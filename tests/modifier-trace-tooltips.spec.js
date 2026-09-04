@@ -1,6 +1,6 @@
 // R7.4 presentation of R7.3's calculated-output traces.
 const { test, expect } = require('@playwright/test');
-const { openCalculator, expectNoConsoleErrors } = require('./helpers');
+const { openCalculator, expectNoConsoleErrors, warmDefaultStateCache } = require('./helpers');
 
 async function configureTracedCards(page) {
   await page.evaluate(() => {
@@ -173,6 +173,11 @@ async function riderChainTooltips(page) {
 test('each rider histogram carries its chain, headed by the realm its roll named', async ({ page }) => {
   const errors = await openCalculator(page);
   await configureRiderCards(page);
+  // The fixture declares `version: 'com2_1.05.11'`, so that version's default-state cache is cold
+  // and the debounced save rebuilds the DOM 250 ms later, wiping `#breakdownGrid` under the node
+  // scrolled below. Today the rebuild lands during `riderChainTooltips` and the scroll is safe by
+  // timing rather than by construction; take the rebuild here instead (F241).
+  await warmDefaultStateCache(page);
   const chains = await riderChainTooltips(page);
 
   // Four realms of one defender inside one attack, and they are not one figure under four

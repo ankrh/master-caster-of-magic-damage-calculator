@@ -376,6 +376,11 @@ The exact order resolves several interactions that a phase label alone hides:
   each present source channel to 1 (`UnitCalc.CAS!NOCOLOSSALSTRENGTH!+2..+15 ", unit becomes undead and gain bloodsuck and create undead :" "IF ((GetStat(U,SLightningBreath,0))>0) THEN { SETSTAT(U,SLightningBreath,0,1); }"`). Shadow Strike then adds
   `1 + floor(current melee / 3)` to that resulting Thrown value (`UnitCalc.CAS!NOVAMPIRISM!+2..+6 ", gain thrown at strength half of its melee power :" "SETSTAT(U,SThrown,0,(GetStat(U,SThrown,0)+STRIKE));"`). The heavy-unit
   Flying conversion can add another Thrown point afterward (`UnitCalc.CAS!NOTDESTINY!+2..+12 ": These units could not fly due to too heavy to do so and have merging, if gain flying ability elsewhere will gain thrown 1 as replacement :" "}"`).
+- **Eye of Heaven's gaze zeroing is one of those late overrides**
+  (`UnitCalc.CAS!IMMUNETOROT!+8..+11 "IF (HASCOMBATGLOBAL(W,CGEyeOfHeaven,2)>0) THEN {" "SETSTAT(U,SDoomGaze,0,0);"`),
+  and it is the enchantment's only gaze write — the region-`b` block grants True Sight and nothing
+  else. See `./F258.1 Eye of Heaven gaze zeroing.md`, which also records that the three DOS builds
+  have no Eye of Heaven to place in any phase.
 - **Late overrides really are late.** Hierophany halves the already modified defense and
   clears the listed immunities/movement abilities at lines 1555–1582. Trapped then sets
   movement to zero and clears Flying at lines 1584–1598. Earlier `d` grants do not survive

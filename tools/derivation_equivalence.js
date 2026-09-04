@@ -84,9 +84,10 @@ function controlSpecs(defs) {
   return specs;
 }
 
-// The Outlander reform spells are owned by an Outlander wizard: `applyOutlanderReformGrants`
-// (`stats_identity.js`) deletes every one of them from the effective ability set when
-// `outlanderWizard` is absent, so a case that sets one alone exercises nothing. Pair them.
+// The Outlander reform spells are owned by an Outlander wizard: every read of one of these
+// research states carries an explicit `outlanderWizard` term (`deriveOutlanderReformRecord`'s
+// `research` helper and the `reform` fields it feeds, `stats_identity.js`, F244.3d), so a case
+// that sets one alone exercises nothing. Pair them.
 const OUTLANDER_REFORMS = new Set([
   'armorcladReform', 'ballisticsTraining', 'energyBeamWeapons', 'explosive',
   'heatPowerEngine', 'magitekEngineering', 'magitekScience', 'militaryDrilling',

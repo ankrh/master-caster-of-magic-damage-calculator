@@ -253,12 +253,17 @@ function runF19Checks(ctx) {
       spellWard: 'nature', soulLinkerAura: 5, leadershipAura: 4,
     },
   });
+  // Spirit Link's cast clears the **permanent** Fantastic flag (`buffs:spiritLink:fantastic`,
+  // F245) while its region-`b` write asserts the calculated one, so this card is the separating
+  // case for the three astronomical events: permanent `false`, calculated `true` where they run.
+  // Before F245 both records were Fantastic here and the card could not tell the two reads apart;
+  // the expected and excluded sets swap with the permanent flag, which is the claim.
   const baseFantasticMadeNormalIds = baseFantasticMadeNormal.statTrace.map(event => event.id);
-  for (const expectedId of ['natureConjunction', 'spellWard', 'leadershipAura']) {
+  for (const expectedId of ['badMoon', 'goodMoon', 'spellWard', 'leadershipAura']) {
     assert(baseFantasticMadeNormalIds.includes(expectedId),
       `F19 ${expectedId} observes its required base/live predicate after Spirit Link`);
   }
-  for (const excludedId of ['badMoon', 'goodMoon', 'soulLinkerAura']) {
+  for (const excludedId of ['natureConjunction', 'soulLinkerAura']) {
     assert(!baseFantasticMadeNormalIds.includes(excludedId),
       `F19 ${excludedId} rejects the opposite base/live predicate after Spirit Link`);
   }

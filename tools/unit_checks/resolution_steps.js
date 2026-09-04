@@ -348,7 +348,11 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     ['Ruler of Underworld', derive({ abilities: { rulerOfUnderworld: true } }), true],
     ['Blazing March', derive({ abilities: { blazingMarch: true } }), true],
     ['Warlord Flame Blade', deriveWarlord({ abilities: { flameBlade: true } }), true],
-    ['Warlord Fiery Blade', deriveWarlord({ abilities: { fieryBlade: true } }), true],
+    // Stated through the control the card offers, not the granted key: since F244.3c the Fiery
+    // Blade flag reaches the record only through `training:lavaSmelter:flameBlade`, so a raw
+    // `fieryBlade` mark writes nothing and this arm would pass on an empty case.
+    ['Warlord Fiery Blade',
+      deriveWarlord({ abilities: { lavaSmelterFieryBlade: true } }), true],
     ['Warlord Fiery Fury', deriveWarlord({ abilities: { fieryFury: true } }), true],
     ['Warlord Wall of Fire garrison', deriveWarlord({ abilities: { wallOfFireBoost: true } }), true],
     ['Warlord Artificer Mechanical', deriveWarlord({ abilities: { artificer: true, mechanical: true } }), true],

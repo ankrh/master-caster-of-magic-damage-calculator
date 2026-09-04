@@ -64,7 +64,7 @@
 // and it does not rank producers within an origin — the chain does that.
 
 const ABILITY_ORIGINS = Object.freeze([
-  'template', 'training', 'buffs', 'debuffs',
+  'template', 'training', 'immunities', 'buffs', 'debuffs',
   'regionA', 'regionB', 'regionC', 'regionD', 'nonRecord', 'derived',
 ]);
 
@@ -75,17 +75,36 @@ const ABILITY_ORIGINS = Object.freeze([
 // calculated record at its own rank. `null` is a key that never reaches the record, so it takes no
 // step and no seed field.
 const ORIGIN_PHASE = Object.freeze({
-  template: 'template', training: 'training', buffs: 'buffs', debuffs: 'debuffs',
+  template: 'template', training: 'training', immunities: 'immunities',
+  buffs: 'buffs', debuffs: 'debuffs',
   regionA: 'a', regionB: 'b', regionC: 'c', regionD: 'd',
   nonRecord: null, derived: null,
 });
 
-// The seven pre-sequence transforms that write the ability map (`stats.js`, `stats_identity.js`).
-// Named here so a producer cannot invent one. The F244.1 census calls them six while listing all
-// seven; the Golem shaping is the one its count drops.
+// **`immunities` is scaffolding, and it is the one origin that does not name an engine writer.**
+// The CLAUDE.md phase table says the immunities the card marks are written to the permanent record
+// before anything tests them, and the user's ruling of 2026-09-02 puts that write in this phase.
+// The calculator cannot say *which* writer put a marked immunity there, because the card's innate
+// control and its enchantment control are merged into one calc key before the derivation sees them
+// (`mergeAbilityCalcValue`, `combat_abilities.js`), so a row here means "the card marks it, and the
+// calculator writes it at the phase the contract names" rather than "a cast wrote it".
+//
+// It retires when the derivation input can tell the two apart: at that point each key's row goes
+// back to `template` for the innate control and `buffs` for the enchantment one, and the step
+// splits with it. Until then a key with a row here is **not seeded** — the phase write is its only
+// source, which is what makes the write positioned rather than hoisted (F244.3b, Option C).
+const MARKED_IMMUNITY_ORIGIN = 'immunities';
+
+// The pre-sequence transforms that still write the ability map (`stats.js`, `stats_identity.js`).
+// Named here so a producer cannot invent one. The F244.1 census listed seven; `markIntrinsicLucky`
+// was deleted by F244.3b, `applyLavaSmelterGrant` by F244.3c (its five grants are
+// `training:lavaSmelter:*` steps now), `applyOutlanderReformGrants` by F244.3e — it grants
+// nothing any more and is `deriveOutlanderReformRecord`, which returns the eligibility record the
+// reform's positioned steps read their `when` from — and `deriveMarionettePackage` by F244.3g,
+// which positioned the owned branch's thirty-one grants after F244.3f positioned the strayed
+// branch's eight. Which is why the list is three.
 const ABILITY_ORIGIN_TRANSFORMS = Object.freeze([
-  'golemShaping', 'markIntrinsicLucky', 'applyLavaSmelterGrant', 'applySanctaBasilicaGrant',
-  'applyPillarOfFaithGrant', 'deriveMarionettePackage', 'applyOutlanderReformGrants',
+  'golemShaping', 'applySanctaBasilicaGrant', 'applyPillarOfFaithGrant',
 ]);
 
 // A `debuffs`-origin key the curse lists do not carry, with why. The rule is deliberately
@@ -131,7 +150,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   arcaneWard: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:strayedPackage'] },
   ],
   armorPiercing: [
     { origin: 'template', versions: SCOPE_ALL,
@@ -139,13 +158,13 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'training', versions: SCOPE_WARLORD,
       producers: ['step:training:militaryWorkshop'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:armorPiercing'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['step:d:blazeOfGlory'] },
   ],
   armorclad: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants', 'step:training:armorclad'] },
+      producers: ['step:training:armorclad'] },
   ],
   armorcladReform: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -193,7 +212,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   blackSleep: [
     { origin: 'debuffs', versions: SCOPE_ALL,
-      producers: ['cast:Black Sleep writes EncBlackSleep on the unit'] },
+      producers: ['step:debuffs:blackSleep:cast'] },
   ],
   blackpowder: [
     { origin: 'training', versions: SCOPE_WARLORD,
@@ -215,7 +234,13 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   bless: [
     { origin: 'buffs', versions: SCOPE_ALL,
-      producers: ['cast:Bless writes its flag on the unit'] },
+      producers: ['step:buffs:bless:cast'] },
+    // The owned Marionette's Life-ascension arm, `SETENCHANTMENTFLAG(U,EncBless,1,1)` - a permanent
+    // write made inside the region-`b` hook, so the row is `regionB` and the step is (F244.3g).
+    // The row was missing until then: the transform granted the key and the table had only the
+    // cast row, which no check could catch because a transform row was never required.
+    { origin: 'regionB', versions: SCOPE_WARLORD,
+      producers: ['step:b:marionette:ascension:bless'] },
   ],
   bloodLust: [
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
@@ -224,6 +249,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   bloodSucker: [
     { origin: 'template', versions: SCOPE_WARLORD,
       producers: ['control'] },
+    // `SETSTAT(U,ABloodsucker,0,1)` in the owned Marionette's Death-ascension arm. Missing from the
+    // table until F244.3g for the same reason `bless`'s row was.
+    { origin: 'regionB', versions: SCOPE_WARLORD,
+      producers: ['step:b:marionette:ascension:bloodSucker'] },
   ],
   blur: [
     // Not a unit enchantment in either family. The DOS builds read the side-indexed combat
@@ -271,7 +300,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:strayedPackage'] },
   ],
   clergy: [
     { origin: 'template', versions: SCOPE_WARLORD,
@@ -285,7 +314,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:insulation', 'transform:deriveMarionettePackage'] },
+      producers: ['step:b:insulation', 'step:b:marionette:books:coldImmunity'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['postChain:applyHierophanyAbilityStrip'] },
   ],
@@ -299,11 +328,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   counterImmunity: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:counterImmunity'] },
   ],
   createUndead: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:createUndead'] },
   ],
   darkForce: [
     // The item-power loop writes the calculated record: `if item.powers[IPDarkForce] then
@@ -320,7 +349,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:divineProtection', 'transform:deriveMarionettePackage'] },
+      producers: ['step:b:divineProtection', 'step:b:marionette:books:deathImmunity'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['postChain:applyHierophanyAbilityStrip'] },
   ],
@@ -336,13 +365,13 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:destruction'] },
   ],
   discipline: [
     { origin: 'buffs', versions: SCOPE_MODERN,
-      producers: ['cast:the Discipline cast'] },
+      producers: ['step:buffs:discipline:cast'] },
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
+      producers: ['step:training:militaryDrilling'] },
   ],
   disheartenProphecy: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -384,7 +413,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   elementalArmor: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyLavaSmelterGrant'] },
+      producers: ['step:training:lavaSmelter:elementalProtection'] },
   ],
   endurance: [
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
@@ -403,8 +432,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       producers: ['postChain:deriveUnitStats'] },
   ],
   energyWeaponry: [
-    { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
+    { origin: 'regionD', versions: SCOPE_WARLORD,
+      producers: ['step:d:energyWeaponry'] },
   ],
   eternalNight: [
     { origin: 'nonRecord', versions: SCOPE_ALL,
@@ -414,7 +443,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_COM_PLUS,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:exorcise'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['postChain:applyAngelicGuardiansEffects'] },
   ],
@@ -438,7 +467,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   fieryBlade: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyLavaSmelterGrant'] },
+      producers: ['step:training:lavaSmelter:flameBlade'] },
   ],
   fieryFury: [
     { origin: 'buffs', versions: SCOPE_WARLORD,
@@ -448,7 +477,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:insulation', 'transform:deriveMarionettePackage'] },
+      producers: ['step:b:insulation', 'step:b:marionette:books:fireImmunity'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['postChain:applyHierophanyAbilityStrip'] },
   ],
@@ -456,7 +485,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:books:firstStrike'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['step:d:blazeOfGlory'] },
   ],
@@ -467,8 +496,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   flying: [
     { origin: 'template', versions: SCOPE_WARLORD,
       producers: ['control'] },
-    { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
+    { origin: 'training', versions: SCOPE_WARLORD,
+      producers: ['step:training:temporalDrive'] },
   ],
   focusMagic: [
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
@@ -476,7 +505,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   forester: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:books:forester'] },
   ],
   fortification: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -508,17 +537,17 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   haste: [
     { origin: 'buffs', versions: SCOPE_ALL,
-      producers: ['cast:Haste writes its flag on the unit'] },
-    { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
+      producers: ['step:buffs:haste:cast'] },
+    { origin: 'training', versions: SCOPE_WARLORD,
+      producers: ['step:training:temporalDrive'] },
   ],
   healer: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:books:healer'] },
   ],
   healingAura: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:healingAura'] },
   ],
   heatPowerEngine: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -554,13 +583,15 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:illusion'] },
   ],
   illusionImmunity: [
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
+    { origin: 'training', versions: SCOPE_WARLORD,
+      producers: ['step:training:temporalDrive'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage', 'transform:applyOutlanderReformGrants'] },
+      producers: ['step:b:marionette:books:illusionImmunity'] },
     { origin: 'regionC', versions: SCOPE_ALL,
       producers: ['step:c:trueSight'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
@@ -587,7 +618,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'buffs', versions: SCOPE_ALL,
       producers: ['cast:Invisibility writes its flag on the unit'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:invisibility'] },
   ],
   invulnerability: [
     { origin: 'buffs', versions: SCOPE_ALL,
@@ -609,13 +640,13 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:magitekEngine', 'transform:deriveMarionettePackage'] },
+      producers: ['step:b:magitekEngine', 'step:b:marionette:books:largeShield'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['step:d:fortification', 'step:d:rust'] },
   ],
   lavaSmelter: [
-    // The legacy selector `applyLavaSmelterGrant` still accepts (`abilities.lavaSmelter ||
-    // 'none'`, `stats_identity.js`) so old presets and share payloads keep loading. No current
+    // The legacy selector `lavaSmelterGrantSteps` still accepts (`marked.lavaSmelter || 'none'`,
+    // `stats_identity.js`) so old presets and share payloads keep loading. No current
     // definition exposes it; it names which mineral pair the training city held.
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
       producers: ['input:legacy selector naming the training city Lava Smelter mineral pair'] },
@@ -650,7 +681,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'training', versions: SCOPE_WARLORD,
       producers: ['step:training:altarOfTheMoon'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:lifeSteal'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['step:d:pneumaField'] },
   ],
@@ -662,7 +693,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:insulation', 'transform:deriveMarionettePackage'] },
+      producers: ['step:b:insulation', 'step:b:marionette:books:lightningResist'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['postChain:applyHierophanyAbilityStrip'] },
   ],
@@ -680,15 +711,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'training', versions: SCOPE_WARLORD,
       producers: ['transform:applySanctaBasilicaGrant', 'transform:applyPillarOfFaithGrant'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:divineProtection', 'transform:deriveMarionettePackage'] },
-  ],
-  luckyPhaseA: [
-    { origin: 'derived', versions: SCOPE_ALL,
-      producers: ['transform:markIntrinsicLucky'] },
-  ],
-  luckyPhaseB: [
-    { origin: 'derived', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:divineProtection', 'step:b:marionette:books:lucky'] },
   ],
   luckyPhaseBase: [
     { origin: 'derived', versions: SCOPE_WARLORD,
@@ -705,8 +728,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   magicImmunity: [
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
-    { origin: 'buffs', versions: SCOPE_ALL,
-      producers: ['cast:Magic Immunity writes its flag on the unit'] },
+    { origin: 'immunities', versions: SCOPE_ALL,
+      producers: ['step:immunities:magicImmunity:marked'] },
     { origin: 'training', versions: SCOPE_WARLORD,
       producers: ['transform:applySanctaBasilicaGrant'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
@@ -772,7 +795,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   mechanicalMaster: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:strayedPackage'] },
   ],
   merging: [
     { origin: 'template', versions: SCOPE_MODERN,
@@ -794,7 +817,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   mindStorm: [
     { origin: 'debuffs', versions: SCOPE_ALL,
-      producers: ['cast:Mind Storm writes its flag on the unit'] },
+      producers: ['step:debuffs:mindStorm:cast'] },
   ],
   mislead: [
     { origin: 'debuffs', versions: SCOPE_MODERN,
@@ -803,12 +826,12 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   missileImmunity: [
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
-    { origin: 'buffs', versions: SCOPE_ALL,
-      producers: ['cast:Guardian Wind writes Missile Immunity on the unit'] },
+    { origin: 'immunities', versions: SCOPE_ALL,
+      producers: ['step:immunities:missileImmunity:marked'] },
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyLavaSmelterGrant'] },
+      producers: ['step:training:lavaSmelter:missileImmunity'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage', 'control:hillfort'] },
+      producers: ['step:b:marionette:books:missileImmunity', 'control:hillfort'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['step:d:fortification', 'postChain:applyHierophanyAbilityStrip', 'control:hillfort'] },
   ],
@@ -818,7 +841,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   mountaineer: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:books:mountaineer'] },
   ],
   mysticSurge: [
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
@@ -830,7 +853,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   nausea: [
     { origin: 'debuffs', versions: SCOPE_WARLORD,
-      producers: ['cast:the Conjuring Pact combat-enchantment flag on the unit'] },
+      producers: ['step:debuffs:nausea:cast'] },
   ],
   negateFirstStrike: [
     { origin: 'template', versions: SCOPE_ALL,
@@ -862,10 +885,6 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
       producers: ['input:the CGPlague combat global'] },
   ],
-  pneumaField: [
-    { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
-  ],
   pneumaReactor: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
       producers: ['input:Outlander research state (SPELLSTATE)'] },
@@ -876,7 +895,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'training', versions: SCOPE_WARLORD,
       producers: ['step:training:altarOfTheMoon', 'step:training:militaryWorkshop', 'step:training:motherFungus'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:poison'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['step:d:venom'] },
   ],
@@ -886,7 +905,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'training', versions: SCOPE_WARLORD,
       producers: ['step:training:altarOfTheMoon'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:books:poisonImmunity'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['step:d:venom', 'postChain:applyHierophanyAbilityStrip'] },
   ],
@@ -896,7 +915,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   powerEngine: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
+      producers: ['step:training:powerEngine'] },
   ],
   powerMinerals: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -913,10 +932,6 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   psychoConverter: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
       producers: ['input:Outlander research state (SPELLSTATE)'] },
-  ],
-  psychoForce: [
-    { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
   ],
   radio: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -947,13 +962,13 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   rebuild: [
     { origin: 'buffs', versions: SCOPE_WARLORD,
-      producers: ['cast:Rebuild writes its flag on the unit'] },
+      producers: ['step:buffs:rebuild:cast'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:strayedPackage'] },
   ],
   regeneration: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:regeneration'] },
   ],
   reinforceMagic: [
     // `Units.RecalculateUnits.pas:1902` `Wizards[U.owner].GlobalEnchantments[GEReinforceMagic]`.
@@ -962,15 +977,15 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   resistElements: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyLavaSmelterGrant'] },
+      producers: ['step:training:lavaSmelter:resistElementsAlias'] },
   ],
   resistMagic: [
     { origin: 'buffs', versions: SCOPE_ALL,
-      producers: ['cast:Resist Magic writes its flag on the unit'] },
+      producers: ['step:buffs:resistMagic:cast'] },
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
+      producers: ['step:training:magitekScience'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:books:resistMagic'] },
   ],
   resistanceToAll: [
     { origin: 'template', versions: SCOPE_ALL,
@@ -988,7 +1003,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   ritualMaster: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:strayedPackage'] },
   ],
   rocketry: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -1004,7 +1019,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   sage: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:strayedPackage'] },
   ],
   sailing: [
     { origin: 'template', versions: SCOPE_WARLORD,
@@ -1030,7 +1045,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   shatter: [
     { origin: 'debuffs', versions: SCOPE_ALL,
-      producers: ['cast:Shatter writes its flag on the unit'] },
+      producers: ['step:debuffs:shatter:cast'] },
   ],
   soulFlay: [
     { origin: 'debuffs', versions: SCOPE_WARLORD,
@@ -1041,10 +1056,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       producers: ['input:the strongest friendly Soul Linker aura'] },
   ],
   spellLock: [
-    { origin: 'buffs', versions: SCOPE_COM1,
-      producers: ['cast:Spell Lock writes its flag on the unit'] },
+    { origin: 'buffs', versions: SCOPE_COM_PLUS,
+      producers: ['step:buffs:spellLock:cast'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:spellLock'] },
   ],
   spellWard: [
     { origin: 'nonRecord', versions: SCOPE_MODERN,
@@ -1066,7 +1081,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:books:stoningImmunity'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['postChain:applyHierophanyAbilityStrip'] },
   ],
@@ -1074,7 +1089,7 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:ascension:stoningTouch'] },
   ],
   supernatural: [
     { origin: 'template', versions: SCOPE_ALL,
@@ -1113,10 +1128,6 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
       producers: ['input:Outlander research state (SPELLSTATE)'] },
   ],
-  temporalGravityDrive: [
-    { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:applyOutlanderReformGrants'] },
-  ],
   temporalTwist: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
       producers: ['input:the side holds the Temporal Twist combat global; the block tests '
@@ -1124,11 +1135,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   transmuteEquipment: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:strayedPackage'] },
   ],
   trueSight: [
     { origin: 'buffs', versions: SCOPE_ALL,
-      producers: ['cast:True Sight writes its flag on the unit'] },
+      producers: ['step:buffs:trueSight:cast'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
       producers: ['step:b:eyeOfHeaven'] },
   ],
@@ -1156,11 +1167,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   vertigo: [
     { origin: 'debuffs', versions: SCOPE_ALL,
-      producers: ['cast:Vertigo writes its flag on the unit'] },
+      producers: ['step:debuffs:vertigo:cast'] },
   ],
   wallCrusher: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:bombsGrenades', 'transform:deriveMarionettePackage'] },
+      producers: ['step:b:bombsGrenades', 'step:b:marionette:ascension:wallCrusher'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['step:d:blazeOfGlory'] },
   ],
@@ -1170,27 +1181,27 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   warpAttack: [
     { origin: 'debuffs', versions: SCOPE_ALL,
-      producers: ['cast:Warp Creature writes its flag on the unit'] },
+      producers: ['step:debuffs:warpAttack:cast'] },
   ],
   warpDefense: [
     { origin: 'debuffs', versions: SCOPE_ALL,
-      producers: ['cast:Warp Creature writes its flag on the unit'] },
+      producers: ['step:debuffs:warpDefense:cast'] },
   ],
   warpResist: [
     { origin: 'debuffs', versions: SCOPE_ALL,
-      producers: ['cast:Warp Creature writes its flag on the unit'] },
+      producers: ['step:debuffs:warpResist:cast'] },
   ],
   weakness: [
     { origin: 'debuffs', versions: SCOPE_ALL,
-      producers: ['cast:Weakness writes its flag on the unit'] },
+      producers: ['step:debuffs:weakness:cast'] },
   ],
   weaponImmunity: [
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['transform:applyLavaSmelterGrant'] },
+      producers: ['step:training:lavaSmelter:weaponImmunity'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['transform:deriveMarionettePackage'] },
+      producers: ['step:b:marionette:books:weaponImmunity'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
       producers: ['postChain:applyHierophanyAbilityStrip'] },
   ],
@@ -1244,4 +1255,12 @@ function abilityOriginPhases(key) {
 function abilityOriginIsTemplate(key, version) {
   return abilityOriginRows(key)
     .some(row => row.origin === 'template' && row.versions.includes(version));
+}
+
+// True where the key is a marked immunity this version writes in the `immunities` phase. Such a key
+// is never seeded, however template-capable it also is: the phase write is its only source, which
+// is what the ruling of 2026-09-02 asks for and what keeps the write positioned (F244.3b).
+function abilityOriginIsMarkedImmunity(key, version) {
+  return abilityOriginRows(key)
+    .some(row => row.origin === MARKED_IMMUNITY_ORIGIN && row.versions.includes(version));
 }

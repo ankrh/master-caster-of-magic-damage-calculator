@@ -127,7 +127,12 @@ test('F43 maps CoM common 0x0800 to the literal Exorcise consumer', async ({ pag
   expect(report.angelParsedExorcise).toBe(0);
   expect(report.angelExorcise).toBeCloseTo(0.8, 12);
   expect(report.tooltip).toContain('literal −3');
-  expect(report.tooltip).toContain('Spell Lock blocks it');
+  // Was `toContain('Spell Lock blocks it')`. That phrasing sat in the tooltip's `CoM 1:`
+  // paragraph and said the blocker was CoM 1's; the blocker is in all three CoM-era engines, so
+  // it moved to the canonical `Opponents with ... are unaffected.` line
+  // (`Reference docs/Tooltip style guide.md`, enemy-held blockers). The assertion follows the
+  // fact rather than the wording: what F43 needs is that the tooltip states the interaction.
+  expect(report.tooltip).toContain('Opponents with Magic Immunity or Spell Lock are unaffected.');
   expectNoConsoleErrors(errors);
 });
 
@@ -170,6 +175,10 @@ test('F43 gates the two DOS names and leaves the other four version mechanics in
       matrixSpellLock,
       modernOnlyNamingDispelEvil,
       spiritLinkTooltip: ENCHANTMENT_DEFS.find(def => def.key === 'spiritLink').tooltip,
+      // A Spell-Locked Fantastic target, in each engine that offers the spell (F244.3f).
+      lockedExorcise: Object.fromEntries(
+        ['com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.9'].map(version => [version,
+          exorciseFailProb(5, { spellLock: true }, 'fantastic_nature', -1, version)])),
       unaffected: {
         mom131Dispel: dispelEvilFailProb(5, {}, 'fantastic_chaos'),
         cp160Dispel: dispelEvilFailProb(5, {}, 'fantastic_death'),
@@ -180,19 +189,40 @@ test('F43 gates the two DOS names and leaves the other four version mechanics in
     };
   });
 
+  // `spellLock` was `true` (hidden) for the two modern versions until F244.3f. That encoded a
+  // defect rather than a finding: Spell Lock is `spells.ini` [54] in the CoM2 1.05.11 base set
+  // and the Warlord set alike — Realm 2, casting cost 100, EnchantmentID 26 — and the shared
+  // modern executable refuses Exorcise on the flag, `if aflags.exorcise and not
+  // Units[du].magicimmunity and not Units[du].EnchantmentFlags[EncSpellLock] and
+  // Units[du].Fantastic` (`Reference docs/Caster binary/Combat.ApplyAttack.pas`). The control
+  // was gated to CoM 1 and `exorciseReachesRoll` tested the key only there, so a Spell-Locked
+  // Fantastic target took Exorcise in both modern builds exactly as an unlocked one did. F43
+  // itself is untouched by the correction: what F43 established is that the two **DOS** names
+  // are gated and that the modern Exorcise mechanic is undisturbed, and both of those are
+  // asserted unchanged below — `dispelEvil`/`exorcise` in this table, and `unaffected`, whose
+  // cases carry no Spell Lock and therefore do not move.
   expect(report.gates).toEqual({
     'mom_1.31': { dispelEvil: false, exorcise: true, spellLock: true },
     'mom_cp_1.60.00': { dispelEvil: false, exorcise: true, spellLock: true },
     'com_6.08': { dispelEvil: true, exorcise: false, spellLock: false },
-    'com2_1.05.11': { dispelEvil: true, exorcise: false, spellLock: true },
-    'com2_warlord_1.5.12.9': { dispelEvil: true, exorcise: false, spellLock: true },
+    'com2_1.05.11': { dispelEvil: true, exorcise: false, spellLock: false },
+    'com2_warlord_1.5.12.9': { dispelEvil: true, exorcise: false, spellLock: false },
   });
+  // The matrix property list follows the same gating, so the control becomes an offerable
+  // defender property in the two modern versions with it.
   expect(report.matrixSpellLock).toEqual({
     'mom_1.31': false,
     'mom_cp_1.60.00': false,
     'com_6.08': true,
-    'com2_1.05.11': false,
-    'com2_warlord_1.5.12.9': false,
+    'com2_1.05.11': true,
+    'com2_warlord_1.5.12.9': true,
+  });
+  // The number the correction moves, which no assertion in this file reached before: a
+  // Spell-Locked Fantastic target is refused the roll in every engine that has the spell.
+  expect(report.lockedExorcise).toEqual({
+    'com_6.08': 0,
+    'com2_1.05.11': 0,
+    'com2_warlord_1.5.12.9': 0,
   });
   expect(report.unaffected).toEqual({
     mom131Dispel: 0.9,

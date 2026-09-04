@@ -80,6 +80,7 @@ const directFunctionIds = new Map([
   ['misleadActiveForUnit', 'misleadEligibility'],
   ['destinyActiveForUnit', 'destinyEligibility'],
   ['deriveMarionettePackage', 'marionettePackage'],
+  ['curseRefusedByImmunity', 'curseImmunityRefusal'],
   ['supernaturalMinDamageForHits', 'supernaturalMinimumDamage'],
   ['distancePenalty', 'distancePenalty'],
   ['applyRage', 'rageEffectiveAttack'],

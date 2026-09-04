@@ -878,7 +878,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
     vacuity: {
       'name-binds-nothing':
-        'Keep. The gap is in the naming, not the fixture: the control is registered as `lavaSmelterFieryBlade`, label "Lava Smelter: Fiery Blade" (enchantments.js:110), and the sweep binds a feature only when the whole token run `lava smelter fiery blade` appears in the key, while this key names the effect without its Lava Smelter source. The feature is live all the same - the grant sets `fieryBlade` (stats_identity.js:538), `hasWarlordBlade` picks it up (stats.js:889-890) and the phase-c blade step adds the modern melee bonus of 3 (stats.js:1910, :1917), taking atk 1 to 4. The other candidate, `race: \'Dwarf\'`, is not read by that grant: `applyLavaSmelterGrant`\'s admission test is the version and the base unitType (stats_identity.js:501-502, the caller passing `baseUnitType` at stats.js:87), and its body reads the five Lava Smelter ability flags and the legacy selector (stats_identity.js:505-510). No race test appears in the function.',
+        'Keep. The gap is in the naming, not the fixture: the control is registered as `lavaSmelterFieryBlade`, label "Lava Smelter: Fiery Blade" (enchantments.js:110), and the sweep binds a feature only when the whole token run `lava smelter fiery blade` appears in the key, while this key names the effect without its Lava Smelter source. The feature is live all the same - `training:lavaSmelter:flameBlade` writes `fieryBlade` onto the record (stats_identity.js), `hasWarlordBladeAt` reads it back off the record at each consumer (stats.js) and the phase-c blade step adds the modern melee bonus of 3, taking atk 1 to 4. The other candidate, `race: \'Dwarf\'`, is not read by that grant: the step\'s admission test is the mineral-pair mark and the permanent unitType (stats_identity.js, the caller passing `baseUnitType` through the sequence context), and it reads the five Lava Smelter ability flags and the legacy selector. No race test appears anywhere in the block.',
     },
   },
   fieryBladeNoFireBreathWarlord: {
@@ -889,7 +889,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 5.000 },
     vacuity: {
       'name-binds-nothing':
-        'Keep. Same naming gap as fieryBladeMeleeWarlord - the control is `lavaSmelterFieryBlade` / "Lava Smelter: Fiery Blade" (enchantments.js:110) and the key names only the effect, so no candidate\'s token run appears in it. The claim itself is live and negative at once: the +1 Fire Breath is a region-d write gated on `warlordCombatFlameBlade` (stats_sequence.js:1524), which is `isWarlord && !!abilities.flameBlade` (stats.js:149) and so reads the combat-cast enchantment rather than the Lava Smelter grant, leaving breath 1 beside the melee 1 + 3 that the phase-c step does land (stats.js:1910, :1917). Widen that gate to the grant and this reads 6.000, which flameBladeFireBreathWarlord pins - it is this card with the combat-cast Flame Blade in place of the grant and no `race` field. Ablating the grant clears `fieryBlade` (stats_identity.js:538) and with it `hasWarlordBlade` (stats.js:889-890), which is the blade step\'s own gate (stats.js:1913), so the melee +3 goes and the candidate is not inert.',
+        'Keep. Same naming gap as fieryBladeMeleeWarlord - the control is `lavaSmelterFieryBlade` / "Lava Smelter: Fiery Blade" (enchantments.js:110) and the key names only the effect, so no candidate\'s token run appears in it. The claim itself is live and negative at once: the +1 Fire Breath is a region-d write gated on `warlordCombatFlameBlade` (stats_sequence.js), which is `isWarlord && !!abilities.flameBlade` (stats.js) and so reads the combat-cast enchantment rather than the Lava Smelter grant, leaving breath 1 beside the melee 1 + 3 that the phase-c step does land. Widen that gate to the grant and this reads 6.000, which flameBladeFireBreathWarlord pins - it is this card with the combat-cast Flame Blade in place of the grant and no `race` field. Ablating the grant leaves `fieryBlade` unwritten on the record and with it `hasWarlordBladeAt` false (stats.js), which is the blade step\'s own gate, so the melee +3 goes and the candidate is not inert.',
     },
   },
   fieryFuryMeleeWarlord: {
@@ -937,7 +937,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
     vacuity: {
       'a.ability.fieryFury':
-        'Keep, and the absence is the rule under test: the stat package is the ELSE arm of Fiery Fury\'s one base-Fantastic test - `ffRegularBonus = isWarlord && !!abilities.fieryFury && !permanentFantastic` (stats.js:909) - and it gates both the phase-b write (stats_sequence.js:509-510) and `ffMeleeBonus` (stats.js:913), so a base-Fantastic card takes nothing and ablating the enchantment must leave 1.000. The THEN arm is not dead in this version, it simply has nothing to act on here: its First Strike (combat_effects.js:164-167) faces a defender with no attack, and its Chaos realm (stats_identity.js:311-314) has no Chaos Surge to feed, this fixture setting none. Drop `!permanentFantastic` and atk 1 becomes 4 for 4.000, which fieryFuryMeleeWarlord - this fixture with `unitType: \'fantastic_nature\'` removed and nothing else changed - pins.',
+        'Keep, and the absence is the rule under test: the stat package is the ELSE arm of Fiery Fury\'s one base-Fantastic test - `ffRegularBonus = isWarlord && !!abilities.fieryFury && !permanentFantastic` (stats.js) - and it gates both the phase-b `b:fieryFury` write (stats_sequence.js) and `ffMeleeBonusAt` (stats.js), so a base-Fantastic card takes nothing and ablating the enchantment must leave 1.000. The THEN arm is not dead in this version, it simply has nothing to act on here: its First Strike (`applyFieryFuryEffects`, combat_effects.js) faces a defender with no attack, and its Chaos realm (`b:fieryFury:race`, stats_identity.js) has no Chaos Surge to feed, this fixture setting none. Drop `!permanentFantastic` and atk 1 becomes 4 for 4.000, which fieryFuryMeleeWarlord - this fixture with `unitType: \'fantastic_nature\'` removed and nothing else changed - pins.',
     },
   },
   fieryFuryFantasticFirstStrike: {
@@ -987,9 +987,9 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 4.000 },
     vacuity: {
       'every-feature-inert':
-        'Inert by construction, and the inertness is the whole assertion: the claim is that the two sources supply one +3 melee between them, so removing either has to leave 4.000. The third candidate, `race: \'Dwarf\'`, is not read by the Lava Smelter grant: `applyLavaSmelterGrant`\'s admission test is the version and the base unitType (stats_identity.js:501-502, the caller passing `baseUnitType` at stats.js:87), and its body reads the five Lava Smelter ability flags and the legacy selector (stats_identity.js:505-510). No race test appears in the function.',
+        'Inert by construction, and the inertness is the whole assertion: the claim is that the two sources supply one +3 melee between them, so removing either has to leave 4.000. The third candidate, `race: \'Dwarf\'`, is not read by the Lava Smelter grant: the step\'s admission test is the mineral-pair mark and the permanent unitType (stats_identity.js, the caller passing `baseUnitType` through the sequence context), and it reads the five Lava Smelter ability flags and the legacy selector. No race test appears anywhere in the block.',
       'a.ability.fieryFury':
-        'Keep, and the absence is the rule under test: with a Warlord blade on the card `ffMeleeBonus` is forced to 0 by `ffRegularBonus && !hasWarlordBlade` (stats.js:913), and the whole +3 comes from the phase-c blade step instead (stats.js:1910, :1917), so ablating Fiery Fury leaves 4.000 - and ablating the Fiery Blade grant also leaves 4.000, because `ffMeleeBonus` then becomes 3. Drop the `!hasWarlordBlade` term and the two stack for 7.000. fieryFuryMeleeWarlord and fieryBladeMeleeWarlord each pin the single-source 4.000 this fixture has to match.',
+        'Keep, and the absence is the rule under test: with a Warlord blade on the card `ffMeleeBonusAt` is forced to 0 by `ffRegularBonus && !hasWarlordBladeAt(u)` (stats.js), and the whole +3 comes from the phase-c blade step instead (`flameBladeStep`, stats.js), so ablating Fiery Fury leaves 4.000 - and ablating the Fiery Blade grant also leaves 4.000, because `ffMeleeBonusAt` then returns 3. Drop the `!hasWarlordBladeAt(u)` term and the two stack for 7.000. fieryFuryMeleeWarlord and fieryBladeMeleeWarlord each pin the single-source 4.000 this fixture has to match.',
     },
   },
   fieryFuryWeaponImmunityBypass: {
@@ -1000,7 +1000,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 7.000 },
     vacuity: {
       'b.ability.weaponImmunity':
-        'Keep, and the absence is the rule under test: the defender\'s flag has to be unable to add anything, or there is no bypass. `ffRegularBonus` is one of `modernEncMagicOtherTerms`\' disjuncts (stats.js:1066-1068), so `modernAttackIsMagic` is true (combat_special_attacks.js:585), `wi` is false (combat_effects.js:646-647) and no Weapon Immunity bonus is ever added - the melee 4 + 3 lands whole. Remove that disjunct and Warlord\'s +10 (combat_effects.js:499) meets a 7-strength attack against Defence 0, the same pairing rustStripsMagicWeaponWarlord asserts at 0.000. Fiery Fury is the live candidate.',
+        'Keep, and the absence is the rule under test: the defender\'s flag has to be unable to add anything, or there is no bypass. `ffRegularBonus` is one of `modernEncMagicOtherTermsAt`\' disjuncts (stats.js), so `modernAttackIsMagic` is true (combat_special_attacks.js), `wi` is false (combat_effects.js) and no Weapon Immunity bonus is ever added - the melee 4 + 3 lands whole. Remove that disjunct and Warlord\'s +10 Weapon Immunity Defence bonus (`effectiveDefense:weaponImmunity`, combat_effects.js) meets a 7-strength attack against Defence 0, the same pairing rustStripsMagicWeaponWarlord asserts at 0.000. Fiery Fury is the live candidate.',
     },
   },
 
@@ -1050,10 +1050,23 @@ definePresets({
     b: { res:5, hp:10, unitType: 'fantastic_nature', abilities: { spiritLink: true } },
     expected: { dmgToA: 0, dmgToB: 6.000 },
   },
-  spiritLinkGrantsLevelBonusWarlord: {
-    desc: 'Spirit Link lets a fantastic creature earn levels: an Elite fantastic_nature attacker gains the Warlord Elite +2 melee. atk 1+2=3, 100% hit vs def 0 → 3.0 (vs 1.0 without Spirit Link, where the level dropdown is ignored for fantastic units)',
+  spiritLinkCastResetsLevelWarlord: {
+    desc: 'Spirit Link’s cast puts a fantastic creature back to Recruit: `SETSTAT(TU,ALevel,1,1)` at OLSpell.CAS!NOTAIRSUPPORT!+10 "SETSTAT(TU,ALevel,1,1);", under the same `IF BASEFANTASTIC(TU)` as the Fantastic clear, and writing the base level "also sets experience to the amount required for that level" (MASTER.CAS~"ALevel=26;"). A marked enchantment is a cast that landed, so the stated Elite is the pre-cast record and `buffs:spiritLink:level` discards it — the shape `debuffs:rust:material` already has for the weapon control. atk 1, 100% hit vs def 0 → 1.0, where the same card without the enchantment reaches 1.0 by the other route, `c:level:fantastic` (F245).',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, level:'elite', unitType: 'fantastic_nature', abilities: { spiritLink: true } },
+    b: { def:0, hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.000 },
+    vacuity: {
+      'a.ability.spiritLink':
+        'Keep, and the inertness is the rule under test: the two routes to Recruit meet on this card. With the enchantment the cast’s own `buffs:spiritLink:level` writes it (stats_sequence.js); without it the permanent record stays Fantastic and `c:level:fantastic` writes it instead (stats_sequence.js). Ablating the enchantment therefore cannot move the number, and that it cannot is the claim — before F245 this same card read 3.000, the widening having suppressed `c:level:fantastic` while nothing replaced it. a.unitType is the live half: dropped to normal, neither route fires and the Elite ladder row survives for 3.000.',
+      'a.level=elite':
+        'Keep for the same reason and from the other side: the field is what the cast discards, so ablating it to normal reaches the same 1.000 by construction. Its presence is what makes the discard visible at all — with the card already at Recruit the step would write the value that stands there. spiritLinkWeaponMaterialWarlord is where the same cast’s Fantastic clear is the live half.',
+    },
+  },
+  spiritLinkWeaponMaterialWarlord: {
+    desc: 'The other side of the same cast: `SETSTAT(TU,AFantastic,1,0)` (OLSpell.CAS!NOTAIRSUPPORT!+9 "SETSTAT(TU,AFantastic,1,0);") takes the Fantastic flag off the permanent record, so the loadout gate `loadoutEligible = !permanentFantastic` (stats.js) stops discarding the stated weapon material and `training:weaponQuality` writes it. Adamantium gives the Warlord melee +2 (c:weapon): atk 1 → 3, 100% hit vs def 0 → 3.0, against the 1.0 the same base-Fantastic card reaches without the enchantment, unequipped (F245).',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10, weapon:'adamantium', unitType: 'fantastic_nature', abilities: { spiritLink: true } },
     b: { def:0, hp:10 },
     expected: { dmgToA: 0, dmgToB: 3.000 },
   },

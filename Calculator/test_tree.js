@@ -245,7 +245,7 @@ const TEST_TREE = [
           'magicImmunityGatesNausea',
           'temporalTwistBypassesMagicImmunity',
           'sanctaBasilicaMagicImmunityStripsWeaknessWarlord',
-          'marionetteIllusionImmunityStripsMindStormWarlord',
+          'marionetteRegionBGrantDoesNotRefuseMindStormWarlord',
           'blackPrayerBypassesMagicImmunity',
         ],
       },
@@ -728,7 +728,7 @@ const TEST_TREE = [
         name: 'Military Drilling',
         keys: [
           'militaryDrillingDefenseWarlord',
-          'militaryDrillingSkipsApotheosisPermanentFantasticWarlord',
+          'militaryDrillingReadsFantasticAtItsOwnRankWarlord',
         ],
       },
       {
@@ -1010,7 +1010,8 @@ const TEST_TREE = [
           'spiritLinkWeaponImmunityBypassWarlord',
           'spiritLinkBlessNoBonusWarlord',
           'spiritLinkResistanceWarlord',
-          'spiritLinkGrantsLevelBonusWarlord',
+          'spiritLinkCastResetsLevelWarlord',
+          'spiritLinkWeaponMaterialWarlord',
         ],
       },
       {

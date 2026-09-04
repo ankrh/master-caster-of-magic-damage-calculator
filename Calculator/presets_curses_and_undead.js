@@ -1343,17 +1343,13 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 0.500 },
   },
-  militaryDrillingSkipsApotheosisPermanentFantasticWarlord: {
-    desc: 'Military Drilling\'s permanent Discipline is written under `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOOUTLANDERUPGRADE"; }` (OverlandEndTurn.CAS!NOMAGITEKSCI!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), the permanent record Apotheosis writes. Negative claim, and the absence is the rule under test: Armor 1 + Apotheosis 4 = 5, and atk 10 at 100% hit against a 100% block chance deals 10 - 5 = 5.0. Reading the training-time flag instead granted Discipline for Armor 6 and 4.0; the sibling militaryDrillingDefenseWarlord without Apotheosis shows the Discipline armor is otherwise live.',
+  militaryDrillingReadsFantasticAtItsOwnRankWarlord: {
+    desc: 'Military Drilling’s permanent Discipline is written under a `BASEFANTASTIC(U)` test (OverlandEndTurn.CAS!NOMAGITEKSCI!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), and `training:militaryDrilling` reads it off the record at its own rank rather than off the projection the permanent phases leave. A `training` step ranks ahead of `buffs:destiny`, so the record it reads is the one the unit was created with and Apotheosis has not written it yet: the grant lands, Discipline adds +1 Armor, and Armor 1 + Discipline 1 + Apotheosis 4 = 6 against atk 10 at 100% hit and a 100% block chance for 10 - 6 = 4.0. Reading the finished permanent record instead closed the grant and gave 5.0, which is this fixture’s predecessor militaryDrillingSkipsApotheosisPermanentFantasticWarlord. The two entrances genuinely disagree for an Apotheosised unit — the creation one grants, the every-turn OverlandEndTurn upgrade pass refuses — and the calculator models the creation position (F245, on the user’s ruling).',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:60,
       abilities: { outlanderWizard: true, militaryDrilling: true, apotheosis: true } },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
-    vacuity: {
-      'b.ability.militaryDrilling':
-        'Keep, and the absence is the rule under test: Military Drilling\'s permanent Discipline is written under a BASEFANTASTIC gate on the permanent record, which Apotheosis writes, so the grant is closed. b.abilities.outlanderWizard is inert for the same reason and by the same claim. Apotheosis is the live half at delta 3, and militaryDrillingDefenseWarlord shows the Discipline armor is otherwise live.',
-    },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
   },
   militaryDrillingDefenseWarlord: {
     desc: 'Military Drilling grants a non-fantastic unit permanent Discipline, whose Normal-level armor bonus is +1: Armor 1+1 = 2, and atk 10 at 100% hit against a 100% block chance deals 8.0 against the 9.0 the same unit takes without the reform.',

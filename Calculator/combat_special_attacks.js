@@ -148,11 +148,23 @@ function dispelEvilFailProb(defRes, defAbilities, defUnitType) {
 }
 
 // CoM 6.08's common 0x0800 flag retains the executable-table name Dispel Evil, but the
-// version-specific consumer ignores Spec_Att_Attrib and uses literal -3. Its persistent-unit
-// Spell Lock bit skips the resistance call altogether.
+// version-specific consumer ignores Spec_Att_Attrib and uses literal -3.
+//
+// The persistent Spell Lock bit skips the resistance call in **all three** CoM-era engines,
+// not CoM 1 alone. The modern rider reads it in the same expression as Magic Immunity and the
+// Fantastic test — `if aflags.exorcise and not Units[du].magicimmunity and not
+// Units[du].EnchantmentFlags[EncSpellLock] and Units[du].Fantastic` — and that executable is
+// base CoM2's and Warlord's alike. The `version === 'com_6.08'` term this gate used to carry
+// made a Spell-Locked Fantastic target take Exorcise at full probability in both modern
+// builds; F244.3f removed it, on the user's ruling, together with the control's own
+// CoM-1-only version gating. `version` stays in the signature because the caller routes by
+// version through `TOUCH_KEY_SCOPE_IDS`, and neither MoM build compiles this rider at all.
+// The evidence is `PROVENANCE[exorciseTouchRider]` below, whose two spans are the CoM 1 block
+// and the modern rider loop this gate rests on — restating them here would give one fact two
+// homes.
 function exorciseReachesRoll(defAbilities, defUnitType, version) {
   if (!String(defUnitType || '').startsWith('fantastic_')) return false;
-  if (version === 'com_6.08' && hasAbil(defAbilities, 'spellLock')) return false;
+  if (hasAbil(defAbilities, 'spellLock')) return false;
   return !hasAbil(defAbilities, 'magicImmunity');
 }
 

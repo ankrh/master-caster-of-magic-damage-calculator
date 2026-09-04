@@ -85,21 +85,6 @@ const CROSS_BOUNDARY_READS = [
       'Calculator/stats.js#modernEncMagicIndependentOfMaterial',
     ],
   },
-  {
-    token: 'finishedImmunities',
-    why: 'The immunity set the recalculation leaves. `immunities:immunityCurseGating` is an artificial '
-      + 'step — no engine removes a curse flag it already carries (`SPEC.md`, *Deliberate '
-      + 'deviations*) — so no source fixes its position relative to a grant that writes one of '
-      + 'these four immunities, and taking the finished set is what makes its answer independent '
-      + 'of where such a grant lands (F164, F199). The curse flags it clears are ordinary record '
-      + 'fields read at its own position; only the immunity half crosses the boundary.',
-    sites: [
-      'Calculator/stats.js#finishedImmunities',   // the declaration
-      'Calculator/stats.js#rawStatSteps',         // handed to the sequence builder
-      'Calculator/stats_sequence.js#baseStatSteps',
-      'Calculator/stats_identity.js#immunityCurseGatingStep',
-    ],
-  },
 ];
 
 // The `data-scope="core"` sources the scan covers. `stats_identity.js` is excluded for the token
@@ -221,8 +206,13 @@ const LANDED_CORRECTIONS = [
     preset: 'battleArmorSkipsApotheosisPermanentFantasticWarlord' },
   { id: 'F198', at: 'the Outlander-soldier gate at UnitCalc.CAS!COMBATOVERRIDE!+5..+7 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)" "NOTOUTLANDERSOLDIER"', record: 'permanent',
     preset: 'energyWeaponrySkipsApotheosisPermanentFantasticWarlord' },
-  { id: 'F198', at: "Military Drilling's permanent Discipline grant", record: 'permanent',
-    preset: 'militaryDrillingSkipsApotheosisPermanentFantasticWarlord' },
+  // F198 filed this as a `permanent` read and F245 moved it, on the user's ruling: the step is
+  // `training`, which ranks ahead of every permanent-record write the pipeline makes, so the
+  // projection it used to read was a later phase's. It is the reform's one `training` gate with a
+  // Fantastic term; the four rows above it stay `permanent` because every step they gate is
+  // region `b` or later.
+  { id: 'F198+F245', at: "Military Drilling's permanent Discipline grant", record: 'positional',
+    preset: 'militaryDrillingReadsFantasticAtItsOwnRankWarlord' },
   { id: 'F198', at: 'b:outlanderXenoveterinary', record: 'positional',
     preset: 'xenoveterinaryReadsFantasticAtItsOwnBlockWarlord' },
   { id: 'F200', at: "d:fortification's already-shielded test, against b:magitekEngine",

@@ -128,11 +128,22 @@ function versionChain(version, entries) {
 // demon-skin armor 0x8F6FE, demon wings 0x8F71B and fire breath 0x8F738. A unit holding both
 // Black Channels and a Chaos Channels mutation therefore finishes Chaos, not Death.
 const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
-  // Template initialization, then the artificial strip. F203: the strip used to stand ahead of
-  // `template:stat:base`, i.e. before the record it reads was seeded.
+  // Template initialization, then the permanent-record cast writes. F203: the retired curse
+  // strip used to stand ahead of `template:stat:base`, i.e. before the record it read was seeded.
   'template:stat:base', 'template:baseThresholds',
   'training:weaponQuality', 'training:veterancy',
-  'immunities:immunityCurseGating',
+  // The immunities the card marks, ahead of every phase that tests them. Order within the
+  // phase is this list's own ruling: the two writes touch disjoint fields.
+  'immunities:magicImmunity:marked', 'immunities:missileImmunity:marked',
+  // The four beneficial cast flags with no roster row, then the nine curse writes: a curse an
+  // immunity refuses is never made, rather than made and stripped (F244.3b). Order within a phase
+  // is this list's own ruling — the writes touch disjoint fields, and no source ranks them.
+  // Bless joined them in F244.3g, when the owned Marionette's Life-ascension `EncBless` write made
+  // `bless` a record field; its control is offered in every engine, so the step is too.
+  'buffs:trueSight:cast', 'buffs:resistMagic:cast', 'buffs:haste:cast', 'buffs:bless:cast',
+  'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
+  'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
+  'debuffs:warpResist:cast', 'debuffs:mindStorm:cast',
   'a:baseCopy',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
@@ -157,7 +168,18 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
 const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
   'template:stat:base', 'template:baseThresholds',
   'training:weaponQuality', 'training:veterancy',
-  'immunities:immunityCurseGating',
+  // The immunities the card marks, ahead of every phase that tests them. Order within the
+  // phase is this list's own ruling: the two writes touch disjoint fields.
+  'immunities:magicImmunity:marked', 'immunities:missileImmunity:marked',
+  // The four beneficial cast flags with no roster row, then the nine curse writes: a curse an
+  // immunity refuses is never made, rather than made and stripped (F244.3b). Order within a phase
+  // is this list's own ruling — the writes touch disjoint fields, and no source ranks them.
+  // Bless joined them in F244.3g, when the owned Marionette's Life-ascension `EncBless` write made
+  // `bless` a record field; its control is offered in every engine, so the step is too.
+  'buffs:trueSight:cast', 'buffs:resistMagic:cast', 'buffs:haste:cast', 'buffs:bless:cast',
+  'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
+  'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
+  'debuffs:warpResist:cast', 'debuffs:mindStorm:cast',
   'a:baseCopy',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon', 'c:chaosSurge',
@@ -176,13 +198,24 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
 ]);
 
 const CHAIN_COM_6_08 = versionChain('com_6.08', [
-  // Template initialization and the construction patches that ride with it, then the artificial
-  // strip (F203). `template:zombies` is gone: the Fantastic bit is the unit-type table's own
+  // Template initialization and the construction patches that ride with it, then the
+  // permanent-record cast writes (F203). `template:zombies` is gone: the Fantastic bit is the unit-type table's own
   // `UA_FANTASTIC` at file com1:0x2AED2, which the roster already states.
   'template:stat:base', 'template:baseThresholds', 'template:zombies:toBlock',
   'template:constructCatapult', 'template:constructCatapult:weapon', 'template:summonBranch',
   'training:weaponQuality', 'training:armorQuality', 'training:veterancy',
-  'immunities:immunityCurseGating',
+  // The immunities the card marks, ahead of every phase that tests them. Order within the
+  // phase is this list's own ruling: the two writes touch disjoint fields.
+  'immunities:magicImmunity:marked', 'immunities:missileImmunity:marked',
+  // The five beneficial cast flags with no roster row, then the nine curse writes: a curse an
+  // immunity refuses is never made, rather than made and stripped (F244.3b). Order within a phase
+  // is this list's own ruling — the writes touch disjoint fields, and no source ranks them.
+  'buffs:trueSight:cast', 'buffs:resistMagic:cast', 'buffs:haste:cast', 'buffs:bless:cast',
+  // Spell Lock is the three CoM-era engines'; `spellLock` became a record field in F244.3f.
+  'buffs:spellLock:cast',
+  'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
+  'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
+  'debuffs:warpResist:cast', 'debuffs:mindStorm:cast',
   'a:baseCopy',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon',
@@ -211,15 +244,26 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
 ]);
 
 const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
-  // F203 ordering: template initialization, then the artificial strip, then the permanent writes.
+  // F203 ordering: template initialization, then the permanent-record writes.
   // `buffs:destiny` is a permanent write the recalculation re-makes on every pass — idempotent,
   // which is what lets it hold this head position as well as `c:destiny`.
   // `buffs:destiny:supernatural` is the same block's third permanent write, chain-adjacent because
   // the conversion keeps writing `race`/`fantastic` alone.
   'template:stat:base', 'template:baseHitChance', 'template:baseThresholds',
   'training:weaponQuality', 'training:armorQuality', 'training:veterancy',
-  'immunities:immunityCurseGating',
+  // The immunities the card marks, ahead of every phase that tests them. Order within the
+  // phase is this list's own ruling: the two writes touch disjoint fields.
+  'immunities:magicImmunity:marked', 'immunities:missileImmunity:marked',
+  // The beneficial cast writes with no roster row — six here, since base CoM2 offers the
+  // Discipline and Spell Lock controls and Rebuild is Warlord's (F244.3b–F244.3g) — then Destiny's three
+  // per-pass permanent writes, then the nine curse writes. Order within a phase is this list's own
+  // ruling: the writes touch disjoint fields and no source ranks them (F244.3b).
+  'buffs:trueSight:cast', 'buffs:resistMagic:cast', 'buffs:discipline:cast',
+  'buffs:haste:cast', 'buffs:spellLock:cast', 'buffs:bless:cast',
   'buffs:destiny', 'buffs:destiny:supernatural', 'buffs:destiny:level',
+  'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
+  'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
+  'debuffs:warpResist:cast', 'debuffs:mindStorm:cast',
   'a:baseCopy',
   'a:combatSummoned', 'a:chosen', 'a:constructCatapult', 'a:callToArmsPaladins',
   'a:chaosChannels:fireBreath:race', 'a:chaosChannels:fireBreath',
@@ -278,28 +322,85 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   'training:poolOfRepentance', 'training:dragonMound', 'training:ludusAgoge',
   'training:altarOfTheSun:holyMother', 'training:altarOfTheSun:figures',
   'training:altarOfTheMoon', 'training:sanctaBasilica', 'training:motherFungus',
-  'training:alumniOfAcademy:figures', 'training:survivalInstinctToBlock',
+  'training:alumniOfAcademy:figures',
+  // The Lava Smelter block, `CreateUnit.CAS`:494-498 — five writes in one `ISBUILT(C,BLavaSmelter)`
+  // block between `!NOACADEMY!` (473) and `!NOLAVASMELTER!` (502), in the file's own order. Like
+  // `armorclad` these have a second entrance, `OverlandEndTurn.CAS`:527-551's Upgrade & Retrain
+  // pass, and take the creation position for the same reason (F244.3c).
+  'training:lavaSmelter:weaponImmunity', 'training:lavaSmelter:missileImmunity',
+  'training:lavaSmelter:resistElementsAlias', 'training:lavaSmelter:elementalProtection',
+  'training:lavaSmelter:flameBlade',
+  'training:survivalInstinctToBlock',
   'training:naturalSelection:powerMinerals', 'training:naturalSelection:nightshade',
   'training:naturalSelection:wildGame', 'training:naturalSelection:coal',
   'training:naturalSelection:iron', 'training:pillarOfFaith',
-  'training:malnourished', 'training:energyCannon', 'training:armorclad',
+  'training:malnourished',
+  // The Outlander reform's five permanent writes, in `CreateUnit.CAS` line order inside the
+  // `!HASEVILPRESENCE!` enchant block: Military Drilling's Discipline flag (659-664), the Heat
+  // Power Engine flag (677-681), the Anti-Gravity Drive block nested inside it (686-692), the
+  // Beam Weapon conversion after it in the same nest (693-699), and the Armorclad block (702-709)
+  // whose Magitek Material Science tail sets Resist Magic. The order is load-bearing three times
+  // over: `training:temporalDrive` and `training:energyCannon` both read the Power Engine flag
+  // off the record and `training:magitekScience` reads the Armorclad one, each the way this
+  // block's `OverlandEndTurn.CAS` entrance spells the same term (F244.3d, F244.3e).
+  'training:militaryDrilling', 'training:powerEngine', 'training:temporalDrive',
+  'training:energyCannon', 'training:armorclad', 'training:magitekScience',
   'training:veterancy',
-  // The artificial strip, then the cast-time permanent writes.
-  'immunities:immunityCurseGating',
   // Beneficial cast-time permanent writes. Rebuild and Spirit Link are one-shot, applied when the
   // spell landed; Spirit Link's +2 Resistance has two entrances too — `OLSpell.CAS!NOTAIRSUPPORT!+6 "SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` and the
   // Mystic Surge random grant at `SpellMysticSurge.CAS~"SETSTAT(TU,SResist,1,(GetStat(TU,SResist,1)+2));"` — and one position for the same
   // reason. Destiny's three are the permanent writes the recalculation re-makes on every pass.
+  // The immunities the card marks, ahead of every phase that tests them. Order within the
+  // phase is this list's own ruling: the two writes touch disjoint fields.
+  'immunities:magicImmunity:marked', 'immunities:missileImmunity:marked',
+  // The five cast writes the roster template cannot state come first, each ahead of the stat
+  // package it admits: `buffs:rebuild` gates on the flag `buffs:rebuild:cast` writes, and
+  // `buffs:discipline:cast` overwrites the `overland` `training:militaryDrilling` left (F244.3d).
+  // `buffs:haste:cast` is the card's Haste mark, which no roster row can carry now that
+  // `training:temporalDrive` has made `haste` a record field (F244.3e).
+  'buffs:rebuild:cast', 'buffs:trueSight:cast', 'buffs:resistMagic:cast',
+  'buffs:discipline:cast', 'buffs:haste:cast', 'buffs:spellLock:cast', 'buffs:bless:cast',
+  // Spirit Link's three permanent writes, in the `SSpiritLink` block's own order: the +2
+  // Resistance, then the `IF BASEFANTASTIC(TU)` pair. The engine evaluates that gate once, so
+  // the third step takes it latched rather than re-reading the record the second one just
+  // cleared; `stats_sequence.js` says so at `buffs:spiritLink:level` (F245).
   'buffs:rebuild', 'buffs:spiritLink',
+  'buffs:spiritLink:fantastic', 'buffs:spiritLink:level',
   'buffs:destiny', 'buffs:destiny:supernatural', 'buffs:destiny:level',
-  // Then the detrimental ones. Rust's material clear and Destiny's writes touch disjoint fields,
-  // so the phase ranks decide this order rather than any source.
+  // Then the detrimental ones. Rust's material clear, the nine curse writes and Destiny's writes
+  // touch disjoint fields, so the phase ranks decide this order rather than any source. A curse
+  // an immunity refuses is never made, rather than made and stripped (F244.3b).
   'debuffs:rust:material',
+  'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
+  'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
+  'debuffs:warpResist:cast', 'debuffs:nausea:cast', 'debuffs:mindStorm:cast',
   'a:baseCopy',
   'a:combatSummoned', 'a:chosen',
   'a:constructCatapult', 'a:callToArmsPaladins', 'a:chaosChannels:fireBreath:race',
   'a:chaosChannels:fireBreath', 'b:spiritLink', 'b:marionetteChanneler', 'b:marionette:stats',
-  'b:marionette:rangedType', 'b:marionette:ascensionRangedType',
+  // The owned branch in `UnitCalcPre.CAS` line order, one entry per engine write (F244.3g):
+  // the realm retype, the fifteen book blocks, then the ascension block — its five
+  // primary-realm arms, with the Chaos arm's projectile retype on that arm's third line
+  // between Armor Piercing and the Life arm, and last its own five book tests.
+  // `b:marionette:ascensionRangedType` sat beside `b:marionette:rangedType` until then, on
+  // the argument that nothing modelled wrote a projectile type between the two; twenty-two
+  // steps do now.
+  'b:marionette:rangedType',
+  'b:marionette:books:forester', 'b:marionette:books:mountaineer', 'b:marionette:books:poisonImmunity',
+  'b:marionette:books:stoningImmunity', 'b:marionette:books:largeShield', 'b:marionette:books:missileImmunity',
+  'b:marionette:books:resistMagic', 'b:marionette:books:firstStrike', 'b:marionette:books:fireImmunity',
+  'b:marionette:books:lightningResist', 'b:marionette:books:healer', 'b:marionette:books:illusionImmunity',
+  'b:marionette:books:lucky', 'b:marionette:books:coldImmunity', 'b:marionette:books:deathImmunity',
+  'b:marionette:books:weaponImmunity', 'b:marionette:ascension:poison', 'b:marionette:ascension:stoningTouch',
+  'b:marionette:ascension:counterImmunity', 'b:marionette:ascension:illusion', 'b:marionette:ascension:wallCrusher',
+  'b:marionette:ascension:armorPiercing', 'b:marionette:ascensionRangedType', 'b:marionette:ascension:exorcise',
+  'b:marionette:ascension:bless', 'b:marionette:ascension:bloodSucker', 'b:marionette:ascension:createUndead',
+  'b:marionette:ascension:regeneration', 'b:marionette:ascension:invisibility', 'b:marionette:ascension:destruction',
+  'b:marionette:ascension:healingAura', 'b:marionette:ascension:lifeSteal',
+  // The strayed branch's own block follows the owned branch's in the file: the package's seven
+  // writes, then the Spell Lock write outside their skip, and only 298 lines later Transmute
+  // Equipment's hero augmentation and Rebuild's, each reading the permanent flag the package set.
+  'b:marionette:strayedPackage', 'b:marionette:spellLock',
   'b:marionette:strayedTransmute', 'b:rebuild', 'b:tactician', 'b:fieryFury:race',
   'b:fieryFury', 'b:insulation', 'b:divineProtection', 'b:natureLink',
   'b:outlanderXenoveterinary', 'b:magitekEngine', 'b:bombsGrenades',
@@ -336,7 +437,8 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   'd:trueSight', 'd:flameBlade', 'd:nightGoblinsNightVision', 'd:rust', 'd:hurricane',
   'd:favoredTerrain', 'd:fortification', 'd:colossalStrength', 'd:vampirism:transfer',
   'd:shadowStrike:thrown',
-  'd:spiritLink', 'd:psychoForce', 'd:pneumaField', 'd:energyCannonThreshold',
+  'd:spiritLink', 'd:energyWeaponry', 'd:psychoForce', 'd:pneumaField',
+  'd:energyCannonThreshold',
   'd:blazeOfGlory', 'd:beatOfSwiftness', 'd:hierophany', 'e:modernClampCommon', 'e:clamp',
   'e:holyBonus', 'e:guidingBeaconAura', 'e:resistanceToAll', 'e:divineBarrierAura',
   'e:soulLinkerAura', 'e:leadershipAura', 'e:mislead', 'e:supremeLight',

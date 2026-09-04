@@ -102,6 +102,36 @@ function expectNoConsoleErrors(errors) {
   expect(errors, 'no console errors or page crashes during the test').toEqual([]);
 }
 
+// Do now, synchronously, the deferred DOM rebuild the page has armed, so it cannot land in the
+// middle of a later locator action.
+//
+// Every `recalculate()` arms a ~250 ms debounced save (`scheduleSaveState`). That save calls
+// `collectState()`, which calls `getDefaultIds` — and on a **cache miss** for the current version
+// that builds the version's defaults by resetting the whole DOM to them and applying the live
+// state back (`Calculator/ui_state.js:790`). The restore re-renders, and `renderBreakdownGrid`
+// opens with `grid.innerHTML = ''` (`Calculator/ui.js:327`), so every node under `#breakdownGrid`
+// resolved before that moment is detached after it. That is the F241 flake: `scrollIntoViewIfNeeded`
+// resolves the selector to a fixed handle and then acts through it, the timer fires in between,
+// and the action reports `Element is not attached to the DOM`. The cache is per version and
+// survives switching away and back, so the miss is once per version per page.
+//
+// Calling `collectState()` here takes that miss inside this awaited evaluate, so the timer that is
+// already armed finds a cache hit and its save is a plain snapshot with no rebuild in it. A
+// visibility wait does not close this — the render is already complete and synchronous, so it
+// passes at once and leaves the same window. `page.waitForFunction(() => _saveTimer === null)`
+// would be causal, but it only works while a save is actually armed and costs the full debounce;
+// taking the miss is unconditional and immediate.
+//
+// Call it after whatever drove the render and before resolving nodes out of the result. Not a
+// no-op: on a miss the reset drops non-persisted UI state — expanded ability groups collapse,
+// in-progress combobox text is replaced, `#breakdownGrid` nodes and any tooltip ownership on them
+// are destroyed. So warm before establishing transient UI state, not after.
+async function warmDefaultStateCache(page) {
+  // `openCalculator` already waits for `collectState`, so its absence is a broken page, not a
+  // condition to skip over (`CLAUDE.md`, *Architecture*: fail loud).
+  await page.evaluate(() => { collectState(); });
+}
+
 // Set an input/select value the way a user would, so the app's input/change
 // listeners fire and state/recalc updates.
 async function setValue(page, id, value) {
@@ -112,10 +142,12 @@ async function setValue(page, id, value) {
     else el.value = value;
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
-    // A first visit to a version builds its default-state cache by temporarily resetting and
-    // restoring the DOM. Do that synchronously here so the delayed save hook cannot race tests.
-    if (id === 'gameVersion' && typeof collectState === 'function') collectState();
   }, [id, value]);
+  // A version change may make a version current whose defaults have not been built yet, which is
+  // the case the debounced save would otherwise take asynchronously.
+  if (id === 'gameVersion') await warmDefaultStateCache(page);
 }
 
-module.exports = { openCalculator, expectNoConsoleErrors, setValue, gameVersions };
+module.exports = {
+  openCalculator, expectNoConsoleErrors, setValue, gameVersions, warmDefaultStateCache,
+};

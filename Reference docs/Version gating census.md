@@ -352,10 +352,29 @@ Three effects gained a cited gate:
 |---|---|---|
 | `COMBAT_VERSION_SCOPES['resolution:blackChannelsEffectDerivation']` | `SCOPE_MOM` | `PROVENANCE[blackChannelsEffectDerivation]`, `unitcalc.c` — bit `0x00000010` is Black Channels in MoM and Animated in CoM 1 |
 | `COMBAT_VERSION_SCOPES['resolution:bloodLustAbilityDerivation']` | `SCOPE_COM_PLUS` | `PROVENANCE[bloodLustAbilityDerivation]`, `unitcalc.c` / `Units.RecalculateUnits.pas` / `UnitCalc.CAS` — bit `0x00000004` is Berserk in MoM |
-| `eyeOfHeaven` reads in `stats.js` and `stats_identity.js` | Warlord | `Script source/Warlord 1.5.12.9/UnitCalcPre.CAS` 1839-1841 sets `EncTrueSight` under `CGEyeOfHeaven`; no `EyeOfHeaven` identifier exists anywhere in the CoM2 1.05.11 base script set |
+| `eyeOfHeaven` reads in `stats.js` and `stats_identity.js` | Warlord | `UnitCalcPre.CAS!ENDOFCOMBAT!+2..+5 ", all friendly units gain True Sight while enemy lose all gaze ability :" "}"` sets `EncTrueSight` under `CGEyeOfHeaven` (the old `1839-1841` was Warlord 1.5.12.7 numbering under a 1.5.12.9 path; the shipped block is 1850-1853, which is why this is an anchor); no `EyeOfHeaven` identifier exists anywhere in the CoM2 1.05.11 base script set |
 
 Eye of Heaven is a derivation-time read, not a resolution-time one, so it takes the inline
 Warlord test its sibling at `stats.js:700` already carries rather than a `resolution:` key.
+
+**That round missed one Eye of Heaven read, and the miss is a shape this census does not enumerate.**
+`stats.js`'s `gazeDisabled` reads the top-level `enemyEyeOfHeaven` input rather than the
+`eyeOfHeaven` ability key, and carries no version test, so it zeroes gaze in all five versions.
+No tool in the repository sets `enemyEyeOfHeaven` at all — `enemyEternalNight` is the only
+top-level enemy input any sweep or check varies — which is why neither
+`hidden_control_leak_sweep.js` nor `tools/unit_checks/hidden_control_gating.js` sees it.
+
+**It is not a derivation-layer-only leak: the matrix reaches it.** The two-card UI is safe, and the
+clearing owner is `applyDisabled` inside `updateTypeVisibility` (`ui_abilities.js:471`, clear at
+`:498`), not `updateAbilityVisibility` (`:614`), which only controls presentation. But matrix rows
+persist separately (`ui_matrix_properties.js:203`); a Warlord-only row is merely hidden on a switch
+to a DOS version (`:313`), not cleared; and `matrixHasActiveEnchantment` (`:272`) reads it with no
+version check, unlike `matrixAppliedEnchantments` (`:250`). `ui_matrix.js:217,302` pass the result
+through as `enemyEyeOfHeaven`. So a DOS matrix run can carry it, which is a live INV-2 violation.
+`enemyEternalNight` (`ui_matrix.js:216,301`) has the same shape and was not checked.
+
+Recorded with the engine evidence in `Caster binary/F258.1 Eye of Heaven gaze zeroing.md`; F258.2
+decides what moves.
 
 **Whether the table should grow a namespace for derivation-time non-step reads was settled by
 F157: no.** The discriminator is not derivation versus resolution but whether an exact version

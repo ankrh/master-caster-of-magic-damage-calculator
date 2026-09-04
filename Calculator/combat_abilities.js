@@ -499,7 +499,8 @@ function distancePenalty(distance, rangedType, longRange, version, isHero) {
 //   rangedOrBreath  Caster.exe's conventional-ranged and two Breath fields, excluding Thrown and
 //                   every gaze field
 //   persistentRanged  `B.ranged > 0`: the permanent record's Ranged field carrying strength,
-//                   tested without regard to what the calculated record holds
+//                   tested without regard to what the calculated record holds — resolved
+//                   against `ctx.base`, the record `a:baseCopy` publishes (F244.3i)
 // and three that name the **DOS shared `.ranged` byte** by the test their own block makes on it.
 // One byte carries conventional ranged, Thrown, Breath and a gaze there, so each of these writes
 // the slot's strength field **and** the record's gaze mirrors of it (`channel.gazeMirrors`) —
@@ -545,7 +546,7 @@ function addToSlot(u, ctx, slot, value, whereStrength) {
   }
   const channels = contextChannels(ctx);
   for (const channel of channels) {
-    if (!slotGateAdmits(u, channel, slot)) continue;
+    if (!slotGateAdmits(u, channel, slot, ctx)) continue;
     if (whereStrength && !whereStrength(u[channel.strengthField])) continue;
     u[channel.strengthField] += value;
     // Only the three shared-byte gates carry the gaze mirrors with them. The modern gates name
@@ -557,15 +558,16 @@ function addToSlot(u, ctx, slot, value, whereStrength) {
 
 // The secondary-strength gates, resolved against the record the sequence is mutating rather than
 // predicted once before the walk (M14). Only `persistentRanged` is not a live read: it is
-// `B.ranged > 0`, a fact of the permanent record, which answers the same at every position and so
-// stays on the slot. `rtb` is the general dead-slot abstraction; the three DOS shared-byte gates
+// `B.ranged > 0`, a fact of the permanent record, which answers the same at every position — so
+// the slot carries a predicate over the run context and reads `ctx.base` through it, exactly as
+// the `melee` gate does (F244.3i). `rtb` is the general dead-slot abstraction; the three DOS shared-byte gates
 // below transcribe one block's own test instead, which is what a gaze record needs because its
 // presence is a type fact and its strength may be empty. A slot with no gates at all — a caller that supplied none — admits every
 // write, which is the shape the DOS-shaped fallback channel above relies on.
-function slotGateAdmits(u, channel, gate) {
+function slotGateAdmits(u, channel, gate, ctx) {
   if (gate === 'rangedField') return isRangedFieldSlot(u, channel);
   if (!channel || !channel.slots) return true;
-  if (gate === 'persistentRanged') return !!channel.slots.persistentRanged;
+  if (gate === 'persistentRanged') return !!channel.slots.persistentRanged(ctx);
   if (gate === 'rtb') return isLiveSlot(u, channel);
   if (gate === 'ranged') return isLiveSlot(u, channel) && u[channel.rangedTypeField] !== 'none';
   // The dead-slot rule's one source-backed exception: neither `Dec(U.ranged, 5)` nor
@@ -694,10 +696,13 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // as functions of the running record, so each is answered where its own block stands (F163).
   const misleadEligibleAt = identityPredicates.misleadEligible || (() => true);
   const survivalInstinctEligibleAt = identityPredicates.survivalInstinctEligible || (() => true);
-  // The Outlander reform block's eligibility record (`applyOutlanderReformGrants`,
-  // `stats_identity.js`). Battle Armor and Magitek Engine are two of the six states the
+  // The Outlander reform block's eligibility record (`deriveOutlanderReformRecord`,
+  // `stats_identity.js`). Battle Armor and Magitek Engine are two of the nine states the
   // calculator used to carry as ability labels with no engine flag behind them, so each is the
-  // gate of the step below rather than a key on the unit's ability map (F198).
+  // gate of the step below rather than a key on the unit's ability map (F198, F244.3e). The
+  // record also carries the `when` of the five permanent writes F244.3d and F244.3e positioned —
+  // `armorclad`, `powerEngine`, `magitekScience`, `militaryDrilling` and `temporalEngineering` —
+  // and the research states read outside that function.
   const outlanderReform = identityPredicates.outlanderReform || {};
 
   // Holy Bonus: +X to melee attack, defense, resistance.
@@ -954,7 +959,8 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // The engine applies all four writes atomically in region e after the terminal clamps. Its
   // ranged write is gated on `if B.ranged > 0` (Units.RecalculateUnits.pas:2599) — the
   // permanent record's Ranged field carrying strength, with no type test — which is the
-  // `ctx.slots.persistentRanged` gate, so Thrown and Breath are unaffected.
+  // `ctx.slots.persistentRanged` gate, read off `ctx.base` at this step's own rank, so Thrown
+  // and Breath are unaffected.
   if (hasAbil(abilities, 'mislead')) {
     // PROVENANCE[mislead]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:15:bc3d65175e46c59dd1bcbd1f
     abilityStep('mislead', 'e', { writes: ['atk', 'def', 'res', ...attackWrites],
@@ -1127,9 +1133,9 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // -5 defense, -5 resistance. CoM2/Warlord: -3 melee, -5 conventional ranged and
   // Thrown only, -5 defense, -5 resistance; both Breath fields and all gazes are separate.
   // Phase c: UnitCalcPre.CAS!NOCHAOSEMBRACE!+26..+28 "IF GETCOMBATENCHANTMENTFLAG(U,EncMindStorm,0) THEN {" "}" only mirrors the combat flag to overland.
-  // Mind Storm is one of the ten curse flags `immunities:immunityCurseGating` can clear, so emission
-  // reads the ability set — a superset — and the flag on the record at this step's own position
-  // is the gate (`SPEC.md`, *Version scope*; F199).
+  // Mind Storm is one of the nine curse flags an immunity can refuse at `debuffs:mindStorm:cast`,
+  // so emission reads the ability set — a superset — and the flag on the record at this step's own
+  // position is the gate (`SPEC.md`, *Version scope*; F199, F244.3b).
   if (hasAbil(abilities, 'mindStorm')) {
     // PROVENANCE[mindStorm]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/unitcalc.c@span:21:5aef6d0a81b854a2f8a97a63 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:12:b93fe4b2bed30f6662144a8f
     const mindStormMelee = version && version.startsWith('com') ? -3 : -5;
@@ -1273,12 +1279,113 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // THEN { GOTO "NOTARMORCLAD"; }` (`OverlandEndTurn.CAS!NOTENGINEADDED!+3 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)>0) THEN { GOTO"`) — so the +6 lands once however the unit got there, which
   // is why one step at one position states both (F203). The block's third site, Xenoveterinary's
   // Fantastic route at `OverlandEndTurn.CAS!NOPNEUMA!+6..+8 "IF (SPELLSTATE(W,STArmorClad)=2) THEN {" "SETSTAT(U,SDefense,1,(GetStat(U,SDefense,1)+6));"`, is not modelled and its control says so.
-  // The Outlander reform block
-  // grants the flag, so it is a record field read here rather than a pre-sequence constant (F202).
+  // Both cited spans carry `SETENCHANTMENTFLAG(U,EncArmorClad,…)` on the line above the +6, so the
+  // flag and the Defense write are one block and this step makes both (F244.3d). Until then the
+  // flag was merged into the ability map by the reform derivation and read back here, which
+  // is the pre-sequence hoist F244 retires: the reform block's own gate is the step's `when` now,
+  // and the record carries the flag from this position onward — which is what lets
+  // `training:magitekScience` below read it the way `OverlandEndTurn.CAS` does.
   if (isWarlord) {
     // PROVENANCE[armorclad]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:4:f33e8912a11fbfe562941d50 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:7:37971f89b0a249ec2951a825
-    abilityStep('armorclad', 'training', { writes: ['def'],
-      when: u => !!u.armorclad, apply: u => { u.def += 6; } });
+    abilityStep('armorclad', 'training', { writes: ['armorclad', 'def'],
+      when: () => !!outlanderReform.armorclad,
+      apply: u => { u.armorclad = true; u.def += 6; } });
+  }
+
+  // The Outlander reform's other four permanent writes — `training:militaryDrilling`,
+  // `training:powerEngine`, `training:temporalDrive` and `training:magitekScience`, each named for
+  // the research state that makes it — are each their own `training` step at the
+  // `CreateUnit.CAS` position its block takes (F244.3d, F244.3e). All four used to be merged into
+  // the ability map before the sequence; F202 left them there on the rule that a permanent write
+  // carrying no stat delta earns no step, and F244 overturned that half of the rule — every
+  // modification of the record is a positioned write, delta or not.
+  //
+  // Each has two entrances, creation and the overland upgrade pass, and takes the creation
+  // position for the reason `training:armorclad` does: the upgrade site is guarded on the marker
+  // creation left, so the write lands once however the unit got there, and this chain is
+  // `CreateUnit.CAS`'s order.
+  //
+  // The gates come from `outlanderReform` rather than the record because the record cannot answer
+  // them at this phase — `deriveOutlanderReformRecord` states why beside the `reform` fields. Two
+  // exceptions *are* record reads, and both are the same shape: Resist Magic's Armorclad term,
+  // which the overland route spells `IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)=0) THEN { GOTO
+  // "NOMAGITEKSCI"; }`, and the Anti-Gravity Drive's Power Engine term, spelled
+  // `IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0)`. In each case the creation route nests the
+  // write inside the block that has just set the flag, so the two routes agree.
+  if (isWarlord) {
+    // Discipline. Neither cited line carries a stat delta; what the flag then does is
+    // `c:discipline`, which reads it off the record at region `c`. The value is the calculator's
+    // overland/combat distinction, which the engine's single `EncDiscipline` flag does not carry:
+    // the training grant is the overland one, and a Discipline cast in combat overwrites it at
+    // `buffs:discipline:cast` (`permanentCastFlagSteps`, `stats_identity.js`).
+    // PROVENANCE[militaryDrilling]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:6:3d4acfcb7c86c692f4f2e3bf | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:8:c9863144b34f17c601e6caea
+    abilityStep('militaryDrilling', 'training', {
+      sourceId: 'militaryDrilling', sourceLabel: 'Military Drilling',
+      writes: ['discipline'],
+      // The block's `BASEFANTASTIC(U)` test, read off the record at this rank rather than off
+      // the projection the permanent phases leave; `deriveOutlanderReformRecord` states which
+      // history that represents and that the source does not settle it (F245).
+      when: u => !!outlanderReform.militaryDrilling && !u.fantastic,
+      apply: u => { u.discipline = 'overland'; } });
+    // Power Engine. The four movement writes beside it are outside the calculator's record
+    // (F139), so the flag is this step's only field; `training:energyCannon` and
+    // `d:energyCannonThreshold` are what read it, at their own positions.
+    // PROVENANCE[powerEngine]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:5:f7cf1f9b8f6d91366b0c9152 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:11:05ef1a8abac620396bab0309
+    abilityStep('powerEngine', 'training', {
+      sourceId: 'heatPowerEngine', sourceLabel: 'Heat Power Engine',
+      writes: ['powerEngine'],
+      when: () => !!outlanderReform.powerEngine,
+      apply: u => { u.powerEngine = true; } });
+    // The Anti-Gravity Drive. One block, three permanent writes and one internal branch:
+    // `SETENCHANTMENTFLAG(U,EncHaste,ABase,1)` unconditionally, then `SETSTAT(U,AFlying,1,1)` and
+    // `SETSTAT(U,AIllusionImmunity,1,1)` for a Sailing unit. Selector `ABase`/`1` throughout — the
+    // permanent record — so the whole block is one `training` write, and the movement stats the
+    // enclosing Power Engine block writes beside it are outside the calculator's record (F139).
+    // It sits between `training:powerEngine` and `training:energyCannon` because that is where
+    // `CreateUnit.CAS` puts it: nested inside the Heat Power Engine block, ahead of the Beam
+    // Weapon conversion in the same nest.
+    //
+    // Until F244.3e all three were merged into the ability map before the sequence, on the F202
+    // rule that a permanent write carrying no stat delta earns no step — the last of F209's four
+    // rulings standing on that criterion, and F244 overturned it. `flying` in particular is read
+    // at a rank: `b:bombsGrenades`'s qualification gate, `GETSTAT(U,AFlying,1)`, takes it off the
+    // record now instead of off the pre-sequence map (`stats.js`).
+    //
+    // The Power Engine term is a record read for the reason `training:magitekScience`'s Armorclad
+    // term is: the overland entrance spells it `IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0)`,
+    // and the creation entrance nests this block inside the one that has just set the flag. So
+    // the two routes agree and the step reads `u.powerEngine`, written one rank earlier.
+    //
+    // The block has **four** entrances, not two: the summon handlers repeat it verbatim on a newly
+    // created unit at `OLSpell.CAS!NOHQ!+2..+9 "IF (SPELLSTATE(W,STMagitekAntiGravityDrive)<>2) THEN { GOTO" "}"` and
+    // `COSpell.CAS!NOHQ!+2..+9 "IF (SPELLSTATE(W,STMagitekAntiGravityDrive)<>2) THEN { GOTO" "}"`, each with the same
+    // `GETENCHANTMENTFLAG(U,EncPowerEngine,1)` guard. All four write the permanent record and all
+    // four are idempotent, so one step at the creation position stands for the set — the same
+    // argument `training:armorclad` makes for its two (F203).
+    // `sailing` stays a map read: `GETSTAT(U,ASailing,1)` is the permanent record and no write in
+    // the corpus reaches it, so it is a template fact with no rank of its own.
+    // PROVENANCE[temporalDrive]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:7:d663db11faa7be37301ed7ca | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:9:66829b6647911d55d4180bdf
+    abilityStep('temporalDrive', 'training', {
+      sourceId: 'temporalEngineering', sourceLabel: 'Temporal Engineering',
+      writes: ['haste', 'flying', 'illusionImmunity'],
+      when: u => !!outlanderReform.temporalEngineering && !!u.powerEngine,
+      apply: u => {
+        u.haste = true;
+        if (hasAbil(abilities, 'sailing')) {
+          u.flying = true;
+          u.illusionImmunity = true;
+        }
+      } });
+    // Resist Magic. Despite both prose sources naming Battle Armor, the executing scripts grant it
+    // only alongside the permanent `EncArmorClad` flag; the transient +3 Battle Armor branch has
+    // no such grant. What the flag then does is `effectiveResistance:resistMagic`
+    // (`combat_effects.js`), which owns the spans that prove the +5 — this anchor cites the write.
+    // PROVENANCE[magitekScience]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:6:92b7f4c9ec5d4507e1e257f5 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:8:2d405357fc65484ca287929b
+    abilityStep('magitekScience', 'training', {
+      sourceId: 'magitekScience', sourceLabel: 'Magitek Material Science',
+      writes: ['resistMagic'],
+      when: u => !!outlanderReform.magitekScience && !!u.armorclad,
+      apply: u => { u.resistMagic = true; } });
   }
 
   // Battle Armor is the in-combat regular non-mechanical branch of the

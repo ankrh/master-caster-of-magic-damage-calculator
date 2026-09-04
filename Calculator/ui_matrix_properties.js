@@ -244,44 +244,49 @@ function matrixGlobalValue(key) {
   return row.value;
 }
 
+// The one place a matrix enchantment row becomes a derivation value. Both readers below go
+// through it, so they cannot disagree about whether a row is active.
+//
+// The version filter has to live here rather than in the stored state. Switching version hides a
+// row but never clears `matrixPropertyState`, so a row enabled under one version survives into
+// the next and stays readable. The card needs no such filter because `applyDisabled` clears
+// version-hidden controls, and a cleared checkbox reads unchecked; the matrix has no equivalent
+// cleaning step, and inheriting the card's assumption without its cleaning is how a Warlord-only
+// `enemyEyeOfHeaven` reached DOS matrix runs against INV-2 (F258.1).
+//
+// `abilityValueIsActive` is the card's own predicate, so routing through it also makes the two
+// views agree on what "active" means rather than restating it a third time.
+function matrixEnchantmentValue(prefix, abil, version) {
+  if (!subgroupAllowedForVersion(abil.subgroup, version)) return undefined;
+  const row = matrixPropertyRow(prefix, abil.uiKey);
+  if (!row || !row.enabled) return undefined;
+  if (!abilityValueIsActive(abil, row.value)) return undefined;
+  return abil.type === 'bool' ? true : row.value;
+}
+
 // Build the same shape as activeNonInnateUnitEnchantments, but driven by matrix state.
 function matrixAppliedEnchantments(prefix) {
   const result = {};
   const version = document.getElementById('gameVersion').value;
   for (const abil of abilityUiDefs()) {
     if (abil.source !== 'enchantment') continue;
-    if (!subgroupAllowedForVersion(abil.subgroup, version)) continue;
-    const row = matrixPropertyRow(prefix, abil.uiKey);
-    const calcKey = abil.calcKey || abil.key;
-    if (!row || !row.enabled) continue;
-    if (abil.type === 'bool' && row.value) {
-      result[calcKey] = true;
-    } else if (abil.type === 'select') {
-      const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
-      if (row.value !== defaultValue) result[calcKey] = row.value;
-    } else if (abil.type === 'numcheck' && row.value != null) {
-      result[calcKey] = row.value;
-    } else if (abil.type === 'num' && row.value !== 0) {
-      result[calcKey] = row.value;
-    }
+    const value = matrixEnchantmentValue(prefix, abil, version);
+    if (value === undefined) continue;
+    result[abil.calcKey || abil.key] = value;
   }
   return result;
 }
 
 // True if the matrix state has the named enchantment row active for the given side.
+//
+// `enchKey` is the enchantment's own `key`, deliberately not its `calcKey`: nine calcKeys have
+// more than one contributing def, so answering through the map above would report a sibling's row
+// (asking for `teleporting` would answer for Planewalking). The two callers name one row each.
 function matrixHasActiveEnchantment(prefix, enchKey) {
-  // enchKey here is the enchantment's `key` (not uiKey).
   const abil = abilityUiDefs().find(a => a.source === 'enchantment' && a.key === enchKey);
   if (!abil) return false;
-  const row = matrixPropertyRow(prefix, abil.uiKey);
-  if (!row || !row.enabled) return false;
-  if (abil.type === 'bool') return !!row.value;
-  if (abil.type === 'select') {
-    const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
-    return row.value !== defaultValue;
-  }
-  if (abil.type === 'numcheck') return row.value != null;
-  return (row.value || 0) !== 0;
+  const version = document.getElementById('gameVersion').value;
+  return matrixEnchantmentValue(prefix, abil, version) !== undefined;
 }
 
 function ensureRequiredMatrixRows(box) {

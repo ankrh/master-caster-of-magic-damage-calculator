@@ -22,8 +22,9 @@ const HALT = Object.freeze({ halt: true });
 //   template   the record as the unit template ships it, plus the construction patches
 //   training   written once, when the city built the unit  (CreateUnit.CAS)
 //   immunities the immunities the card marks, in the permanent record before anything tests
-//              them. Today its one entry is the artificial strip that follows from them:
-//              curses an immunity would have refused never landed
+//              them. Its entries are the marked immunities whose calc key more than one control
+//              can set; a curse an immunity would have refused is declined at its own `debuffs`
+//              write rather than stripped here
 //   buffs      each beneficial enchantment or condition the card marks, written where the
 //              engine's own eligibility test admits it (OLSpell.CAS and the other grant sites),
 //              and the permanent writes a recalculation re-makes on every pass
@@ -136,9 +137,16 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'training:artificer': SCOPE_WARLORD,
   'training:dragonMound': SCOPE_WARLORD,
   'training:energyCannon': SCOPE_WARLORD,
+  'training:lavaSmelter:weaponImmunity': SCOPE_WARLORD,
+  'training:lavaSmelter:missileImmunity': SCOPE_WARLORD,
+  'training:lavaSmelter:resistElementsAlias': SCOPE_WARLORD,
+  'training:lavaSmelter:elementalProtection': SCOPE_WARLORD,
+  'training:lavaSmelter:flameBlade': SCOPE_WARLORD,
   'training:lightningBlade:breath': SCOPE_WARLORD,
   'training:ludusAgoge': SCOPE_WARLORD,
+  'training:magitekScience': SCOPE_WARLORD,
   'training:malnourished': SCOPE_WARLORD,
+  'training:militaryDrilling': SCOPE_WARLORD,
   'training:militaryWorkshop': SCOPE_WARLORD,
   'training:motherFungus': SCOPE_WARLORD,
   'training:naturalSelection:coal': SCOPE_WARLORD,
@@ -147,19 +155,51 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'training:naturalSelection:powerMinerals': SCOPE_WARLORD,
   'training:naturalSelection:wildGame': SCOPE_WARLORD,
   'training:pillarOfFaith': SCOPE_WARLORD,
+  'training:powerEngine': SCOPE_WARLORD,
   'training:poolOfRepentance': SCOPE_WARLORD,
   'training:sanctaBasilica': SCOPE_WARLORD,
   'training:survivalInstinctToBlock': SCOPE_WARLORD,
-  // --- immunities: the artificial strip the marked immunities imply ---
-  'immunities:immunityCurseGating': SCOPE_ALL,
+  'training:temporalDrive': SCOPE_WARLORD,
+  // --- immunities: the immunities the card marks, written before anything tests them. The two
+  // keys here are the ones more than one control can set, so the record is the only place their
+  // combined value can stand at a rank; every other marked immunity has a single control and rides
+  // the template seed. The artificial curse strip that used to be this phase's one entry is gone:
+  // a curse is refused at its own `debuffs` write now (F244.3b).
+  'immunities:magicImmunity:marked': SCOPE_ALL,
+  'immunities:missileImmunity:marked': SCOPE_ALL,
   // --- buffs: beneficial permanent writes made when the spell landed, and the per-pass ones ---
   'buffs:destiny': SCOPE_MODERN,
   'buffs:destiny:supernatural': SCOPE_MODERN,
   'buffs:destiny:level': SCOPE_MODERN,
   'buffs:rebuild': SCOPE_WARLORD,
+  // The cast's own write, ahead of the stat package it admits. These five are the
+  // `buffs`-origin record keys with no `template` row, so the seed cannot carry them
+  // (`permanentCastFlagSteps`, `stats_identity.js`). `discipline` carries a value rather than
+  // a flag and is scoped to the two builds whose control offers it.
+  'buffs:discipline:cast': SCOPE_MODERN,
+  'buffs:haste:cast': SCOPE_ALL,
+  'buffs:rebuild:cast': SCOPE_WARLORD,
+  'buffs:spellLock:cast': SCOPE_COM_PLUS,
+  'buffs:bless:cast': SCOPE_ALL,
+  'buffs:resistMagic:cast': SCOPE_ALL,
+  'buffs:trueSight:cast': SCOPE_ALL,
   'buffs:spiritLink': SCOPE_WARLORD,
+  'buffs:spiritLink:fantastic': SCOPE_WARLORD,
+  'buffs:spiritLink:level': SCOPE_WARLORD,
   // --- debuffs: the same for curses and detrimental conditions ---
   'debuffs:rust:material': SCOPE_WARLORD,
+  // The nine curse flags an immunity can refuse, each the cast's own permanent write, gated on the
+  // immunities standing on the record at this phase (`curseCastSteps`, `stats_identity.js`).
+  // `nausea` is Warlord's alone: it is a `UnitCalcPre.CAS` effect with no spell record.
+  'debuffs:blackSleep:cast': SCOPE_ALL,
+  'debuffs:mindStorm:cast': SCOPE_ALL,
+  'debuffs:nausea:cast': SCOPE_WARLORD,
+  'debuffs:shatter:cast': SCOPE_ALL,
+  'debuffs:vertigo:cast': SCOPE_ALL,
+  'debuffs:warpAttack:cast': SCOPE_ALL,
+  'debuffs:warpDefense:cast': SCOPE_ALL,
+  'debuffs:warpResist:cast': SCOPE_ALL,
+  'debuffs:weakness:cast': SCOPE_ALL,
   // --- a: precalc, in the binary ---
   // The head of the region in every engine: the copy that seeds the calculated record from the
   // permanent one. It is a boundary step, so it writes nothing and publishes `ctx.base`.
@@ -196,8 +236,41 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'b:luckyStar': SCOPE_WARLORD,
   'b:magitekEngine': SCOPE_WARLORD,
   'b:marionette:ascensionRangedType': SCOPE_WARLORD,
+  'b:marionette:ascension:armorPiercing': SCOPE_WARLORD,
+  'b:marionette:ascension:bless': SCOPE_WARLORD,
+  'b:marionette:ascension:bloodSucker': SCOPE_WARLORD,
+  'b:marionette:ascension:counterImmunity': SCOPE_WARLORD,
+  'b:marionette:ascension:createUndead': SCOPE_WARLORD,
+  'b:marionette:ascension:destruction': SCOPE_WARLORD,
+  'b:marionette:ascension:exorcise': SCOPE_WARLORD,
+  'b:marionette:ascension:healingAura': SCOPE_WARLORD,
+  'b:marionette:ascension:illusion': SCOPE_WARLORD,
+  'b:marionette:ascension:invisibility': SCOPE_WARLORD,
+  'b:marionette:ascension:lifeSteal': SCOPE_WARLORD,
+  'b:marionette:ascension:poison': SCOPE_WARLORD,
+  'b:marionette:ascension:regeneration': SCOPE_WARLORD,
+  'b:marionette:ascension:stoningTouch': SCOPE_WARLORD,
+  'b:marionette:ascension:wallCrusher': SCOPE_WARLORD,
+  'b:marionette:books:coldImmunity': SCOPE_WARLORD,
+  'b:marionette:books:deathImmunity': SCOPE_WARLORD,
+  'b:marionette:books:fireImmunity': SCOPE_WARLORD,
+  'b:marionette:books:firstStrike': SCOPE_WARLORD,
+  'b:marionette:books:forester': SCOPE_WARLORD,
+  'b:marionette:books:healer': SCOPE_WARLORD,
+  'b:marionette:books:illusionImmunity': SCOPE_WARLORD,
+  'b:marionette:books:largeShield': SCOPE_WARLORD,
+  'b:marionette:books:lightningResist': SCOPE_WARLORD,
+  'b:marionette:books:lucky': SCOPE_WARLORD,
+  'b:marionette:books:missileImmunity': SCOPE_WARLORD,
+  'b:marionette:books:mountaineer': SCOPE_WARLORD,
+  'b:marionette:books:poisonImmunity': SCOPE_WARLORD,
+  'b:marionette:books:resistMagic': SCOPE_WARLORD,
+  'b:marionette:books:stoningImmunity': SCOPE_WARLORD,
+  'b:marionette:books:weaponImmunity': SCOPE_WARLORD,
   'b:marionette:rangedType': SCOPE_WARLORD,
   'b:marionette:stats': SCOPE_WARLORD,
+  'b:marionette:spellLock': SCOPE_WARLORD,
+  'b:marionette:strayedPackage': SCOPE_WARLORD,
   'b:marionette:strayedTransmute': SCOPE_WARLORD,
   'b:natureLink': SCOPE_WARLORD,
   'b:sanctify': SCOPE_WARLORD,
@@ -320,6 +393,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'd:spiritLink': SCOPE_WARLORD,
   'd:mechanicalExpert': SCOPE_WARLORD,
   'd:nightGoblinsNightVision': SCOPE_WARLORD,
+  'd:energyWeaponry': SCOPE_WARLORD,
   'd:pneumaField': SCOPE_WARLORD,
   'd:psychoForce': SCOPE_WARLORD,
   'd:rust': SCOPE_WARLORD,

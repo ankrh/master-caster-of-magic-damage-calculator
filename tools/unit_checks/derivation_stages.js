@@ -66,12 +66,10 @@ function runDerivationStageChecks(ctx) {
     return step ? step.phase : null;
   };
 
-  assertEqual(phaseOf({ lucky: true, luckyPhaseA: true }, 'lucky'), 'c',
+  assertEqual(phaseOf({ lucky: true }, 'lucky'), 'c',
     'Intrinsic Lucky is applied in region c, where +0x044C7 puts it');
-  assertEqual(phaseOf({ lucky: true, luckyPhaseBase: true, luckyPhaseA: true }, 'lucky'), 'c',
+  assertEqual(phaseOf({ lucky: true, luckyPhaseBase: true }, 'lucky'), 'c',
     'Creation-time Lucky establishes the flag before its compiled region-c stat write');
-  assertEqual(phaseOf({ lucky: true, luckyPhaseB: true }, 'lucky'), 'c',
-    'Lucky Star / Divine Protection establish the flag before the compiled region-c stat write');
 
   // The four magnitudes are proved by damage instead — `artificerMechanical*Warlord`, whose
   // resistance case is written against the script's +2.
@@ -203,6 +201,72 @@ function runDerivationStageChecks(ctx) {
   assertEqual(phaseOf({ spiritLink: true }, 'spiritLink'), 'buffs',
     'Spirit Link writes +2 Resistance permanently to ABase when cast');
 
+  // F245: the cast's three permanent writes. `buffs:spiritLink:fantastic` clears the Fantastic
+  // flag ahead of `a:baseCopy`, so it is off the record every later gate reads;
+  // `buffs:spiritLink:level` puts the base level back to Recruit behind it. Asserted through
+  // derived outputs at four production call sites rather than by reading the record: the loadout
+  // gate (`loadoutEligible` -> `training:weaponQuality` -> `c:weapon`), the level ladder
+  // (`training:veterancy` overwritten at `buffs:spiritLink:level`, with `c:level:fantastic` no
+  // longer firing), Bad Moon's `!permanentFantastic` arm, and the reform's `NOTSAPIENS` gate.
+  // Mutation-tested: reverting any one of those consumers to the template flag
+  // (`!isFantasticBase`) fails exactly one assertion below, and reverting `permanentFantastic`
+  // or ranking `buffs:spiritLink:fantastic` behind `buffs:destiny` trips the base-record
+  // assertion in `deriveUnitStats` instead. Restoring the retired `spiritLinkLevelWidening` term
+  // does **not** fail, and that is the retirement being complete rather than a gap here: its
+  // training occurrence was already vacuous (Warlord satisfies `isCoM2`) and its
+  // `c:level:fantastic` occurrence is now a no-op, `ctx.base.fantastic` being false wherever it
+  // would have fired.
+  const linkedCard = over => baseUnitInput({
+    version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature', atk: 4, def: 4, res: 6,
+    rtb: 0, rtbType: 'none', modernAttacks: {}, level: 'elite', ...over });
+  const linkedEquipped = ctx.deriveUnitStats(linkedCard({
+    weapon: 'adamantium', abilities: { spiritLink: true } }));
+  const unlinkedEquipped = ctx.deriveUnitStats(linkedCard({
+    weapon: 'adamantium', abilities: {} }));
+  assertEqual(unlinkedEquipped.weapon, 'normal',
+    'a base-Fantastic Warlord unit is unequipped: the loadout gate discards the stated material');
+  assertEqual(linkedEquipped.weapon, 'adamantium',
+    'Spirit Link clears the permanent Fantastic flag, so the stated material reaches the record');
+  assertEqual(unlinkedEquipped.lvl.atk, 0,
+    'and c:level:fantastic zeroes the stated level for the unlinked one');
+  assertEqual(linkedEquipped.lvl.atk, 0,
+    'while the Spirit-Linked one is put back to Recruit by the cast itself, at buffs rather than c');
+  assert(linkedEquipped.statTrace.some(e => e.id === 'spiritLink:level'),
+    'and buffs:spiritLink:level is the step that did it');
+  assert(!linkedEquipped.statTrace.some(e => e.id === 'level:fantastic'),
+    'while c:level:fantastic no longer fires, its gate reading the cleared base record');
+  const linkedBadMoon = ctx.deriveUnitStats(linkedCard({
+    level: 'normal', abilities: { spiritLink: true, badMoon: true } }));
+  const unlinkedBadMoon = ctx.deriveUnitStats(linkedCard({
+    level: 'normal', abilities: { badMoon: true } }));
+  assertEqual(unlinkedBadMoon.res, 6,
+    "Bad Moon's permanent-record arm refuses a base-Fantastic unit");
+  assertEqual(linkedBadMoon.res, 5,
+    'and admits the same unit once Spirit Link has cleared that flag');
+  // Destiny's `B.Fantastic := True` is a write the recalculation re-makes on every pass and it is
+  // ranked after the clear, so it wins on the flag.
+  const linkedDestiny = ctx.deriveUnitStats(linkedCard({
+    weapon: 'adamantium', abilities: { spiritLink: true, destiny: true } }));
+  assertEqual(linkedDestiny.weapon, 'normal',
+    'Destiny re-asserts the permanent Fantastic flag after the Spirit Link clear');
+  // But `SMultiLabel := 14` is not re-asserted away with it, so the reform's `NOTSAPIENS` gate
+  // still admits the unit. Read through the three Sapiens-gated reform states rather than off
+  // the record: without Spirit Link the same Destiny card needs the `sapiens` control.
+  const reformCard = over => baseUnitInput({
+    version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature', atk: 4, def: 4, res: 6,
+    rtb: 6, rtbType: 'missile',
+    modernAttacks: { ranged: { strength: 6, type: 'missile' } }, ...over });
+  const REFORM = { outlanderWizard: true, ballisticsTraining: true, xenopsychology: true,
+    radio: true };
+  const reformDestinyLinked = ctx.deriveUnitStats(reformCard({
+    abilities: { ...REFORM, spiritLink: true, destiny: true } }));
+  const reformDestinyPlain = ctx.deriveUnitStats(reformCard({
+    abilities: { ...REFORM, destiny: true } }));
+  assertEqual(reformDestinyPlain.toHitRtb, 0.3,
+    'a permanently Fantastic Outlander unit is outside the Sapiens tail');
+  assertEqual(reformDestinyLinked.toHitRtb, 0.5,
+    "but Spirit Link's SMultiLabel 14 label survives Destiny's Fantastic write and admits it");
+
   // Which fields modern Animated and Black Prayer reach is proved by the four channel strengths
   // and the untouched Doom Gaze in `runDeriveUnitStatsChecks`.
 
@@ -239,13 +303,16 @@ function runDerivationStageChecks(ctx) {
     'Every emitted step carries a known phase');
   // Emission is in source order, which is *not* phase order — Artificer is `training` and comes
   // near the end. Partitioning by phase is therefore the caller's job, not something to be
-  // assumed. `lucky`, `armorclad` and `rebuild` appear without being asked for: each reads a
-  // grantable flag off the record at its own position, so emission is a superset and the `when`
-  // is the gate (F202).
+  // assumed. `lucky` and `rebuild` appear without being asked for because each reads a grantable
+  // flag off the record at its own position, and the five Outlander reform writes appear because
+  // their `when` reads the reform record this harness does not supply — so emission is a superset
+  // and the `when` is the gate (F202, F244.3d, F244.3e).
   assertEqual(mixed.map(step => step.id).join(','),
-    'holyBonus,lucky,prayer,rust,favoredTerrain,armorclad,artificer,rebuild',
+    'holyBonus,lucky,prayer,rust,favoredTerrain,armorclad,militaryDrilling,powerEngine,'
+    + 'temporalDrive,magitekScience,artificer,rebuild',
     'Steps are emitted in source order, which the caller partitions by phase');
-  assertEqual(mixed.map(step => step.phase).join(','), 'e,c,c,d,d,training,training,buffs',
+  assertEqual(mixed.map(step => step.phase).join(','),
+    'e,c,c,d,d,training,training,training,training,training,training,buffs',
     'Emission order is not phase order');
 }
 

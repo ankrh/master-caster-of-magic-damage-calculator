@@ -45,13 +45,27 @@ function baseStatSteps(ctx) {
     naturalSelectionNightshadeCount, naturalSelectionPowerMinerals,
     naturalSelectionPowerMineralsCount, pillarOfFaith, pillarOfFaithCount, poolOfRepentance,
     rangedTypeFields, recordContext, sanctaBasilica, secondaryHitFields, strengthFields,
-    survivalInstinctToBlkBonus, thrownTypeFields, version, finishedImmunities,
+    survivalInstinctToBlkBonus, thrownTypeFields, version, markedAbilities, cardAbilities,
+    eyeOfHeavenActive,
+    baseUnitType,
   } = ctx;
   return [
-    // The head of every chain, and the one step no engine makes: the curse flags an immunity
-    // blocks are cleared before anything reads them. Its citation and the reason it may read the
-    // finished immunity set are at `immunityCurseGatingStep` (`stats_identity.js`).
-    immunityCurseGatingStep(version, finishedImmunities),
+    // The beneficial cast writes the roster template cannot state — two in the DOS builds, three
+    // in base CoM2, four in Warlord — then the nine curse writes.
+    // A curse is refused where the record already carries the immunity that blocks it, so an
+    // immune unit never receives the flag rather than receiving it and having it stripped
+    // (`curseCastSteps`, `stats_identity.js`; the user's ruling of 2026-09-02, F244.3b).
+    // The cast steps read `cardAbilities`, the map before any transform ran, and every other
+    // group here reads `markedAbilities`, the map after them. That is deliberate: only a cast
+    // step claims a *cast* made the write, and the Marionette book package grants two of the
+    // keys it writes (F244.3d review, finding 1).
+    // The immunities the card marks, before anything tests them (`CLAUDE.md`, the phase table).
+    // The five Lava Smelter mineral-pair grants, at the `CreateUnit.CAS` position their block
+    // takes among the training writes (`lavaSmelterGrantSteps`, `stats_identity.js`, F244.3c).
+    ...lavaSmelterGrantSteps(baseUnitType, markedAbilities),
+    ...markedImmunitySteps(markedAbilities),
+    ...permanentCastFlagSteps(version, cardAbilities),
+    ...curseCastSteps(version, markedAbilities, eyeOfHeavenActive),
     // Destiny's third permanent write, beside the `B.race` / `B.Fantastic` pair `buffs:destiny`
     // makes — one block, $0059A35E..$0059A633, whose permanent half runs in executable order.
     // It is a separate id because the identity conversion must keep writing `race` and
@@ -221,6 +235,35 @@ function baseStatSteps(ctx) {
     statStep({ id: 'destiny:level', sourceId: 'destiny', sourceLabel: 'Destiny',
       phase: 'buffs', writes: ['level'],
       when: () => destinyActiveForUnit(abilities, version),
+      apply: u => { u.level = 'normal'; } }),
+    // Spirit Link's third permanent write, `SETSTAT(TU,ALevel,1,1)` — record selector 1,
+    // `ABase` (`MASTER.CAS~"ABase=1"`) — beside the `AFantastic := 0` that
+    // `buffs:spiritLink:fantastic` (`stats_identity.js`) makes and the +2 Resistance that
+    // `buffs:spiritLink` (`combat_abilities.js`) makes. Split from the identity conversion for
+    // the reason `buffs:destiny:level` is: that conversion must keep writing `race` and
+    // `fantastic` and nothing else, which is what makes `targetingIdentity` exact.
+    //
+    // It is a state write, not an initialisation of a field the control already states. Writing
+    // the base level "also sets experience to the amount required for that level"
+    // (`MASTER.CAS~"ALevel=26;"`), so the cast puts the target back to Recruit with the
+    // experience of a Recruit, and the helptext's "able to earn experience"
+    // (`Unit rosters/Warlord mod unit data/HELP.TXT:6329`) is what happens next rather than
+    // something this write preserves. A marked enchantment is an attempted cast that landed
+    // (`SPEC.md`, *Input/output contract*), so the stated Unit Level is the pre-cast record and
+    // this write beats it — the same shape as `debuffs:rust:material` below, which discards the
+    // stated weapon material for the same reason. The consequence is that Spirit Link's level
+    // effect is unobservable on a card: `spiritLinkCastResetsLevelWarlord` pins the reset at
+    // 1.000, where it used to pin the surviving Elite ladder row at 3.000.
+    //
+    // The gate is the block's own `IF BASEFANTASTIC(TU)`, which the engine evaluates once for
+    // all three writes. This step stands **behind** the Fantastic clear, so it cannot re-read
+    // the record — the clear has already falsified it — and takes the latched
+    // `spiritLinkClearsPermanentFantastic` instead, which is that same predicate stated ahead of
+    // the sequence (F245).
+    // PROVENANCE[spiritLink:level]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
+    statStep({ id: 'spiritLink:level', sourceId: 'spiritLink', sourceLabel: 'Spirit Link',
+      phase: 'buffs', writes: ['level'],
+      when: () => spiritLinkClearsPermanentFantastic(identity, abilities, version),
       apply: u => { u.level = 'normal'; } }),
     // Rust's cast clears the material flags on the target's permanent record once the resistance
     // roll has beaten it, so the recalculation that follows finds an unequipped unit. The block
@@ -415,17 +458,22 @@ function baseStatSteps(ctx) {
       when: () => pillarOfFaith, apply: u => { u.res += pillarOfFaithCount; } }),
     // Energy Cannon is the last represented CreateUnit.CAS ranged-strength write, so its
     // +50% reads every earlier permanent ranged contribution in this sequence.
+    // The block's Power Engine term is a record read at this position: `training:powerEngine`
+    // stands earlier in the chain, and the overland entrance of this same block spells the term
+    // `IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0)` (F244.3d). What is left in
+    // `c.energyCannonResearch` is the research state and the permanent ranged slot.
     // PROVENANCE[energyCannon]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:7:40a6858a207fd2460b6df58e
     statStep({ id: 'energyCannon', phase: 'training',
       writes: [...strengthFields, ...rangedTypeFields, 'energyCannon'],
-      when: () => channels.some(c => c.energyCannon && c.energyCannonOwnsThisSlot),
+      when: u => !!u.powerEngine
+        && channels.some(c => c.energyCannonResearch && c.energyCannonOwnsThisSlot),
       apply: u => {
         // `SETSTAT(U,AFDoom,1,1,3)` beside the conversion (`CreateUnit.CAS!HASEVILPRESENCE!+85 "SETSTAT(U,SRanged,1,GETSTAT(U,SRanged,1)+%I(GETSTAT(U,SRanged,1)/2));"`) is what makes
         // the converted attack a Doom one; `energyCannon` is the calculator's label for that
         // write, and combat resolution reads it off the finished record (F201).
         u.energyCannon = true;
         for (const c of channels) {
-          if (!c.energyCannon || !c.energyCannonOwnsThisSlot) continue;
+          if (!c.energyCannonResearch || !c.energyCannonOwnsThisSlot) continue;
           u[c.strengthField] += Math.floor(Math.max(0, u[c.strengthField]) / 2);
           // `RangedType=40`, Warlord's beam energy: `IsMagic=Yes` and nothing else
           // (`RangedType.INI [40]`), which is the whole of what the modern engine reads.
@@ -462,10 +510,12 @@ function chaosChannelsFireBreathWrite(ctx) {
   } = ctx;
   return {
     writes: [...strengthFields, ...rangedTypeFields, ...thrownTypeFields],
-    when: u => channels.some(c => ccGrantsThisSlot(u, c)),
-    apply: u => {
+    // The admission half of `ccGrantsThisSlot` is a permanent-record read, so the run context
+    // travels with the unit into it: in the DOS builds it resolves `ctx.base` (F244.3i).
+    when: (u, runCtx) => channels.some(c => ccGrantsThisSlot(u, c, runCtx)),
+    apply: (u, runCtx) => {
       for (const c of channels) {
-        if (!ccGrantsThisSlot(u, c)) continue;
+        if (!ccGrantsThisSlot(u, c, runCtx)) continue;
         u[c.strengthField] = ccIndependentChannels
           ? u[c.strengthField] + ccFireBreathStrength : ccFireBreathStrength;
         u[c.rangedTypeField] = 'none';
@@ -517,9 +567,9 @@ function precalcBinaryStatSteps(ctx) {
 // `b`: precalc, in UnitCalcPre.CAS (Warlord only).
 function precalcScriptStatSteps(ctx) {
   const {
-    abilByPhase, abilities, baseFigs, bombsGrenadesActive, channels, ffMeleeBonus, ffRegularBonus,
+    abilByPhase, abilities, baseFigs, bombsGrenadesActive, channels, ffMeleeBonusAt, ffRegularBonus,
     fieryFuryRtbWrite, goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
-    greatUnbindingActive, isWarlord,
+    greatUnbindingActive, identity, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
     marionetteStrayed, natureLinkActive, outlanderReform,
     plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields,
@@ -560,14 +610,90 @@ function precalcScriptStatSteps(ctx) {
           if (c.marionetteOwnsThisRangedSlot) u[c.rangedTypeField] = marionette.rangedType;
         }
       } }),
-    // The ascension block's own retype, a second `SETSTAT(U,SRangedType,0,…)` at a second
-    // position: the five realm arms above are `UnitCalcPre.CAS!NOVAMPIRISM!+26..+98 "SETSTAT(U,SRangedType,0,37);" "SETSTAT(U,SRangedType,0,33);"`, the twenty book-grant
-    // blocks follow, and only then does the ascension branch write `SRangedType = 30` for a
-    // Chaos primary (`UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+80 "SETSTAT(U,SRangedType,0,30);"`), beside the Wall Crusher and Armor Piercing grants the package
-    // already carries. Id 30 is the lightning-bolt projectile and a token of its own, so this
-    // is a write the primary arm's value does not stand in for. Nothing modelled writes a
-    // projectile type between the two, which is why they are adjacent on the chain.
-    // PROVENANCE[marionette:ascensionRangedType]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
+    // --- The owned branch's thirty-one grants, one step per engine write (F244.3g) ---
+    //
+    // Fifteen `IF (BOOKS(W,<realm>)>n)` blocks making sixteen writes, then the ascension block: five
+    // mutually exclusive `IF (PRIMARY=n)` arms making ten writes and the Chaos arm's projectile
+    // retype, then five more `IF (BOOKS(W,<realm>)>4)` blocks. Every one is its own step with its own
+    // citation, which is what `CLAUDE.md`'s *Architecture* section asks for, and what makes the order
+    // representable: the retype sits inside the Chaos arm, between Armor Piercing and the Life arm.
+    // The bodies are `marionetteOwnedGrantStep` (`stats_identity.js`), which reads the one table the
+    // package's label list reads, so a threshold or a value has a single home.
+    //
+    // A book count is a *wizard* fact — `BOOKS(W,…)`, read off the owner — so it comes off the
+    // package rather than the record, exactly as `marionetteOwned` does.
+    //
+    // Until F244.3g these thirty-one grants were merged into the ability map before the sequence
+    // began, which put every one of them on the record ahead of the `immunities`, `buffs` and
+    // `debuffs` phases. That is what the citations rule out: the writes are in `UnitCalcPre.CAS`, the
+    // precalc script hook, which runs after those phases and after `a:baseCopy`. **The one place that
+    // reordering is observable is Illusion Immunity.** Three Life books grant `AIllusionImmunity`, and
+    // `illusionImmunity` is a member of `ILLUSION_IMMUNITY_GATED_CURSES`, so a Marionette used to
+    // refuse Mind Storm and Vertigo on the strength of a grant made two phases later than the curse
+    // it was refusing. It does not now.
+    //
+    // Two citations on a book write and three on an ascension one, in order: the branch entrance —
+    // `ISHERO`, hero type 48 and a Channeler owner, which no span containing the writes can also
+    // reach, they are 170 lines apart — then, for an ascension write, the block's own
+    // `IF (SPELLSTATE(W,SMarionetteAscension)<>2) THEN { GOTO ... }` with the `SCHARGE` recompute that
+    // follows it, and last the write's own block, whose leading `IF` is the rest of its gate.
+    // PROVENANCE[marionette:books:forester]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:93c7bb58c9d7fe738841ac61
+    statStep({ id: 'marionette:books:forester', ...marionetteOwnedGrantStep('forester', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:mountaineer]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:93c7bb58c9d7fe738841ac61
+    statStep({ id: 'marionette:books:mountaineer', ...marionetteOwnedGrantStep('mountaineer', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:poisonImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:320d3faec6c8680d482d2ebd
+    statStep({ id: 'marionette:books:poisonImmunity', ...marionetteOwnedGrantStep('poisonImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:stoningImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:a728b282f561698fa14ce5bf
+    statStep({ id: 'marionette:books:stoningImmunity', ...marionetteOwnedGrantStep('stoningImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:largeShield]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:428a1ca3bd5185e33bc6239b
+    statStep({ id: 'marionette:books:largeShield', ...marionetteOwnedGrantStep('largeShield', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:3649eb23c49427b0806a7927
+    statStep({ id: 'marionette:books:missileImmunity', ...marionetteOwnedGrantStep('missileImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:resistMagic]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:8be3258aa6673bbe5d069b18
+    statStep({ id: 'marionette:books:resistMagic', ...marionetteOwnedGrantStep('resistMagic', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:firstStrike]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:f38cc9633faa6626c52a60a5
+    statStep({ id: 'marionette:books:firstStrike', ...marionetteOwnedGrantStep('firstStrike', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:fireImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:fdfe3ea0000f992d46d7918b
+    statStep({ id: 'marionette:books:fireImmunity', ...marionetteOwnedGrantStep('fireImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:lightningResist]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:45eb123b1f172c9a52d640f8
+    statStep({ id: 'marionette:books:lightningResist', ...marionetteOwnedGrantStep('lightningResist', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:healer]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:5c467b6bf98005e84c285e87
+    statStep({ id: 'marionette:books:healer', ...marionetteOwnedGrantStep('healer', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:illusionImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:9f09244def47e1963b28b2d5
+    statStep({ id: 'marionette:books:illusionImmunity', ...marionetteOwnedGrantStep('illusionImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:lucky]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:c097c0d114269ed458ebb361
+    statStep({ id: 'marionette:books:lucky', ...marionetteOwnedGrantStep('lucky', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:coldImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cc46f855d946a7788b8b9801
+    statStep({ id: 'marionette:books:coldImmunity', ...marionetteOwnedGrantStep('coldImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:deathImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:2cc9ca769513a059de5d32c8
+    statStep({ id: 'marionette:books:deathImmunity', ...marionetteOwnedGrantStep('deathImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:books:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:1c2e8a605f513b6d57e807e0
+    statStep({ id: 'marionette:books:weaponImmunity', ...marionetteOwnedGrantStep('weaponImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:poison]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ed65171994183ea86738f1c6
+    statStep({ id: 'marionette:ascension:poison', ...marionetteOwnedGrantStep('poison', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:stoningTouch]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ed65171994183ea86738f1c6
+    statStep({ id: 'marionette:ascension:stoningTouch', ...marionetteOwnedGrantStep('stoningTouch', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:counterImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:1298176c625f84071d1711d2
+    statStep({ id: 'marionette:ascension:counterImmunity', ...marionetteOwnedGrantStep('counterImmunity', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:illusion]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:1298176c625f84071d1711d2
+    statStep({ id: 'marionette:ascension:illusion', ...marionetteOwnedGrantStep('illusion', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:wallCrusher]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
+    statStep({ id: 'marionette:ascension:wallCrusher', ...marionetteOwnedGrantStep('wallCrusher', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:armorPiercing]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
+    statStep({ id: 'marionette:ascension:armorPiercing', ...marionetteOwnedGrantStep('armorPiercing', marionette, marionetteOwned) }),
+    // The ascension block's own retype, on the **third line of the Chaos arm**: the five spell arms
+    // wrote `SRangedType` at `UnitCalcPre.CAS!NOVAMPIRISM!+26..+98 "SETSTAT(U,SRangedType,0,37);" "SETSTAT(U,SRangedType,0,33);"`, the fifteen book blocks follow, and only
+    // then does `UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+80 "SETSTAT(U,SRangedType,0,30);"` run, after Wall Crusher and Armor Piercing and before the
+    // Life arm's Exorcise. That position is exactly why the grants are one step per write: a single
+    // step covering the whole ascension arm could not sit both after the Chaos writes and before the
+    // Life ones. Id 30 is the lightning-bolt projectile and a token of its own, so this is a write
+    // the primary arm's value does not stand in for.
+    //
+    // Three citations, in order: the branch entrance, the ascension gate, then the Chaos arm with the
+    // write. The first two are what the step's `when` carries beyond `PRIMARY=3` —
+    // `marionetteOwned` and, through `marionette.ascensionRangedType` being null otherwise,
+    // the ascension test — and neither is inside the arm (F244.3g review, finding 4).
+    // PROVENANCE[marionette:ascensionRangedType]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
     statStep({ id: 'marionette:ascensionRangedType', sourceId: 'marionetteChanneler',
       sourceLabel: 'Marionette (Channeler)', phase: 'b', writes: rangedTypeFields,
       when: () => marionetteOwned && !!marionette.ascensionRangedType,
@@ -578,12 +704,139 @@ function precalcScriptStatSteps(ctx) {
           }
         }
       } }),
-    // The strayed branch first grants Transmute Equipment; its hero augmentation block later
-    // in this same hook runs before Rebuild and the Outlander research block.
+    // PROVENANCE[marionette:ascension:exorcise]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:2d1af45a3798d4da1eed770a
+    statStep({ id: 'marionette:ascension:exorcise', ...marionetteOwnedGrantStep('exorcise', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:bless]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:2d1af45a3798d4da1eed770a
+    statStep({ id: 'marionette:ascension:bless', ...marionetteOwnedGrantStep('bless', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:bloodSucker]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ae1848acfc2d2719280b398c
+    statStep({ id: 'marionette:ascension:bloodSucker', ...marionetteOwnedGrantStep('bloodSucker', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:createUndead]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ae1848acfc2d2719280b398c
+    statStep({ id: 'marionette:ascension:createUndead', ...marionetteOwnedGrantStep('createUndead', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:regeneration]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:6620a3426b88e50747a69f0a
+    statStep({ id: 'marionette:ascension:regeneration', ...marionetteOwnedGrantStep('regeneration', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:invisibility]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:62742dfecf522ecc0db41d4c
+    statStep({ id: 'marionette:ascension:invisibility', ...marionetteOwnedGrantStep('invisibility', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:destruction]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:ee6d9fdf8bc302149fcf5af8
+    statStep({ id: 'marionette:ascension:destruction', ...marionetteOwnedGrantStep('destruction', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:healingAura]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:7c4bf594f3a8b64b45b78ffd
+    statStep({ id: 'marionette:ascension:healingAura', ...marionetteOwnedGrantStep('healingAura', marionette, marionetteOwned) }),
+    // PROVENANCE[marionette:ascension:lifeSteal]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:7361d4897743a0409ae48b72
+    statStep({ id: 'marionette:ascension:lifeSteal', ...marionetteOwnedGrantStep('lifeSteal', marionette, marionetteOwned) }),
+    // **What follows the five ascension book blocks in the script and is deliberately not modelled**:
+    // the retort tail, `UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+111..+164 "IF RETORT(W,Alchemist) THEN {" "}"`. Sixteen `IF RETORT(W,…)` blocks holding
+    // twenty-two conditional writes, of which at most eighteen run for one primary realm; the
+    // unconditional `UnitCalcPre.CAS!NOTMARIONETTEASCENSION!-101 "SETHEAB(W,48,HAArcanePower,2);"` at the head of the same region makes nineteen.
+    //
+    // The reason is **not** that no input reaches them — that reading was wrong and F244.3g's review
+    // corrected it. `marionetteConjurer` is a control, and it represents the same
+    // `RETORT(W,Conjurer)` that writes `SETHEAB(W,48,HASoulLinker,2)` in this tail, so one of the
+    // sixteen retorts is reachable from the page today. The reason is that the tail's writes have no
+    // *target* in the calculator's record. Fifteen of the nineteen are `SETHEAB(W,48,HA…,n)` ranks on
+    // the wizard's hero record for type 48, and the calculator carries a key for five of them —
+    // `sage`, `mechanicalMaster`, `ritualMaster`, `charmed` and, through `EncSpellLock`, `spellLock`
+    // — each already written once by the strayed branch, and each behind a retort (Sage Master,
+    // Artificer, Astrologer, Charismatic, Enchanter) with no control. `HASoulLinker` is the reachable
+    // one and it is *not* a unit key at all: the calculator models Soul Linker as `soulLinkerAura`, a
+    // `nonRecord` **input** the user states as "the strongest friendly side-maximum aura value"
+    // (`enchantments.js`), read by `c:soulLinkerAura` / `e:soulLinkerAura` (`combat_abilities.js`).
+    // A step here would have to write that input, which would make a query field a derived one. The
+    // rest are hero-ability ranks and overland stats the record does not hold at all
+    // (`HALeadership`, `HALogistics`, `HANoble`, `HASupplycommander`, `HAPrayermaster`,
+    // `HAChosenOf…`, `HAAEtherMaster`, `HAIrresistibleCharge`, `HADivineBarrier`, `HAArcanePower`,
+    // `APlaneShifting`, `SMaxMP`). Modelling any of it is a change to the input contract, not to this
+    // chain.
+    // The strayed branch's persistent package: seven writes in one block, made when a Wanderer
+    // is recalculated with no Channeler owner. Every one is a **permanent** write —
+    // `SETENCHANTMENTFLAG(U,Enc…,1,1)` for the two enchantments and `SETHEAB(W,48,HA…,n)` for
+    // the five hero abilities, the latter a rank on the wizard's own hero record for type 48 —
+    // and the block that makes them is region `b`, so each takes its rank here rather than
+    // entering the ability map before the sequence starts (F244.3f). The engine's own
+    // one-shot guard is the block gate below, not the map: the writes are persistent and stand
+    // on later recalculations because the record keeps them, which is what the read-back does.
+    //
+    // `when` reads `spellLock` off the record, which is the block's own skip —
+    // `IF (GETOLENCHANTMENTFLAG(U,EncSpellLock,1)>0) THEN { GOTO "NOLONGERSTRAYEDMARIONETTE" }`
+    // — and the flag `b:marionette:spellLock` sets one rank later. Two things can close it: the
+    // card's own Spell Lock, which `buffs:spellLock:cast` writes ahead of region `b` now that
+    // F244.3f widened that control to the three CoM-era engines, and the two steps' *order*.
+    // A Wanderer marked Spell Lock therefore loses the whole package — and with it Transmute
+    // Equipment's and Rebuild's later augmentations, which read the flags it would have set —
+    // exactly as the script's skip does.
+    //
+    // Each of the seven carries its own `IF (GET…=0)` skip, and each is modelled. They are not
+    // no-ops: an `HEAB` rank is a number, so a unit already holding Sage 1 keeps 1 here rather
+    // than being raised to the script's 2 — the skip is a "first writer wins" rule, not an
+    // idempotent guard. (An earlier revision of this step dropped them on the argument that a
+    // constant assignment cannot change a value already present. That is true only of the two
+    // booleans; F244.3f's review found it false for the five `SETHEAB` ranks.)
+    // `charmed` and `rebuild` are the two that can already stand here today — from the card's own
+    // control and from `buffs:rebuild:cast` — and for both the skip and the write agree.
+    // The first span is the branch entrance — the three tests that admit this step, which no
+    // span containing the writes can also reach: they are 280 lines apart. The second is the
+    // block itself, whose leading `IF` **is** this step's own gate.
+    // PROVENANCE[marionette:strayedPackage]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:27:688abd2f84c0bba46ff33efd
+    statStep({ id: 'marionette:strayedPackage', sourceId: 'marionetteStrayed',
+      sourceLabel: 'Marionette (strayed): persistent package', phase: 'b',
+      writes: ['transmuteEquipment', 'rebuild', 'sage', 'mechanicalMaster', 'ritualMaster',
+        'charmed', 'arcaneWard'],
+      when: u => marionetteStrayed && !u.spellLock,
+      apply: u => {
+        if (!u.transmuteEquipment) u.transmuteEquipment = true;
+        if (!u.rebuild) u.rebuild = true;
+        if (!u.sage) u.sage = 2;
+        if (!u.mechanicalMaster) u.mechanicalMaster = 2;
+        if (!u.ritualMaster) u.ritualMaster = 2;
+        if (!u.charmed) u.charmed = true;
+        if (!u.arcaneWard) u.arcaneWard = 2;
+      } }),
+    // Spell Lock is the block's eighth write and the only one **outside** the skip: it sits after
+    // `!NOLONGERSTRAYEDMARIONETTE!`, so an already-locked Wanderer that took none of the seven
+    // still re-writes it. That placement is the whole reason it is a step of its own rather than
+    // an eighth line of the one above.
+    //
+    // **Read the two citations in order, because neither is "this write and its own gate".** The
+    // first is the entrance: `ISHERO`, hero type 48, and no Channeler retort — the three tests
+    // that admit this step, and the whole of its `when`. The second shows the write itself
+    // standing *after* `!NOLONGERSTRAYEDMARIONETTE!`, which is the claim that separates it from
+    // the seven above; the `IF`s inside that second span are **the other step's** per-write skips
+    // and gate nothing here. The span is wider than the write needs because
+    // `hasImplementationWrite` (`tools/provenance_audit.js`) does not recognise `SETHEAB` or
+    // `SETOLENCHANTMENTFLAG` — two verbs the shipped scripts use — so a citation carrying only
+    // those is rejected as writing nothing, and it has to reach back to line 374's
+    // `SETENCHANTMENTFLAG` to be accepted. Reported with F244.3f rather than fixed here: teaching
+    // the detector those two verbs is a change to the gate every provenance citation in the repo
+    // passes through.
+    // PROVENANCE[marionette:spellLock]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:21:cd89ef04350bd3d82d4cb25c
+    statStep({ id: 'marionette:spellLock', sourceId: 'marionetteStrayed',
+      sourceLabel: 'Marionette (strayed): Spell Lock', phase: 'b',
+      writes: ['spellLock'],
+      when: () => marionetteStrayed,
+      apply: u => { u.spellLock = true; } }),
+    // Transmute Equipment's hero augmentation block, 298 lines further down the same hook and
+    // still ahead of Rebuild and the Outlander research block. Its gate is
+    // `GetEnchantmentFlag(U,EncTransmuteEquipment,1)` — the **permanent** flag the strayed block
+    // above wrote — so it is a record read at this step's own rank rather than the branch
+    // constant it used to be (F244.3f). The two ranks are what make the reading order observable;
+    // `b:rebuild` one block later is the same shape.
+    //
+    // `identity.isHero` is the block's enclosing region, not a second copy of the branch test:
+    // the augmentation sits between `UnitCalcPre.CAS!NOVAMPIRISM!+3 "IF ( ISHERO(U) = 0 ) THEN { GOTO"` and `UnitCalcPre.CAS!NOTHERO!`,
+    // so it reaches heroes alone. The branch constant this gate used to be carried that term
+    // implicitly; a record read does not, and the flag has writers outside the Marionette package
+    // the calculator does not model yet — the Transmute Equipment cast at
+    // `OLSpell.CAS!NOTTRANSMUTEEQUIPMENT!-9 "SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,1);"`, the Caravanserai retrain in `OverlandEndTurn.CAS`, and the
+    // Adamant-plus-Orihalcon training write at `CreateUnit.CAS~": give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :"+1..+2 "IF GETENCHANTMENTFLAG(U,EncAdamant,ABase) %AND GETENCHANTMENTFLAG(U,EncOrihalcon,ABase) THEN {" "SETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase,1);"`. None has a control, so none
+    // can reach this gate today, which is exactly why the term has to be written rather than
+    // inherited.
+    //
+    // Not corrected here, and reported with F244.3f: the `SRanged` half of this block is
+    // `SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2))`, ungated, while the apply below adds it only
+    // to a channel `marionetteRangedSlot` selects. That predates this subtask and moves numbers.
     // PROVENANCE[marionette:strayedTransmute]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:11:e36dada50542233ab9fda915
     statStep({ id: 'marionette:strayedTransmute', sourceId: 'marionetteStrayed',
       sourceLabel: 'Marionette (strayed): Transmute Equipment', phase: 'b',
-      writes: ['atk', ...strengthFields, 'def', 'res'], when: () => marionetteStrayed,
+      writes: ['atk', ...strengthFields, 'def', 'res'],
+      when: u => !!identity.isHero && !!u.transmuteEquipment,
       apply: u => {
         u.atk += 2;
         for (const c of channels) {
@@ -682,7 +935,9 @@ function precalcScriptStatSteps(ctx) {
     statStep({ id: 'fieryFury', phase: 'b', writes: ['atk', ...strengthFields],
       when: () => ffRegularBonus,
       apply: u => {
-        u.atk += ffMeleeBonus;
+        // The non-stacking term is `fieryBlade` off the record, which
+        // `training:lavaSmelter:flameBlade` wrote before this region ran (F244.3c).
+        u.atk += ffMeleeBonusAt(u);
         // The block precedes Bombs & Grenades (`UnitCalcPre.CAS!NOMAGITEKENGINE!+6..+20 "IF (SPELLSTATE(W,STExplosive)<>2) THEN { GOTO" "!NOEXPLOSIVE!"`) in the same file, so the Thrown
         // field that block creates is not yet there to be read.
         for (const c of channels) u[c.strengthField] += fieryFuryRtbWrite(u, c);
@@ -855,7 +1110,7 @@ function magicCalcBinaryStatSteps(ctx) {
     chaosSurgeCount, chaosSurgeMeleeBonus, chaosSurgeResBonus, chaosSurgeRtbBonus,
     charmOfLifeActive, classicBerserk, com1DivineBarrierAura, com1SoulLinkerAura,
     com1GuidingBeaconAura, darkForceActive, darknessAtkBonus, darknessDefBonus, darknessResBonus,
-    destinyActive, disciplineActive, disciplineAtkMod, disciplineDefMod, doomGazeLvlMod,
+    destinyActive, disciplineActiveAt, disciplineAtkMod, disciplineDefMod, doomGazeLvlMod,
     dosTrueLightStep, enduranceActive, enduranceDefMod, enduranceHpMod,
     eternalNightEnemyResPenalty, flameBladeStep,
     focusMagicActive, focusMagicBranchSlots, gazeLvlMod, gazeWarpHalves,
@@ -864,7 +1119,7 @@ function magicCalcBinaryStatSteps(ctx) {
     heavenlyLightMeleeToHitAt, holyArmorActive, holyWeaponHitPick, hwMeleeToHit,
     landLinkingEligible,
     identity, inputBaseAtk, isCoM1, isCoM2,
-    isCoMVersion, isWarlord, lionheartHpMod, spiritLinkLevelWidening,
+    isCoMVersion, isWarlord, lionheartHpMod,
     natureConjunctionActive, nodeAuraActive, orihalconActive,
     rangedTypeFields, realmWardActive, secondaryHitTargets, secondaryHitFields, spellWardActive,
     recordContext, secondaryHitFieldsFor, strengthFields, supremeLightEligibleAt,
@@ -891,20 +1146,17 @@ function magicCalcBinaryStatSteps(ctx) {
     // for a unit whose **permanent** record is Fantastic. Only the else arm is modelled — the
     // calculator has no Heroism control — and its gate is `B.Fantastic`, read through `ctx.base`
     // at this position rather than from a constant, which is what makes Destiny's permanent
-    // `B.Fantastic := True` ($0059A3BF) visible to it (F244.2).
+    // `B.Fantastic := True` ($0059A3BF) visible to it — and, since F245, Spirit Link's permanent
+    // `SETSTAT(TU,AFantastic,1,0)` invisible to it, because `buffs:spiritLink:fantastic` took the
+    // flag off the record the copy publishes. The gate is `ctx.base.fantastic` and nothing else.
     //
     // The DOS engines have no reconstructed counterpart, which is why the scope is modern and the
     // DOS builds keep the same exclusion as the training gate `trainingLevelEligible`
     // (`stats.js`).
-    //
-    // **Temporary, 2026-09-02.** The Spirit Link term is the widening stated at
-    // `spiritLinkLevelWidening` (`stats.js`): the spell's own cast writes `AFantastic := 0` on the
-    // permanent record, so once F245 makes that a `buffs:spiritLink` write the permanent record is
-    // not Fantastic here and this term retires with it.
     // PROVENANCE[level:fantastic]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:19:cf6cc9e5b8acd1ca19251175
     statStep({ id: 'level:fantastic', sourceId: 'veterancy', sourceLabel: 'Unit Level',
       phase: 'c', writes: ['level'],
-      when: (u, runCtx) => !!runCtx.base.fantastic && !spiritLinkLevelWidening,
+      when: (u, runCtx) => !!runCtx.base.fantastic,
       apply: u => { u.level = 'normal'; } }),
     // Destiny's persistent identity/storage writes occur here, after UnitCalcPre, and its
     // calculated-record package immediately follows. Every permanent-record write plus regions
@@ -1198,7 +1450,7 @@ function magicCalcBinaryStatSteps(ctx) {
       apply: u => { u.def += enduranceDefMod; u.hp += enduranceHpMod; } }),
     // PROVENANCE[discipline]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:20:445349dde257497d94440bc9
     statStep({ id: 'discipline', phase: 'c', writes: ['def', 'atk', ...strengthFields],
-      when: () => disciplineActive,
+      when: u => disciplineActiveAt(u),
       apply: u => {
         u.def += disciplineDefMod(u); u.atk += disciplineAtkMod(u);
         if (levelRankOf(u.level) >= 2) {
@@ -1663,8 +1915,8 @@ function makeSecondaryHitPick(active, thrownValue) {
 function magicCalcScriptStatSteps(ctx) {
   const {
     abilByPhase, abilities, blazeOfGloryActive, channels, colossalScaled,
-    colossalStrength, energyCannon, energyCannonHitField,
-    hasDarkness, hurricaneActive, identity, isWarlord,
+    colossalStrength, energyCannonResearchAt, energyCannonHitField,
+    hasDarkness, hurricaneActive, identity, isWarlord, outlanderReform,
     rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     shadowStrikeActive, vampirismActive,
@@ -1843,6 +2095,24 @@ function magicCalcScriptStatSteps(ctx) {
           u[c.thrownTypeField] = 'thrown';
         }
       } }),
+    // The three `!COMBATOVERRIDE!` Outlander-soldier effects, in the file's own order: the Energy
+    // Weaponry melee Doom conversion, Psycho Force and Pneuma Field. All three stand behind one
+    // gate, `outlanderCombatSoldierAt` (`stats_identity.js`), which reads Armorclad and Mechanical
+    // off the record at this rank rather than taking them as pre-sequence constants — the two
+    // terms `UnitCalc.CAS!COMBATOVERRIDE!+5..+6 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)" "%AND (GetStat(U,SCustomAttribute,1)=1) %OR (BASEFANTASTIC(U)>0)"` spells as record reads (F244.3e).
+    // Each step's own research state is a `reform` field, the way `b:outlanderXenoveterinary`'s is
+    // (F198); none of the three is an ability key any more.
+    //
+    // Energy Weaponry writes no stat here. `SETSTAT(U,AFDoom,0,1,2)` sets the melee attack's Doom
+    // rider on the **calculated** record, and the calculator's stand-in for that rider is the
+    // `energyWeaponry` record field, which combat resolution reads off the finished unit
+    // (`combat.js`, the melee-Doom decision). Before F244.3e the key was a pre-sequence grant with
+    // no anchor of its own.
+    // PROVENANCE[energyWeaponry]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:8:6239ec7ba03bacb0a8116266
+    statStep({ id: 'energyWeaponry', sourceId: 'energyBeamWeapons',
+      sourceLabel: 'Energy Beam Weapons', phase: 'd', writes: ['energyWeaponry'],
+      when: u => !!outlanderReform.energyBeamWeapons && outlanderCombatSoldierAt(u, outlanderReform),
+      apply: u => { u.energyWeaponry = true; } }),
     // Psycho Force (UnitCalc.CAS!COMBATOVERRIDE!+13..+17 "IF (SPELLSTATE(W,STMagitekPsycheForceConverter)=2) THEN {" "}") and Pneuma Field (UnitCalc.CAS!COMBATOVERRIDE!+19..+25 "IF (SPELLSTATE(W,STMagitekPneumaReactor)=2) THEN {" "SETSTAT(U,AFLifeSteal,0,PNEUMA,1);") both *read*
     // `GETSTAT(U,SResist,0)` — the Resistance standing at their own position in `d`. That is
     // before region `e`, so neither sees the aura pass: a Holy Bonus or Resistance to All aura
@@ -1851,17 +2121,18 @@ function magicCalcScriptStatSteps(ctx) {
     // present. `%I` is the integer part, so the division truncates toward zero rather than
     // flooring, which is visible only when a curse has driven Resistance negative.
     // PROVENANCE[psychoForce]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:4:f3235558e9ec7dbd4427844b
-    statStep({ id: 'psychoForce', sourceId: 'psychoForce', sourceLabel: 'Psycho Force',
+    statStep({ id: 'psychoForce', sourceId: 'psychoConverter', sourceLabel: 'Psycho Converter',
       phase: 'd', writes: ['toHit', 'toBlk'],
-      when: u => !!u.psychoForce,
+      when: u => !!outlanderReform.psychoConverter && outlanderCombatSoldierAt(u, outlanderReform),
       apply: u => {
         const psyche = Math.trunc(u.res * levelRankOf(u.level) / 2);
         u.toHit += psyche;
         u.toBlk += psyche;
       } }),
     // PROVENANCE[pneumaField]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:7:7f0a838eb82f6cc67584d242
-    statStep({ id: 'pneumaField', phase: 'd', writes: ['lifeSteal'],
-      when: u => !!u.pneumaField,
+    statStep({ id: 'pneumaField', sourceId: 'pneumaReactor', sourceLabel: 'Pneuma Reactor',
+      phase: 'd', writes: ['lifeSteal'],
+      when: u => !!outlanderReform.pneumaReactor && outlanderCombatSoldierAt(u, outlanderReform),
       apply: u => {
         const drain = Math.trunc(u.res / 2);
         u.lifeSteal = (u.lifeSteal != null && u.lifeSteal <= 0) ? u.lifeSteal - drain : -drain;
@@ -1871,7 +2142,9 @@ function magicCalcScriptStatSteps(ctx) {
     // PROVENANCE[energyCannonThreshold]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:9:415a610fbab04f989880d02e
     statStep({ id: 'energyCannonThreshold', sourceId: 'energyCannon',
       sourceLabel: 'Energy Cannon', phase: 'd', writes: ['energyCannonToHit'],
-      when: () => energyCannon,
+      // The research half's record term is `ctx.base`'s Ranged field, read at this step's rank
+      // (F244.3i); the Power Engine flag is the live record `training:powerEngine` wrote.
+      when: (u, runCtx) => energyCannonResearchAt(runCtx) && !!u.powerEngine,
       apply: u => {
         u.energyCannonToHit = Math.min(100, u.toHit + u[energyCannonHitField]);
       } }),

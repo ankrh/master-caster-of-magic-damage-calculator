@@ -100,6 +100,43 @@ test('a hidden ability does not leak into the result', async ({ page }) => {
   expectNoConsoleErrors(errors);
 });
 
+test('a hidden enchantment does not leak into the matrix', async ({ page }) => {
+  const errors = await openCalculator(page);
+
+  // The card is protected by `applyDisabled` clearing version-hidden controls, so its readers
+  // need no version test. The matrix has no equivalent cleaning step: switching version only
+  // hides a row, and nothing clears `matrixPropertyState`. The filter therefore has to hold in
+  // the reader, which is what `matrixEnchantmentValue` is for. Eye of Heaven is Warlord-only and
+  // reaches the derivation as the top-level `enemyEyeOfHeaven` — the input F258.1 found reaching
+  // DOS matrix runs.
+  const ask = () => page.evaluate(() => ({
+    active: matrixHasActiveEnchantment('b', 'eyeOfHeaven'),
+    applied: Object.prototype.hasOwnProperty.call(matrixAppliedEnchantments('b'), 'eyeOfHeaven'),
+  }));
+
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
+  await page.evaluate(() => {
+    matrixPropertyState.b = (matrixPropertyState.b || []).filter(r => r.key !== 'eyeOfHeaven');
+    matrixPropertyState.b.push({ key: 'eyeOfHeaven', enabled: true, value: true });
+  });
+
+  // Warlord offers the row, so it must read active here — otherwise the DOS assertion below
+  // would pass on a row that was never live in the first place.
+  expect(await ask()).toEqual({ active: true, applied: true });
+
+  await setValue(page, 'gameVersion', 'mom_1.31');
+
+  // The row is still stored: it is the reader's filter that must refuse it, not a cleanup step.
+  // If this ever goes false the test below stops proving anything.
+  const stillStored = await page.evaluate(() =>
+    (matrixPropertyState.b || []).some(r => r.key === 'eyeOfHeaven' && r.enabled));
+  expect(stillStored).toBe(true);
+
+  expect(await ask()).toEqual({ active: false, applied: false });
+
+  expectNoConsoleErrors(errors);
+});
+
 test('gaze inputs follow the selected engine record shape', async ({ page }) => {
   const errors = await openCalculator(page);
 

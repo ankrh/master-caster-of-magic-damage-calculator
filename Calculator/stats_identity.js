@@ -188,6 +188,26 @@ function isConstructCatapultUnit(identity, abilities, version, meta = {}) {
       || (isCoM1 && (sourceTemplateId === 37 || identity.specialUnit === 'catapult'))));
 }
 
+// Spirit Link's cast (Warlord) writes the **permanent** record with selector 1 — `ABase`
+// (`MASTER.CAS~"ABase=1"`): the flag, +2 Resistance, and, for a target that is Fantastic in its base
+// unit data, `SMultiLabel := 14`, `AFantastic := 0` and `ALevel := 1`
+// (`OLSpell.CAS!NOTAIRSUPPORT!+2..+11 "IF (SP<>SSpiritLink) THEN { GOTO" "}"`, the `SSpiritLink`
+// block). The Air Support Doctrine grant makes the Fantastic and level pair on a newly created
+// unit at two further sites (`COSpell.CAS` and `OLSpell.CAS`, both after the
+// `IF (SP<>STAirSupportDoctrine)` branch entrance), and the Mystic
+// Surge random-enchantment table makes the whole package at `R=43` (`SpellMysticSurge.CAS`); the
+// calculator models one cast, so those are the same write reached another way.
+//
+// This is the pre-sequence spelling of `buffs:spiritLink:fantastic`, for the gates that still
+// read the permanent Fantastic flag ahead of the run — `permanentFantastic` here and in
+// `stats.js`. It is not the step's own `when`: the step reads the record at its own position, and
+// the assertion in `deriveUnitStats` is what keeps the two answers equal (F245).
+function spiritLinkClearsPermanentFantastic(identity, abilities, version) {
+  return !!(version && version.startsWith('com2_warlord'))
+    && !!(abilities && abilities.spiritLink)
+    && !!(identity && identity.baseFantastic);
+}
+
 // The identity conversions, as steps of the one derivation sequence. They write the record's
 // `race` and `fantastic` fields at their own chain positions, exactly like every other step:
 // there is no identity pre-pass and no fixed point, so a gate that reads the calculated identity
@@ -231,8 +251,14 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`) — the record the permanent-record phases
   // leaves, so `buffs:destiny`'s `B.Fantastic := True` ($0059A390) is in it, and the unit's own
   // training-time flag is not the whole of it (F192).
-  const permanentFantastic = !!identity.baseFantastic
-    || destinyActiveForUnit(abilities, version);
+  // Spirit Link's cast clears the same flag (`buffs:spiritLink:fantastic` below), so this is
+  // `stats.js`'s `permanentFantastic` restated on the same two terms: Destiny's per-pass
+  // `B.Fantastic := True`, which stands after the clear in the chain, and the clear itself
+  // (F245). The two spellings are the same statement in two files, and F244.3h is what replaces
+  // both with a `ctx.base.fantastic` read.
+  const permanentFantastic = destinyActiveForUnit(abilities, version)
+    || (!!identity.baseFantastic
+      && !spiritLinkClearsPermanentFantastic(identity, abilities, version));
   const isHero = typeof meta.isHero === 'boolean' ? meta.isHero : !!identity.isHero;
   // One predicate for Spirit Link's two conversions: both blocks gate on the same
   // `GetEnchantmentFlag(U,EncSpiritLink,1)`, and neither tests the unit's realm or Fantastic
@@ -241,6 +267,37 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     && !!(abilities && abilities.spiritLink);
 
   return [
+    // Spirit Link's cast clears the **permanent** record's Fantastic flag —
+    // `IF BASEFANTASTIC(TU) THEN { … SETSTAT(TU,AFantastic,1,0); … }`, selector 1 — so a
+    // base-Fantastic target is not Fantastic in the record `a:baseCopy` publishes, and the
+    // per-pass region-`b`/`d` pair below is what makes it Fantastic again inside each
+    // recalculation. The gate is the block's own `BASEFANTASTIC(TU)`, read off the record at this
+    // position: `spiritLinkClearsPermanentFantastic` restates it ahead of the sequence for the
+    // gates that still need it there, and the two must agree. It stands ahead of `buffs:destiny`,
+    // whose `B.Fantastic := True` is a write the recalculation re-makes on every pass, so a
+    // Destiny unit is Fantastic again by the time the record is copied.
+    // Its two siblings under the same `IF BASEFANTASTIC(TU)`. `SETSTAT(TU,ALevel,1,1)` is
+    // `buffs:spiritLink:level` (`stats_sequence.js`), ranked behind this step and taking the
+    // gate latched for that reason. `SETSTAT(TU,SMultiLabel,1,14)` is the **Sapiens** label, and
+    // it is not a step: it has one modelled reader, the reform's `NOTSAPIENS` entrance at
+    // `UnitCalcPre.CAS!NOMAGITEKENGINE!+2..+4 "IF (BASEFANTASTIC(U)>0)" "THEN { GOTO"`, whose
+    // test is `BASEFANTASTIC(U)>0 %AND (SMultiLabel<>14)`, and `deriveOutlanderReformRecord`
+    // carries it there as a predicate instead (`spiritLinkSentience`). It is **not** redundant
+    // with this clear, which a first draft claimed: the label survives Destiny's per-pass
+    // `B.Fantastic := True`, so a Spirit Link + Destiny unit is permanently Fantastic again and
+    // still labelled 14, and the script's conjunction admits it (F245 review, finding 2).
+    // `DisAbil.CAS`'s Bombs & Grenades line reads the same pair and is display text.
+    // The citation is the `SSpiritLink` block itself, which carries this write and the
+    // `IF BASEFANTASTIC(TU)` that gates it. The same pair is written at three further sites — the
+    // two Air Support Doctrine grants (`COSpell.CAS` and `OLSpell.CAS`, each after
+    // `IF (SP<>STAirSupportDoctrine)`) and the Mystic Surge table's `R=43` arm
+    // (`SpellMysticSurge.CAS`) — all reaching the same field on the same record, so the block the
+    // control names is the one cited.
+    // PROVENANCE[spiritLink:fantastic]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
+    statStep({ id: 'spiritLink:fantastic', sourceId: 'spiritLink', sourceLabel: 'Spirit Link',
+      phase: 'buffs', writes: ['fantastic'],
+      when: u => spiritLinkActive && !!u.fantastic,
+      apply: u => { u.fantastic = false; } }),
     // Destiny's identity write is a **permanent**-record write, which is why it is a `buffs` step
     // and not a region-`c` one beside the calculated package `c:destiny` carries. The block at
     // $0059A35E..$0059A633 runs `B.race := 19; B.Fantastic := True;
@@ -339,9 +396,8 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // The `sanctify` gate is the one grantable-ability read F202 left standing that a positioned
     // grant really can move, and it cannot move under F202 alone. Sancta Basilica's block writes
     // `SETSTAT(U,SResist,1,+3)` and then `SETENCHANTMENTFLAG(U,EncSanctify,ABase,1)` in two of its
-    // four `STypeID` branches (`CreateUnit.CAS!NOFROSTCLUB!+5..+14 "SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+3));" "SETENCHANTMENTFLAG(U,EncSanctify,ABase,1);"`), so unlike the flag-only permanent grants
-    // — Lava Smelter's, Heat Power Engine's, Anti-Gravity Drive's, Military Drilling's, each of
-    // which earns no step (`SPEC.md`, *Phases*) — this one carries a stat delta and is already
+    // four `STypeID` branches (`CreateUnit.CAS!NOFROSTCLUB!+5..+14 "SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+3));" "SETENCHANTMENTFLAG(U,EncSanctify,ABase,1);"`), and it carries a stat delta rather than a bare
+    // flag, so it is already
     // `training:sanctaBasilica`. F200 stage 3 widens that step onto these branches, at which point the
     // flag is a positioned write and this gate must read the record. What blocks doing it here is
     // `targetingIdentity` below: it replays the conversion list alone on a scratch record and does
@@ -460,38 +516,75 @@ function targetingIdentity(identity, abilities, version, meta = {}) {
 // Membership is "granted by a hoist **and** read by a step", not the whole grantable set: a key
 // no step reads needs no field, and a read that is itself part of a hoist moves with that hoist.
 //
-// Two further exclusions closed F202 rather than adding a field (stage 2). A key whose grant is a
-// **permanent write carrying no stat delta** earns no step at all (`SPEC.md`, *Phases*), so no
-// step can ever move it and a field would restate a constant: that is `fieryBlade`'s Lava Smelter
-// grant, `powerEngine`'s, `flying`'s and `discipline`'s, each ruled at its own read in `stats.js`.
-// (`fieryBlade` keeps the field it took in stage 1 — `c:metalFires` reads it off the record — but
-// nothing writes it and nothing will.) And a key whose only readers are **result** fields, the
+// Two further exclusions closed F202 rather than adding a field (stage 2). The first was that a
+// key whose grant is a **permanent write carrying no stat delta** earns no step, so no step could
+// ever move it and a field would restate a constant. F244 overturned that half: every modification
+// of the record is a positioned write, whether or not it carries a delta. `fieryBlade` was the
+// first to move — its grant is `training:lavaSmelter:flameBlade` and the key is now on both lists
+// (F244.3c). `powerEngine` and `discipline` were the next two: F244.3d gave each a `training`
+// write of its own, which is what re-opened their F209/F202 ruling, and each is now read off the
+// record at the position that used to take it as a pre-sequence constant. `flying` was the last
+// of the four, and F244.3e settled it the same way: `training:temporalDrive` writes it and
+// `b:bombsGrenades`'s qualification gate reads it off the record, so it is on both lists too.
+// **All four F209 rulings that stood on the retired criterion have now fallen.** The second
+// exclusion still holds: a key whose only readers are **result** fields, the
 // weapon material among them, has nowhere to take a rank: `SPEC.md`, *The step model*, gives the
 // finished record to those, and `effectiveWeapon` and Metal Fires' upgrade already do.
+// `resistMagic` is exactly that shape — its only reader is `effectiveResistance:resistMagic`, an
+// attack-specific step over the finished set — so its writes are positioned without it taking a
+// read side here. `haste` and `energyWeaponry` joined it in F244.3e: combat resolution reads both
+// off the finished map (`combat.js`, the attack-repeat gate and the melee-Doom decision) and no
+// step gates on either, so each takes a positioned write and no read row.
 const POSITIONED_GRANT_FIELDS = [
   'lucky',        // applySanctaBasilicaGrant, applyPillarOfFaithGrant,
-                  // deriveMarionettePackage, `b:divineProtection`  ->  `c:lucky`
-  'fieryBlade',   // applyLavaSmelterGrant  ->  `c:metalFires`'s non-stacking gate
-  'armorclad',    // applyOutlanderReformGrants  ->  `training:armorclad`
+                  // `b:marionette:books:lucky`, `b:divineProtection`  ->  `c:lucky`
+  'fieryBlade',   // `training:lavaSmelter:flameBlade`  ->  `c:flameBlade`'s gate and
+                  // `c:metalFires`'s non-stacking gate
+  'armorclad',    // `training:armorclad`  ->  `training:magitekScience`'s Armorclad gate
+  'powerEngine',  // `training:powerEngine`  ->  `training:energyCannon`,
+                  // `d:energyCannonThreshold` and the post-chain Destruction write
   'mechanical',   // `buffs:rebuild` (non-hero only, F217.3)  ->  `training:artificer`,
                   // `d:mechanicalExpert`
-  'rebuild',      // deriveMarionettePackage  ->  `buffs:rebuild` / `b:rebuild`
+  'rebuild',      // `buffs:rebuild:cast`, `b:marionette:strayedPackage`
+                  //   ->  `buffs:rebuild` / `b:rebuild`
+  // The strayed Marionette package's own read side. `UnitCalcPre.CAS` writes the permanent
+  // `EncTransmuteEquipment` in the strayed block at line 371 and the hero augmentation 298 lines
+  // later opens on `GetEnchantmentFlag(U,EncTransmuteEquipment,1)` — the permanent flag, read at
+  // its own rank — so `b:marionette:strayedTransmute`'s gate is a record read and the two ranks
+  // are what order it (F244.3f). `rebuild` above is the same shape one block further on.
+  'transmuteEquipment', // `b:marionette:strayedPackage`  ->  `b:marionette:strayedTransmute`
+  // The block's own skip: `IF (GETOLENCHANTMENTFLAG(U,EncSpellLock,1)>0) THEN { GOTO
+  // "NOLONGERSTRAYEDMARIONETTE" }` refuses the seven writes on a Wanderer that already carries
+  // Spell Lock, and `b:marionette:spellLock` is the write that sets it, one rank later. Since
+  // F244.3f widened the control to the three CoM-era engines, a Warlord card can state Spell
+  // Lock and `buffs:spellLock:cast` puts it on the record ahead of region `b`, so this gate is
+  // reachable from an input rather than only from the two steps' order: a Wanderer marked Spell
+  // Lock is refused the whole strayed package, which is what the script does.
+  'spellLock',    // `b:marionette:spellLock`  ->  `b:marionette:strayedPackage`'s skip
   'trueSight',    // `b:eyeOfHeaven`  ->  `c:trueSight`, `d:trueSight`
-  'fireImmunity',    // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
-  'lightningResist', // `b:insulation`, deriveMarionettePackage  ->  `c:innerPower`
-  'psychoForce',  // applyOutlanderReformGrants  ->  `d:psychoForce`
-  'pneumaField',  // applyOutlanderReformGrants  ->  `d:pneumaField`
-  'illusion',     // deriveMarionettePackage  ->  the Illusion malus inside `b:trueLight`
+  'fireImmunity',    // `b:insulation`, `b:marionette:books:fireImmunity`  ->  `c:innerPower`
+  'lightningResist', // `b:insulation`, `b:marionette:books:lightningResist`  ->  `c:innerPower`
+  'magicImmunity',   // `immunities:magicImmunity`  ->  the nine `debuffs:*:cast` gates
+  'flying',       // `training:temporalDrive`  ->  `b:bombsGrenades`'s qualification gate
+  'illusion',     // `b:marionette:ascension:illusion`  ->  the Illusion malus inside `b:trueLight`
 ];
 
 // The ability keys a **positioned grant step** writes. Each is a record field seeded from the
 // pre-grant ability set, written at the rank its own engine block has, and read back into the
-// published ability set after the chain — the shape F199 gave the ten curse flags, one layer out
+// published ability set after the chain — the shape F199 gave the curse flags, one layer out
 // (F200). `POSITIONED_GRANT_FIELDS` above is the read side of the same move: a key some step
 // gates on. A key here is one no hoist writes any more, so the record is its only carrier and the
 // post-chain read-back is what hands it to combat resolution.
 //
-// Five keys are in both lists, because a positioned write of theirs also has a positioned reader:
+// Nine keys are in both lists, because a positioned write of theirs also has a positioned reader:
+// `fieryBlade` (`training:lavaSmelter:flameBlade` writes it; `c:flameBlade` and `c:metalFires`
+// read it, and the weapon result field reads the finished record — F244.3c),
+// `armorclad` and `powerEngine` (`training:armorclad` and `training:powerEngine` write them;
+// `training:magitekScience` reads the first and `training:energyCannon` the second — and, since
+// F244.3e, `training:temporalDrive` reads the second too — each at the
+// position the script's own upgrade route reads its `GETENCHANTMENTFLAG` at — F244.3d),
+// `flying` (`training:temporalDrive` writes it and `b:bombsGrenades`'s qualification gate reads it,
+// which is the interaction that retired F209's last flag-versus-delta ruling — F244.3e),
 // `lucky` (`b:divineProtection` writes it, `c:lucky` reads it, and combat resolution reads the
 // finished value — `combat_phases.js`, MoM 1.31's enemy melee penalty), `trueSight`
 // (`b:eyeOfHeaven` writes it, `c:trueSight` and `d:trueSight` read it), `fireImmunity` and
@@ -502,7 +595,41 @@ const POSITIONED_GRANT_FIELDS = [
 // the retort's read is training-time, F208).
 const POSITIONED_GRANT_WRITES = [
   'largeShield',      // `b:magitekEngine`, `d:rust` (clear), `d:fortification`
-  'missileImmunity',  // `d:fortification`'s already-shielded arm
+  'rebuild',          // `buffs:rebuild:cast` — the cast's own flag. On both lists for the
+                      // reason the five below are: `buffs:rebuild` and `b:rebuild` read it at
+                      // their own rank, and combat resolution reads the finished value
+                      // (`applyRebuildEffects`, `combat_effects.js`), so the record has to be
+                      // its carrier in both directions (F244.3b review, finding 3).
+  'missileImmunity',  // `d:fortification`'s already-shielded arm,
+                      // `training:lavaSmelter:missileImmunity`
+  // The other four Lava Smelter grants (F244.3c). The three carry the card's own mark three
+  // different ways. `weaponImmunity` has a `template` row and no `immunities` row, so its seed
+  // carries the mark and the training write adds the mineral pair's. `missileImmunity` has a
+  // `template` row too, but its `immunities` row wins in `seedNonStatRecordFields`: the seed is
+  // false and the mark reaches the record through `immunities:missileImmunity:marked`, with the
+  // training write adding the pair's on top (F244.3c review, finding 2). `resistElements`,
+  // `elementalArmor` and `fieryBlade` have no control of their own at all, so the step is their
+  // only source in any version.
+  'weaponImmunity',   // `training:lavaSmelter:weaponImmunity`
+  'resistElements',   // `training:lavaSmelter:resistElementsAlias`
+  'elementalArmor',   // `training:lavaSmelter:elementalProtection`
+  'fieryBlade',       // `training:lavaSmelter:flameBlade`
+  // The Outlander reform's three flag grants (F244.3d). `armorclad` and `powerEngine` have no
+  // control of any kind, so their `training` step is the only source in any version;
+  // `resistMagic` has an enchantment control in all five, whose mark arrives at
+  // `buffs:resistMagic:cast`, and a Marionette book grant that is still a declared seed carry.
+  'armorclad',        // `training:armorclad`
+  'powerEngine',      // `training:powerEngine`
+  'resistMagic',      // `training:magitekScience`, `buffs:resistMagic:cast`
+  // The Anti-Gravity Drive block's three permanent writes and the `!COMBATOVERRIDE!` Doom write
+  // (F244.3e). `haste` and `illusionImmunity` have a control of their own whose mark reaches the
+  // record its own way — Haste is a cast enchantment with no `template` row, so
+  // `buffs:haste:cast` carries it, while Illusion Immunity is a template ability and its seed
+  // does; `flying` is a Warlord-only template ability, and `energyWeaponry` has no control at all,
+  // so the step is its one source.
+  'haste',            // `training:temporalDrive`, `buffs:haste:cast`
+  'flying',           // `training:temporalDrive`
+  'energyWeaponry',   // `d:energyWeaponry`
   'deathImmunity',    // `b:divineProtection`
   'lucky',            // `b:divineProtection`
   'rage',             // `training:altarOfTheMoon`
@@ -516,77 +643,148 @@ const POSITIONED_GRANT_WRITES = [
                       // branch writes selector 0, which nothing reads (F217.3)
   'supernatural',     // `buffs:destiny:supernatural` — `B.attackflags.supernatural := True`
   'trueSight',        // `b:eyeOfHeaven`
-  'illusionImmunity', // `c:trueSight`
+  'illusionImmunity', // `c:trueSight`, `training:temporalDrive`
   'fireImmunity',     // `b:insulation`
   'lightningResist',  // `b:insulation`
   'coldImmunity',     // `b:insulation`
+  // The strayed Marionette package's two flag writes and the Spell Lock write that follows it
+  // (F244.3f). `transmuteEquipment` has no control in any version, so the step is its only
+  // source; `charmed` is a template ability in all five and its seed carries the card's mark,
+  // with this write adding the branch's on top; `spellLock` is a cast enchantment in all three
+  // CoM-era engines, so its `buffs` origin covers them and this region-`b` write is Warlord's
+  // alone — the two can meet, and the cast one wins the package gate. `rebuild` is on the list
+  // above already — `buffs:rebuild:cast` writes it too.
+  'transmuteEquipment', // `b:marionette:strayedPackage`
+  'charmed',            // `b:marionette:strayedPackage`
+  'spellLock',          // `b:marionette:spellLock`
+  // The owned Marionette branch's flag grants (F244.3g). Eleven keys join here; the fourteen the list
+  // already carried — `largeShield`, `missileImmunity`, `weaponImmunity`, `resistMagic`,
+  // `deathImmunity`, `lucky`, `poisonImmunity`, `armorPiercing`, `wallCrusher`, `firstStrike`,
+  // `illusionImmunity`, `fireImmunity`, `lightningResist` and `coldImmunity` — take the branch's
+  // write on top of whatever their own step or seed already put there.
+  //
+  // Three groups, by how the card's own mark reaches the record. `stoningImmunity`, `illusion`,
+  // `invisibility` and `bloodSucker` are template abilities, so their seed carries the mark and the
+  // branch's write adds to it — `bloodSucker`'s control is Warlord's alone, which is the only
+  // version this branch runs in anyway. `bless` has no `template` row: its only control is a cast
+  // enchantment, so `buffs:bless:cast` carries the card's mark, the way `haste` and `spellLock` are
+  // carried (`permanentCastFlagSteps`). And `forester`, `mountaineer`, `healer`, `counterImmunity`,
+  // `createUndead` and `healingAura` have no control of any kind in any version, so the branch's
+  // step is their one source — each stands for a real engine write (`AForester`, `AMountaineer`,
+  // `AHealer`, `ACounterImmunity`, `ACreateUndead`, `AHealingAura`) that no modelled reader
+  // consumes, so the record carries them and combat resolution reads past them.
+  'forester',         // `b:marionette:books:forester`
+  'mountaineer',      // `b:marionette:books:mountaineer`
+  'stoningImmunity',  // `b:marionette:books:stoningImmunity`
+  'healer',           // `b:marionette:books:healer`
+  'counterImmunity',  // `b:marionette:ascension:counterImmunity`
+  'illusion',         // `b:marionette:ascension:illusion` — also on the read list above
+  'bless',            // `b:marionette:ascension:bless`, `buffs:bless:cast`
+  'bloodSucker',      // `b:marionette:ascension:bloodSucker`
+  'createUndead',     // `b:marionette:ascension:createUndead`
+  'invisibility',     // `b:marionette:ascension:invisibility`
+  'healingAura',      // `b:marionette:ascension:healingAura`
 ];
 
-// The same move for the two ability fields that carry a **value** rather than a flag. They are
+// The same move for the three ability fields that carry a **value** rather than a flag. They are
 // seeded verbatim instead of through `!!`, and read back on the same rule, so an absent key stays
 // absent. `poison` is written by four positioned steps in a row — `training:altarOfTheMoon`'s two
 // `STypeID` branches assign it, then `training:militaryWorkshop`, `training:motherFungus` and `d:venom`
 // each make the script's `<>100` increment — and the chain is what orders them; the merge that
 // used to do this restated their precedence by hand and lost one increment (F201). `lifeSteal` is
 // written by `training:altarOfTheMoon`'s Witchdoctor branch and by `d:pneumaField`.
-const POSITIONED_GRANT_VALUE_WRITES = ['poison', 'lifeSteal'];
+// `discipline` joined them in F244.3d. Its value is `'overland'` or `'combat'`, the calculator's
+// distinction between where the spell was cast, which the engine's single `EncDiscipline` flag
+// does not carry; `training:militaryDrilling` writes the overland one and `buffs:discipline:cast`
+// overwrites it with whatever the card states, which is the precedence the retired
+// `discipline === 'combat' ? 'combat' : 'overland'` merge stated by hand. `c:discipline` reads it
+// off the record at its own position, and the finished record answers the Combat-Discipline First
+// Strike cancellation.
+// The strayed Marionette's four hero-ability grants joined them in F244.3f. Each is a
+// `SETHEAB(W,48,HA…,<n>)` — a rank on the wizard's hero record rather than a flag — and the
+// script states 2 for Sage, Mechanical Master, Ritual Master and Arcane Ward. None has a control
+// or a `template` row in any version, so `b:marionette:strayedPackage` is their one source and an
+// absent key stays absent everywhere else.
+// The owned Marionette branch's four value grants joined them in F244.3g. `stoningTouch`,
+// `exorcise` and `destruction` are numeric card abilities whose seed carries the card's own value
+// and whose ascension write overwrites it — the script's `SETSTAT(U,AF…,0,<n>,1)` is an assignment,
+// not an increment. `regeneration` is the one increment in the whole branch
+// (`SETSTAT(U,SRegeneration,0,GETSTAT(U,SRegeneration,0)+2)`), and it has no control and no
+// `template` row in any version, so `b:marionette:ascension:regeneration` is its one source. `poison` and
+// `lifeSteal` were already here and take the branch's assignment like any other write at its rank.
+const POSITIONED_GRANT_VALUE_WRITES = ['poison', 'lifeSteal', 'discipline',
+  'sage', 'mechanicalMaster', 'ritualMaster', 'arcaneWard',
+  'stoningTouch', 'exorcise', 'destruction', 'regeneration'];
 
-// Lava Smelter (Warlord): five independent flags record the permanent mineral-pair grants already
-// carried by the unit. New Dwarf units receive them when trained; Upgrade & Retrain can apply
-// them later to any existing non-fantastic unit. Returns the ability set with every grant merged
-// in (a new object), or the original set unchanged when it does not apply. The grant is still
-// merged up-front because one reader has no position to take it at: `hasWarlordBlade`
-// (`stats.js`) turns the Fiery Blade flag into the magic-weapon upgrade and the +2 blade bonus,
-// and the upgrade is a **result** field rather than a record field, computed well before the
-// sequence is built. `c:metalFires`'s non-stacking gate, the other reader, already takes it off
-// the record (`fieryBlade` in `POSITIONED_GRANT_FIELDS` above, F202). The Wall-of-Fire siege
-// effect is not modelled here (it has its own global toggle). Each grant is sourced on its own
-// PROVENANCE[lavaSmelter:*] anchor further down this function, outside this block's window.
-function applyLavaSmelterGrant(abilities, version, unitType) {
-  if (!version || !version.startsWith('com2_warlord') || (unitType || '').startsWith('fantastic_')) return abilities;
-  // The legacy selector branches keep old presets/share payloads readable; new UI state uses
-  // the five independent booleans and can therefore carry every applicable pair simultaneously.
-  const legacy = abilities.lavaSmelter || 'none';
-  const weaponImmunity = !!abilities.lavaSmelterWeaponImmunity || legacy === 'weaponImmunity';
-  const missileImmunity = !!abilities.lavaSmelterMissileImmunity || legacy === 'missileImmunity';
-  const resistElements = !!abilities.lavaSmelterResistElements || legacy === 'resistElem';
-  const elementalArmor = !!abilities.lavaSmelterElementalArmor || legacy === 'elementalArmor';
-  const fieryBlade = !!abilities.lavaSmelterFieryBlade || legacy === 'flameBlade';
-  if (!weaponImmunity && !missileImmunity && !resistElements && !elementalArmor && !fieryBlade) {
-    return abilities;
-  }
-  const merged = { ...abilities };
-  const grants = [
-    weaponImmunity && 'weaponImmunity',
-    missileImmunity && 'missileImmunity',
-    resistElements && 'resistElements',
-    elementalArmor && 'elementalArmor',
-    fieryBlade && 'fieryBlade',
-  ].filter(Boolean);
-  for (const grant of grants) {
-    switch (grant) {
-      // STAT-FORMULA[lavaSmelter:weaponImmunity]
-      // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:20:6b832639e6e0656624d526f2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:5:19b52f5f80442e39e3d39683
-      case 'weaponImmunity': merged.weaponImmunity = true; break;
-      // STAT-FORMULA[lavaSmelter:missileImmunity]
-      // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:21:b4b1a5faba3c07399d273ecc | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:11:d560f73eb0a27ed8c05f0521
-      case 'missileImmunity': merged.missileImmunity = true; break;
-      // STAT-FORMULA[lavaSmelter:resistElementsAlias]
-      // PROVENANCE[lavaSmelter:resistElementsAlias]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:23:d6475291cbd817aedb8be4d2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:23:02ffaad30254a68cf55740f4 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:c5d736809b27903ec0e40f87 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:69075b87f644f18cbdb1c64a | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:e2dc42fafe0d325d0f39e42c | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:c99051561c61668cea94903d
-      case 'resistElements': merged.resistElements = true; break;
-      // STAT-FORMULA[lavaSmelter:elementalProtection]
-      // PROVENANCE[lavaSmelter:elementalProtection]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:23:d6475291cbd817aedb8be4d2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:23:02ffaad30254a68cf55740f4 | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:95c224910389756ff6f69515 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:473b9eac9397f92d8022c2cd
-      case 'elementalArmor': merged.elementalArmor = true; break;
-      // STAT-FORMULA[lavaSmelter:flameBlade]
-      // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:24:03c7f203c08a93035f9d5921 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:29:9803f0d614b7957485b50536
-      case 'fieryBlade': merged.fieryBlade = true; break;
-      // A grant added to the list above without a case here would be dropped in silence.
-      default: throw new Error(
-        `applyLavaSmelterGrant: '${grant}' is not one of weaponImmunity/missileImmunity/`
-        + `resistElements/elementalArmor/fieryBlade.`);
-    }
-  }
-  return merged;
+// Lava Smelter (Warlord): five independent mineral-pair grants, each a permanent write the owning
+// city makes and each its own `training` step (F244.3c). A unit receives them when the city builds
+// it — `CreateUnit.CAS` 494-498, the five writes inside the `ISBUILT(C,BLavaSmelter)` block that
+// runs between `!NOACADEMY!` and `!NOLAVASMELTER!` — and Upgrade & Retrain applies the same five
+// later to any existing non-Fantastic unit (`OverlandEndTurn.CAS` 527-551, each behind a
+// "does it already have it" skip). The two entrances are one modelled step at the creation
+// position, for the reason `training:armorclad` is (`stats_manifests.js`).
+//
+// Until F244.3c the five were a pre-sequence hoist merged into the ability map, and the reason
+// given for keeping the Fiery Blade half there was that `hasWarlordBlade` (`stats.js`) had no rank
+// to read it at. It has one now: the two blade consumers that are steps read `fieryBlade` off the
+// record at their own position, and the weapon *result* field reads the record the run leaves.
+// That is what re-opens F202's ruling — see the F244.3c report.
+//
+// All five keys are record fields (`POSITIONED_GRANT_WRITES` above), so the record is their only
+// carrier and the post-chain read-back is what hands them to combat resolution. The Wall-of-Fire
+// siege effect is not modelled here (it has its own global toggle).
+//
+// Each step id is the reviewed anchor's own name rather than the key's, so moving these five
+// citations off the retired transform and onto the steps leaves their
+// `provenance_verified_anchors.json` bindings untouched.
+//
+// `unitType` is the **permanent** unit type the caller resolved, which is the
+// block's one gate outside the mineral tests: `OverlandEndTurn.CAS`:446
+// `IF (BASEFANTASTIC(U)>0) THEN { GOTO "NOOUTLANDERUPGRADE"; }` stands upstream of the retrain
+// entrance, and the creation entrance is unreachable for a summoned Fantastic unit. A `training`
+// step runs before `a:baseCopy`, so the gate takes the permanent type as a closure constant rather
+// than off `ctx.base` — the rule `ORIGIN_PHASE` states (`stats_origins.js`). There is no race and
+// no hero term in either block; the two `preset_vacuity_sweep` declarations on
+// `lavaSmelterUpgradeRetrainNonDwarfWarlord` and `lavaSmelterUpgradeRetrainHeroWarlord` are what
+// pin that.
+//
+// `marked` is the ability set the card states. The legacy `lavaSmelter` selector is still read so
+// old presets and share payloads keep loading; new UI state uses the five independent booleans and
+// can therefore carry every applicable pair at once.
+// The version scope is `STEP_VERSION_SCOPES`' (`steps.js`), so these carry no version term.
+function lavaSmelterGrantSteps(unitType, marked) {
+  const fantasticBase = (unitType || '').startsWith('fantastic_');
+  const legacy = marked.lavaSmelter || 'none';
+  // The body every one of them has: the mineral pair's own control or the legacy selector's value
+  // is the mark, the permanent Fantastic test is the block's shared gate, and the write is the
+  // flag. Written once so a grant cannot be added without the gate that admits it.
+  const grant = (key, control, legacyValue, label) => ({
+    sourceId: control, sourceLabel: label, writes: [key],
+    when: () => !fantasticBase && (!!marked[control] || legacy === legacyValue),
+    apply: u => { u[key] = true; } });
+  return [
+    // PROVENANCE[lavaSmelter:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:20:6b832639e6e0656624d526f2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:5:19b52f5f80442e39e3d39683
+    statStep({ id: 'lavaSmelter:weaponImmunity', phase: 'training',
+      ...grant('weaponImmunity', 'lavaSmelterWeaponImmunity', 'weaponImmunity', 'Lava Smelter: Weapon Imm.') }),
+    // PROVENANCE[lavaSmelter:missileImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:21:b4b1a5faba3c07399d273ecc | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:11:d560f73eb0a27ed8c05f0521
+    statStep({ id: 'lavaSmelter:missileImmunity', phase: 'training',
+      ...grant('missileImmunity', 'lavaSmelterMissileImmunity', 'missileImmunity', 'Lava Smelter: Missile Imm.') }),
+    // What the flag then *does* is not cited here: the Resistance and Defence bonuses are
+    // `effectiveResistance:resistElements` and `effectiveDefense:resistElements`
+    // (`combat_effects.js`), which own the `Combat.ResolutionHelpers.pas` and `MODDING.INI` spans
+    // that prove them. This anchor cites the write alone (F244.3c review, finding 1).
+    // PROVENANCE[lavaSmelter:resistElementsAlias]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:23:d6475291cbd817aedb8be4d2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:23:02ffaad30254a68cf55740f4
+    statStep({ id: 'lavaSmelter:resistElementsAlias', phase: 'training',
+      ...grant('resistElements', 'lavaSmelterResistElements', 'resistElem', 'Lava Smelter: Resist Elem.') }),
+    // The Defence bonus is `effectiveDefense:elementalArmor`'s (`combat_effects.js`), which owns
+    // the effect's spans; this anchor cites the write alone (F244.3c review, finding 1).
+    // PROVENANCE[lavaSmelter:elementalProtection]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:23:d6475291cbd817aedb8be4d2 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:23:02ffaad30254a68cf55740f4
+    statStep({ id: 'lavaSmelter:elementalProtection', phase: 'training',
+      ...grant('elementalArmor', 'lavaSmelterElementalArmor', 'elementalArmor', 'Lava Smelter: Elem. Armor') }),
+    // PROVENANCE[lavaSmelter:flameBlade]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS@span:24:03c7f203c08a93035f9d5921 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:19:60c5b098b00fb24b111ce36e | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:40:6041faab8107a7e9e3594201 | Reference docs/Script source/Warlord 1.5.12.9/OverlandEndTurn.CAS@span:29:9803f0d614b7957485b50536
+    statStep({ id: 'lavaSmelter:flameBlade', phase: 'training',
+      ...grant('fieryBlade', 'lavaSmelterFieryBlade', 'flameBlade', 'Lava Smelter: Fiery Blade') }),
+  ];
 }
 
 // Sancta Basilica (Warlord, High Men building): every High Men unit trained here gains +3
@@ -625,14 +823,18 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
   return result;
 }
 
-// An immunity strips the curses it blocks. This is an **artificial calculator step**: no engine
-// makes this write, because no engine ever has to. The immunity is enforced where the spell
-// lands, so an immune unit simply never acquires the flag, and nothing later removes one it does
-// carry (`RecalculateUnits` has six flag clears, none a curse and none gated on an immunity).
+// An immunity refuses the curses it blocks — at the curse's own cast, not by a later strip. The
+// immunity is enforced where the spell lands, so an immune unit simply never acquires the flag,
+// and nothing later removes one it does carry (`RecalculateUnits` has six flag clears, none a
+// curse and none gated on an immunity). Each curse is therefore a `debuffs:<curse>` write whose
+// own `when` reads the immunity fields off the record at its own position, and an immune unit
+// never receives the flag rather than receiving it and having it stripped (the user's ruling of
+// 2026-09-02; F244.3b retired `immunities:immunityCurseGating`, which was the stand-in).
 // The calculator has no cast order, so it assumes the immunity is the pre-existing one — innate,
 // cast overland, or cast earlier in combat — which is the common case and the only one a single
-// ability set can represent. `SPEC.md`, *Deliberate deviations*, states the assumption; the step
-// is `immunities:immunityCurseGating`, at the head of every chain.
+// ability set can represent. `SPEC.md`, *Deliberate deviations*, states the assumption; the
+// record's `magicImmunity` and `illusionImmunity` are seeded by the template phase, so they stand
+// before any `debuffs` write asks.
 // Magic Immunity's half is the cited mechanism: both engine families make the target's
 // resistance unreachable for any spell carrying a realm, so the roll cannot fail. Modern sets
 // Result := 100 against a `Random(10) + 1` roll; DOS adds 30 against a d10.
@@ -680,48 +882,275 @@ const MAGIC_IMMUNITY_GATED_CURSES = [
   'warpAttack', 'warpDefense', 'warpResist', 'nausea', 'mindStorm',
 ];
 const ILLUSION_IMMUNITY_GATED_CURSES = ['mindStorm', 'vertigo'];
-// `version` is read for the Eye of Heaven arm alone: that enchantment is Warlord's, granted by
-// `Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS!ENDOFCOMBAT!+2..+4 ": New combat enchantment" "SETENCHANTMENTFLAG(U,EncTrueSight,0,1);"` and named by
-// no other supported source, so outside Warlord it must not confer the Illusion Immunity that
-// strips Mind Storm and Vertigo here.
-// PROVENANCE[immunityCurseGating]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
-// The ten curse flags are fields of the sequence record, and this is the step that clears them —
-// `immunities:immunityCurseGating`, the head of every chain. It reads the curse flags positionally, like
-// any other step, and takes its **immunity** half from `finishedImmunities`, the set the
-// recalculation leaves. That split is the ruling F199 implements: the step is artificial, so no
-// source fixes its position relative to a grant that writes an immunity, and reading the finished
-// set makes its answer independent of where such a grant lands (F164, and F166's stage (ii)).
-// `finishedImmunities` is a declared cross-boundary read — the shape F163 gave `targetingIdentity`
-// — and `tools/unit_checks/identity_record_choice.js` halts on an occurrence no row there claims.
-function immunityCurseGatingStep(version, finishedImmunities) {
-  return statStep({ id: 'immunityCurseGating', sourceLabel: 'Immunity', phase: 'immunities',
-    writes: [...MAGIC_IMMUNITY_GATED_CURSES],
-    when: u => immunityStrippedCurses(u, version, finishedImmunities).length > 0,
-    apply: (u) => {
-      for (const key of immunityStrippedCurses(u, version, finishedImmunities)) u[key] = false;
-    } });
+
+// Every non-stat field the sequence record carries, in one list. The four lists above say what
+// each key is *for* — read at a rank, written at a rank, or a value rather than a flag — and this
+// is what the seed iterates.
+const SEEDED_NON_STAT_KEYS = Object.freeze([...new Set([
+  ...POSITIONED_GRANT_VALUE_WRITES, ...MAGIC_IMMUNITY_GATED_CURSES,
+  ...POSITIONED_GRANT_FIELDS, ...POSITIONED_GRANT_WRITES,
+])]);
+
+// The record seed, by origin (F244.3b). F244's rule is that the record starts as the roster
+// template and nothing else, and every modification is a positioned write on top of it, so a key
+// is seeded only where `abilityOriginIsTemplate` (`stats_origins.js`) gives it a `template` row in
+// this version. Every other origin the key has takes a step at the phase `abilityOriginPhases`
+// names — `debuffs:*:cast` for the nine curses, the `buffs:*:cast` writes for the beneficial
+// casts the roster template cannot state (`permanentCastFlagSteps` below: three in the DOS builds,
+// four in base CoM2, five in Warlord), and the positioned grant steps already in the chain for the
+// rest.
+//
+// **The declared exception is gone.** `TRANSFORM_SEED_CARRY` stood here from F244.3b until F244.3g
+// and named the seeded keys a pre-sequence transform still granted: the Outlander reform's left in
+// F244.3e, the strayed Marionette branch's in F244.3f, and the owned branch's last two —
+// `resistMagic` and `wallCrusher` — in F244.3g, which positioned all thirty-one of its grants. No
+// transform writes a seeded key any more, so the branch below is unconditionally the fail-loud one.
+//
+// `marked` is the effective ability set (the card's marks plus the transforms' grants) and
+// `supplied` is the same set before the transforms ran, so their difference is exactly what a
+// transform granted. The throw is the fail-loud half: a transform that starts granting a key with
+// no template row would otherwise seed it in silence.
+function seedNonStatRecordFields(version, marked, supplied) {
+  const seed = {};
+  for (const key of SEEDED_NON_STAT_KEYS) {
+    const isValueField = POSITIONED_GRANT_VALUE_WRITES.includes(key);
+    // A marked immunity is written by its own `immunities` step, so the seed leaves it alone even
+    // where the key is template-capable. That is what makes the phase's write positioned rather
+    // than a hoist the phase then re-states (F244.3b, Option C).
+    if (abilityOriginIsMarkedImmunity(key, version)) {
+      seed[key] = false;
+      continue;
+    }
+    if (abilityOriginIsTemplate(key, version)) {
+      seed[key] = isValueField ? marked[key] : !!marked[key];
+      continue;
+    }
+    // The test is "did a transform *write* this key", not "is it truthy now". `marked` is the map
+    // after the transforms and `supplied` the map before them, and an unchanged key holds the same
+    // value in both, so an inequality with a value present on the `marked` side is exactly a
+    // transform's write. Truthiness was the earlier spelling and it had a hole: a transform writing
+    // an unseeded **value** key to `0` — a real shape here, the ascension block's
+    // `SETSTAT(U,AFDestruction,0,0,1)` — read as false and was seeded away in silence instead of
+    // halting (F244.3g review, finding 7). The `!= null` term is what keeps a *deletion* legal:
+    // `deriveOutlanderReformRecord` strips its derived output names from the map on purpose, so
+    // `armorclad` and the rest differ in the other direction and must not halt.
+    if (marked[key] !== supplied[key] && marked[key] != null) {
+      throw new Error(`seedNonStatRecordFields: '${key}' has no template origin in ${version}, `
+        + 'yet a pre-sequence transform wrote it. Give the write a positioned step '
+        + '(Calculator/stats_sequence.js) — no seed carry is offered any more (F244.3g).');
+    }
+    seed[key] = isValueField ? undefined : false;
+  }
+  return seed;
+}
+// The display name each cast write carries in the chain; the ids are `<key>:cast`, so the label
+// is what a tooltip reader sees beside the flag.
+const CURSE_CAST_LABELS = Object.freeze({
+  weakness: 'Weakness', blackSleep: 'Black Sleep', shatter: 'Shatter', vertigo: 'Vertigo',
+  warpAttack: 'Warp Creature', warpDefense: 'Warp Creature', warpResist: 'Warp Creature',
+  nausea: 'Conjuring Pact nausea', mindStorm: 'Mind Storm',
+});
+
+// The `immunities` phase: the immunities the card marks, written to the permanent record before
+// anything tests them (`CLAUDE.md`, the phase table; the user's ruling of 2026-09-02). Two keys
+// take a write here — the two whose calc key more than one control can set, so the record is the
+// only place their combined value can stand at a rank. Every other marked immunity has a single
+// control and rides the template seed, where its own origin row puts it.
+//
+// The value is the **merged** mark. The card's innate control and its enchantment control are
+// distinct DOM elements with distinct saved state (`aAbil_magicImmunity` and
+// `aAbil_enchantment_magicImmunity`; for Missile Immunity the innate control, Guardian Wind and
+// Hillfort), but `readAbilitiesFromDOM` runs them through `mergeAbilityCalcValue`, which is
+// `!!current || !!next` for a boolean, so the derivation is handed one flag. Writing that flag here
+// is what the ruling asks for; telling the two apart would be a change to the derivation's input
+// and is not this subtask's (F244.3b, Option C).
+//
+// Both are UNVERIFIED for the same reason the cast flags are: no supported source reconstructs a
+// cast or a building putting an immunity flag on the permanent record. The pointer is the compiled
+// read that proves the record carries the flag at all.
+const MARKED_IMMUNITY_FLAGS = Object.freeze([
+  { key: 'magicImmunity', label: 'Magic Immunity' },
+  { key: 'missileImmunity', label: 'Missile Immunity' },
+]);
+
+function markedImmunitySteps(marked) {
+  const immunity = (key, label) => ({ sourceId: key, sourceLabel: label, writes: [key],
+    when: () => !!marked[key],
+    apply: u => { u[key] = true; } });
+  return [
+    // PROVENANCE[magicImmunity:marked]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=no supported source reconstructs a cast or a building writing Magic Immunity onto the permanent record, and the calculator cannot tell an innate mark from a cast one because the two controls are merged before the derivation sees them; pointer=Reference docs/Caster binary/Combat.ResolutionHelpers.pas
+    statStep({ id: 'magicImmunity:marked', phase: 'immunities', ...immunity('magicImmunity', 'Magic Immunity') }),
+    // PROVENANCE[missileImmunity:marked]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=no supported source reconstructs a cast or a building writing Missile Immunity onto the permanent record, and Guardian Wind and Hillfort reach the same calc key as the innate control; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    statStep({ id: 'missileImmunity:marked', phase: 'immunities', ...immunity('missileImmunity', 'Missile Immunity') }),
+  ];
 }
 
-// One predicate for both the gate and the write, so the step cannot fire without stripping or
-// strip a key it did not declare. Illusion Immunity reaches only its own two curses.
-// `record` supplies the curse flags at the step's own position; `immunities` is the finished set.
-function immunityStrippedCurses(record, version, immunities) {
-  const eyeOfHeaven = !!(version && version.startsWith('com2_warlord') && immunities.eyeOfHeaven);
-  const illusionImmune = !!(immunities.illusionImmunity || immunities.trueSight || eyeOfHeaven);
-  const blocked = new Set();
-  if (immunities.magicImmunity) for (const key of MAGIC_IMMUNITY_GATED_CURSES) blocked.add(key);
-  if (illusionImmune) for (const key of ILLUSION_IMMUNITY_GATED_CURSES) blocked.add(key);
-  return [...blocked].filter(key => record[key]);
+// Whether the immunities standing on the record at this step's own position refuse the curse.
+// This predicate is the single audited home of the refusal mechanism: both engine families make
+// the target's resistance unreachable for any spell carrying a realm, so the roll cannot fail.
+// The nine `debuffs:*:cast` steps below apply it rather than restating its citation, which is why
+// each of them is UNVERIFIED for its own write and none of them repeats these spans (F244.3b
+// review, findings 4 and 5). Illusion Immunity's half is assumed rather than cited, for the
+// reasons the paragraph above `MAGIC_IMMUNITY_GATED_CURSES` gives; the spans below are the Magic
+// Immunity mechanism alone.
+// `record` is the sequence record — `magicImmunity` and `illusionImmunity` are seeded by the
+// template phase and `trueSight` is written by `buffs:trueSight`, all of which rank ahead of every
+// `debuffs` step, so the answer is a positioned read rather than a projection of the finished set.
+// `eyeOfHeaven` stays a constant because the key is `nonRecord` (`stats_origins.js`): it is
+// Warlord's combat enchantment, granted by
+// `Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS!ENDOFCOMBAT!+2..+4 ": New combat enchantment" "SETENCHANTMENTFLAG(U,EncTrueSight,0,1);"` and named by
+// no other supported source, so outside Warlord it must not confer the Illusion Immunity that
+// refuses Mind Storm and Vertigo here.
+// STAT-FORMULA[curseImmunityRefusal]
+// PROVENANCE[curseImmunityRefusal]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
+function curseRefusedByImmunity(record, key, version, eyeOfHeaven) {
+  const eye = !!(version && version.startsWith('com2_warlord') && eyeOfHeaven);
+  const illusionImmune = !!(record.illusionImmunity || record.trueSight || eye);
+  if (record.magicImmunity && MAGIC_IMMUNITY_GATED_CURSES.includes(key)) return true;
+  return illusionImmune && ILLUSION_IMMUNITY_GATED_CURSES.includes(key);
+}
+
+// One `debuffs:<curse>:cast` write per curse flag: the cast puts the flag on the target's
+// permanent record, and the target's immunity is what refuses it.
+// Each is UNVERIFIED, and the gap is the write rather than the gate. No supported source in this
+// tree reconstructs a curse cast writing its own flag onto the permanent record —
+// `Spells.InitializeCombatSpellcasting.pas` reconstructs exactly one such write, Raise Dead's
+// `EncNoHeal` — so the value here is the card's mark. What *is* reconstructed is the refusal,
+// and it has its own VERIFIED anchor above rather than nine copies (F244.3b review, finding 5).
+// `marked` is the ability set the card states.
+function curseCastSteps(version, marked, eyeOfHeaven) {
+  const isWarlord = !!(version && version.startsWith('com2_warlord'));
+  // The body every one of them has: the mark is the value, and the immunities on the record at
+  // this position are the gate. Written once so a step cannot fire without the gate that admits
+  // it, the way `immunityStrippedCurses` used to serve the strip's gate and write together.
+  const cast = key => ({ sourceId: key, sourceLabel: CURSE_CAST_LABELS[key], writes: [key],
+    when: u => !!marked[key] && !curseRefusedByImmunity(u, key, version, eyeOfHeaven),
+    apply: u => { u[key] = true; } });
+  return [
+    // PROVENANCE[weakness:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    statStep({ id: 'weakness:cast', phase: 'debuffs', ...cast('weakness') }),
+    // PROVENANCE[blackSleep:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    statStep({ id: 'blackSleep:cast', phase: 'debuffs', ...cast('blackSleep') }),
+    // PROVENANCE[shatter:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    statStep({ id: 'shatter:cast', phase: 'debuffs', ...cast('shatter') }),
+    // PROVENANCE[vertigo:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    statStep({ id: 'vertigo:cast', phase: 'debuffs', ...cast('vertigo') }),
+    // PROVENANCE[warpAttack:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    statStep({ id: 'warpAttack:cast', phase: 'debuffs', ...cast('warpAttack') }),
+    // PROVENANCE[warpDefense:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    statStep({ id: 'warpDefense:cast', phase: 'debuffs', ...cast('warpDefense') }),
+    // PROVENANCE[warpResist:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    statStep({ id: 'warpResist:cast', phase: 'debuffs', ...cast('warpResist') }),
+    // PROVENANCE[mindStorm:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    statStep({ id: 'mindStorm:cast', phase: 'debuffs', ...cast('mindStorm') }),
+    // `nausea` is Warlord's alone — a `UnitCalcPre.CAS` effect with no spell record at all — so no
+    // other engine has the write, and its scope entry says the same thing. The Magic Immunity
+    // refusal is inferred from the effect's shape rather than read off a `NonMagic` flag, which is
+    // the second half of its declared gap below.
+    // PROVENANCE[nausea:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=neither the effect's own flag write nor its membership of the blocked set is reconstructed: nausea is a UnitCalcPre.CAS effect with no spells.ini record at all, so its refusal is inferred from the effect's shape. The refusal mechanism itself is PROVENANCE[curseImmunityRefusal]; pointer=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS
+    ...(isWarlord ? [statStep({ id: 'nausea:cast', phase: 'debuffs', ...cast('nausea') })] : []),
+  ];
+}
+
+// The beneficial cast writes the record carries that no roster template can state: True Sight
+// (all five engines), Rebuild (Warlord), and — since F244.3d — Resist Magic (all five) and
+// Discipline (CoM2 and Warlord). Each is a `buffs`-origin key with no `template` row
+// (`stats_origins.js`), so the seed cannot carry it and the cast's own permanent write is a
+// step, at the rank every other `buffs` write takes.
+//
+// All are **UNVERIFIED**, declared rather than exempted (F244.3b review, finding 4). The write is
+// the card's mark and has no eligibility gate to cite, and no supported source in this tree
+// reconstructs either cast putting its flag on the permanent record. What each pointer names is
+// the strongest thing that *is* reconstructed: for True Sight the compiled read of
+// `U.EnchantmentFlags[EncTrueSight]`, which proves the permanent record carries the flag; for
+// Rebuild the cast block `PROVENANCE[rebuildEffectDerivation]` (`combat_effects.js`) already cites
+// for the package it confers. The audited anchors for the *effects* stay on the steps that read
+// the flag — `c:trueSight` / `d:trueSight`, and `buffs:rebuild` / `b:rebuild`.
+// F244.3d added two more, for the same reason and with the same shape. Resist Magic and Discipline
+// each became a record field when the Outlander reform's training grant of it was positioned
+// (`training:magitekScience` and `training:militaryDrilling`, `combat_abilities.js`), and neither
+// has a `template` row either — both are cast enchantments — so the card's own mark needs a
+// `buffs` write of its own or the seed would drop it. Discipline is the one that carries a value
+// rather than a flag: the engine has a single `EncDiscipline`, and overland-versus-combat is the
+// calculator's distinction, so the cast writes whichever the card states and thereby overrides the
+// `overland` the earlier training grant wrote.
+// Bless joined them in F244.3g, when the owned Marionette branch's Life-ascension
+// `SETENCHANTMENTFLAG(U,EncBless,1,1)` became `b:marionette:ascension:bless` and made `bless` a
+// record field. Its control is a cast enchantment with no `template` row, so the same rule applies.
+// `cast` is the **card's own** ability set, before any pre-sequence transform ran — not the
+// effective one every other step group reads. A step here claims the *cast* put the flag on the
+// permanent record, and the effective map could not support that claim while a transform still
+// granted one of these keys from the Channeler's book counts. Since F244.3g no transform grants any
+// ability key, so the two maps now agree on all six; the distinction is kept because it is the one
+// that states what a `buffs` step means (F244.3d review, finding 1).
+function permanentCastFlagSteps(version, cast) {
+  const isWarlord = !!(version && version.startsWith('com2_warlord'));
+  const isCoM2 = !!(version && version.startsWith('com2'));
+  const isCoM1 = version === 'com_6.08';
+  const flag = (key, label) => ({ sourceId: key, sourceLabel: label, writes: [key],
+    when: () => !!cast[key],
+    apply: u => { u[key] = true; } });
+  const disciplineValue = () => (cast.discipline === 'combat' ? 'combat' : 'overland');
+  return [
+    // PROVENANCE[trueSight:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the True Sight cast's own write of the permanent flag is reconstructed nowhere, so the pointer is the compiled read that proves the permanent record carries it; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    statStep({ id: 'trueSight:cast', phase: 'buffs', ...flag('trueSight', 'True Sight') }),
+    // PROVENANCE[resistMagic:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=Warlord does reconstruct a Resist Magic cast writing the permanent flag, at `OLSpell.CAS!NOPERMENCHANT!-59 "SETENCHANTMENTFLAG(TU,EncResistMagic,1,1)"`, and `Reference docs/Caster binary/Units.RecalculateUnits.pas` reconstructs the modern aggregation the flag is then read through. Neither covers this step's claim. The script write stands behind the Tattoo Magic research gate at `OLSpell.CAS!NOPERMENCHANT!-74 "IF (SPELLSTATE(W,STattooMagic)<>2) THEN { GOTO"` while the step is unconditional, the four other engines have no reconstructed writer at all, and no source makes the card's mark evidence that the cast landed - which is the calculator's own assumption, stated in SPEC.md under Deliberate deviations; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
+    statStep({ id: 'resistMagic:cast', phase: 'buffs', ...flag('resistMagic', 'Resist Magic') }),
+    // PROVENANCE[discipline:cast]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; gap=Warlord does reconstruct a Tactical Drill cast writing the permanent flag, at `OLSpell.CAS!NOPERMENCHANT!-5 "SETENCHANTMENTFLAG(TU,EncDiscipline,1,1)"`, and `Reference docs/Caster binary/Units.RecalculateUnits.pas` reconstructs the modern aggregation the value is read through. Neither covers this step's claim. The script write stands behind the Tattoo Magic research gate at `OLSpell.CAS!NOPERMENCHANT!-74 "IF (SPELLSTATE(W,STattooMagic)<>2) THEN { GOTO"` while the step is unconditional, base CoM2 has no reconstructed writer of its own, and overland-versus-combat is a calculator distinction the single EncDiscipline flag does not carry, so the card states it; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
+    ...(isCoM2 ? [statStep({ id: 'discipline:cast', phase: 'buffs',
+      sourceId: 'discipline', sourceLabel: 'Discipline', writes: ['discipline'],
+      when: () => cast.discipline === 'overland' || cast.discipline === 'combat',
+      apply: u => { u.discipline = disciplineValue(); } })] : []),
+    // PROVENANCE[rebuild:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=this entry's old text said the write is reconstructed nowhere and that was wrong. `OLSpell.CAS!NOTMARKOFCONQUEROR!+5 "SETENCHANTMENTFLAG(TU,EncRebuild,1,1)"` is the Rebuild cast writing the permanent flag, unconditionally and in this step's one version, inside the block PROVENANCE[rebuildEffectDerivation] already cites for the package it confers. What is left unverified is only the calculator's own assumption that a marked flag means the cast landed, which is shared by every buffs cast step. This looks promotable to VERIFIED on that span and F250 owns the decision; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
+    ...(isWarlord ? [statStep({ id: 'rebuild:cast', phase: 'buffs', ...flag('rebuild', 'Rebuild') })] : []),
+    // Haste joined them in F244.3e for the same reason Resist Magic and Discipline joined in
+    // F244.3d: the Anti-Gravity Drive reform's permanent `EncHaste` write became
+    // `training:temporalDrive`, so `haste` is a record field, and its only control is a cast
+    // enchantment with no `template` row — without this step the seed would drop the card's mark.
+    // PROVENANCE[haste:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the Haste cast's own write of the permanent flag is reconstructed in no supported source. What the scripts do reconstruct is a *training* write of the same flag - `CreateUnit.CAS!HASEVILPRESENCE!+75 "SETENCHANTMENTFLAG(U,EncHaste,ABase,1)"`, which is training:temporalDrive and not this step - and reads of it on neighbouring units at `UnitCalcPre.CAS!NOZOMBIEMASTERY!+42 "%AND (GETENCHANTMENTFLAG(UNITONTILE(P,OX,OY,N),EncHaste,1)>0)"`, which prove the permanent record carries the flag but not that a cast is what put it there. The corpus's other EncHaste writers are a different record: `COSpell.CAS~"SETCOMBATENCHANTMENTFLAG(TU,EncHaste,1,1)"` (Power of Sorcery) and `SpellMysticSurge.CAS~"SETCOMBATENCHANTMENTFLAG(TU,EncHaste,ABase,1)"` set the *combat* enchantment flag, which is not the permanent one this step writes, and base CoM2's only writer is the same Mystic Surge line. The four non-Warlord engines have no reconstructed permanent writer at all, and no source makes the card's mark evidence that the cast landed - the calculator's own assumption, stated in CLAUDE.md under Damage calculator purpose and non-goals, the paragraph beginning `Generally, the calculator should assume that unit curses have succeeded`; pointer=Reference docs/Script source/Warlord 1.5.12.9/CreateUnit.CAS
+    statStep({ id: 'haste:cast', phase: 'buffs', ...flag('haste', 'Haste') }),
+    // Spell Lock joined them in F244.3f: `spellLock` became a record field when the strayed
+    // Marionette's `SETOLENCHANTMENTFLAG(U,EncSpellLock,1,1)` became `b:marionette:spellLock`,
+    // and its control is a cast enchantment with no `template` row, so without this step the
+    // seed would drop the card's mark and the target would stop blocking Exorcise
+    // (`combat_special_attacks.js`).
+    //
+    // The scope is the three CoM-era engines, not CoM 1 alone. Spell Lock is `spells.ini` [54]
+    // in **both** modern sets as well — Realm 2, casting cost 100, `EnchantmentID=26`, a
+    // castable unit enchantment — and the shared modern executable refuses Exorcise on the flag
+    // it sets: `if aflags.exorcise and not Units[du].magicimmunity and not
+    // Units[du].EnchantmentFlags[EncSpellLock] and Units[du].Fantastic`
+    // (`Reference docs/Caster binary/Combat.ApplyAttack.pas`, the rider loop). Until F244.3f the
+    // control was gated to CoM 1 and `exorciseReachesRoll` tested the key only there, so a
+    // Spell-Locked Fantastic target took Exorcise in base CoM2 and Warlord exactly as an
+    // unlocked one did. Warlord's *other* writer is the region-`b` Marionette step, which is not
+    // a cast, and the two can meet: a card that states Spell Lock closes that step's gate.
+    //
+    // The two MoM builds take no step, and the reason is **not** that they lack the spell — they
+    // have it. `Reference docs/MoM binary analysis.md` decodes mask `0x00004000` as Spell Lock in
+    // the unit-enchantment table read from all three DOS executables. What they lack is a
+    // *reader*: MoM's Dispel Evil carries no Spell Lock exclusion (the same file's MoM-versus-CoM
+    // comparison records `Extra exclusion: none` for MoM against CoM 1's `[bx+0x19] & 0x40`), and
+    // the one reconstructed test, `combat.c`'s `& UE_SPELL_LOCK`, sits at com1 addresses inside
+    // the Exorcise arm. So in MoM the flag reaches no modelled number, and whether a control that
+    // moves nothing should still be offered there is a decision F244.3f raised and did not take
+    // (round-2 review, finding 1).
+    // PROVENANCE[spellLock:cast]: UNVERIFIED versions=com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=no reconstructed source in any of the three CoM-era engines carries a Spell Lock cast writing the permanent flag, and the four things that *are* reconstructed each establish something narrower. (1) The spell records establish that the cast exists - `spells.ini` [54] in the CoM2 1.05.11 base set and the Warlord set alike, Realm 2, casting cost 100, EnchantmentID 26 - which is why the scope is the three CoM-era engines (F244.3f, on the user's ruling). (2) The consumer is `Reference docs/Caster binary/Combat.ApplyAttack.pas`, the Exorcise rider's `not Units[du].EnchantmentFlags[EncSpellLock]` term. That proves Exorcise reads the flag, but **not** which record supplied it - `Reference docs/Caster binary/Units.RecalculateUnits.pas` builds `EnchantmentFlags` by OR-ing the base, item, combat and overland layers, so the reader sees an aggregate and cannot identify the backing store. (3) Five writes of the same flag are reconstructed and none of them is this step - the strayed Marionette package at `UnitCalcPre.CAS!NOLONGERSTRAYEDMARIONETTE!+2 "SETOLENCHANTMENTFLAG(U,EncSpellLock,1,1)"`, which is b:marionette:spellLock - the ascension block's Enchanter branch at `UnitCalcPre.CAS!NOTMARIONETTEASCENSION!-3 "SETOLENCHANTMENTFLAG(U,EncSpellLock,1,1)"`, which F244.3g owns - hero item power 81 at `UnitCalcPre.CAS!NOVAMPIRICWEAPON!+3 "SETOLENCHANTMENTFLAG(U,EncSpellLock,1,1)"`, which is hero equipment and out of scope - the Mystic Surge random grant at `SpellMysticSurge.CAS~"SETCOMBATENCHANTMENTFLAG(TU,EncSpellLock,ABase,1)"`, present in both modern sets - and the Nodeborne Souls Sorcery-node grant at `EnterCombat.CAS!NOTNEUTRALNODEDEFEND!-4 "IF (BUFF=3) THEN { SETCOMBATENCHANTMENTFLAG(U,EncSpellLock,1,1)"`. The last two write the *combat* enchantment record rather than the permanent one. (4) What is left unverified is therefore only the calculator's own assumption that a marked flag means the cast landed, stated in CLAUDE.md under Damage calculator purpose and non-goals, the paragraph beginning `Generally, the calculator should assume that unit curses have succeeded`; pointer=Reference docs/Caster binary/Combat.ApplyAttack.pas
+    ...(isCoM1 || isCoM2 ? [statStep({ id: 'spellLock:cast', phase: 'buffs',
+      ...flag('spellLock', 'Spell Lock') })] : []),
+    // Bless joined them in F244.3g, and for the fifth time the mechanism forced it: the owned
+    // Marionette's Life-ascension arm writes `SETENCHANTMENTFLAG(U,EncBless,1,1)`, so `bless`
+    // became a record field, and its only control is a cast enchantment with no `template` row —
+    // without this step the seed would drop the card's mark and the two Bless riders
+    // (`effectiveResistance:bless` and `effectiveDefense:bless`, `combat_effects.js`) would stop
+    // firing in all five versions. Scope is every engine, which is where the control is offered.
+    // PROVENANCE[bless:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the Bless *cast's* own write of the permanent flag is reconstructed in no supported source, and the three things that are reconstructed each establish something narrower. (1) The spell record establishes that the cast exists - `spells.ini` [121] Bless in the Warlord set, Realm 4, casting cost 7, EnchantmentID 51, CastingLocation 2 - but says nothing about which record the cast writes. (2) One permanent EncBless write **is** reconstructed and it is not a Bless cast at all: the Consecration city enchantment grants it to units the city produces, at `COSpell.CAS~": New effect of Consecration, Temple/Cathedral enchant unit with Bless (not permanent) :"+5 "SETENCHANTMENTFLAG(NEWU,EncBless,1,1)"`, behind a Tattoo Magic research gate that routes to SETOLENCHANTMENTFLAG instead when the research is absent. That is a training-time writer with no control, not this step. (3) The corpus's other EncBless writer sets the *combat* record rather than the permanent one, and it is not the Bless cast either: `COSpell.CAS~"SETCOMBATENCHANTMENTFLAG(TU,EncBless,1,1)"` is one line of the **Power of Life** package, inside `COSpell.CAS~"IF (SP<>SPowerOfLife) THEN { GOTO"`, which grants eleven Life enchantments at once (F244.3g review, finding 8 - the earlier text called it a generic reapplication block, which misidentified the writer). And every reconstructed reader is spelled GETENCHANTMENTFLAG(U,EncBless,0), selector 0, which `Reference docs/Caster binary/Units.RecalculateUnits.pas` builds by OR-ing the base, item, combat and overland layers, so no reader identifies which record supplied the flag. What is left unverified is therefore the calculator's own assumption that a marked flag means the cast landed, stated in CLAUDE.md under Damage calculator purpose and non-goals, the paragraph beginning `Generally, the calculator should assume that unit curses have succeeded`, plus the narrower question of whether the permanent record is the right home for this key at all; pointer=Reference docs/Script source/Warlord 1.5.12.9/COSpell.CAS
+    statStep({ id: 'bless:cast', phase: 'buffs', ...flag('bless', 'Bless') }),
+  ];
 }
 
 // Divine Protection's grant is `b:divineProtection` (`stats_sequence.js`), a positioned write to
 // the record's `deathImmunity` and `lucky` fields (F200).
-// Lucky reaches a unit from several sources. These markers retain which stage established
-// the flag, but the resulting stat package does not execute there: Caster.exe's compiled
-// Lucky block reads the finished flag and writes Resistance/To Hit/To Defend in region c.
-function markIntrinsicLucky(abilities) {
-  return abilities && abilities.lucky ? { ...abilities, luckyPhaseA: true } : abilities;
-}
 
 // Pillar of Faith (Warlord, Life rare city enchantment): units trained in the city have a
 // 20% chance to gain Lucky. The calculator models the landed outcome, so the pillarOfFaithLucky
@@ -775,36 +1204,172 @@ function marionetteBookCount(abilities, realm) {
   return Math.max(0, Math.trunc(Number(abilities[key]) || 0));
 }
 
-// The package carries the branch's grants, its spell and charge metadata, and — for the owned
-// branch alone — the realm retype value `b:marionette:rangedType` writes. It carries no permanent
+// --- The owned branch's thirty-one grants, one entry per engine write (F244.3g) ---
+//
+// Every write the owned Marionette branch makes, in `UnitCalcPre.CAS` order, as data: the five
+// `b:marionette:books:*` and twenty-six `b:marionette:ascension:*` steps read it
+// (`stats_sequence.js`), and so does the package's display list, so the thresholds and values have
+// one home. Until F244.3g these were `grant(...)` calls inside `deriveMarionettePackage` that merged
+// into the ability map before the sequence started; F244's rule is that the record starts as the
+// roster template and nothing else, so each is a positioned region-`b` write now.
+//
+// **One entry per engine write, not per block.** `CLAUDE.md`'s *Architecture* section requires each
+// engine write to be its own step with its own citation, and the grouping this subtask first used —
+// one step per realm — could not express the order either: `SETSTAT(U,SRangedType,0,30)` sits on the
+// third line of the Chaos arm, after Wall Crusher and Armor Piercing and before the Life arm's
+// Exorcise, which a single ascension step cannot straddle.
+//
+// Every one of the thirty-one is in `UnitCalcPre.CAS`, the precalc script hook, which is what makes
+// the phase `b`. Twenty-eight are `SETSTAT(U,…,0,…)` — record selector `0`, the calculated record.
+// Three are `SETENCHANTMENTFLAG(U,Enc…,1,1)`, selector `1`, the **permanent** record: Resist Magic at
+// `UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+24 "SETENCHANTMENTFLAG(U,EncResistMagic,1,1);"`, Bless at `UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+84 "SETENCHANTMENTFLAG(U,EncBless,1,1);"` and Invisibility at
+// `UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+96 "SETENCHANTMENTFLAG(U,EncInvisibility,1,1);"`. Permanent storage says what a later recalculation
+// reads, not that the write happens earlier than the hook containing it, so all three keep this
+// phase — the ruling F244.3f made for the strayed package's eight.
+//
+// Three gate shapes, and the entry says which. `over` is the script's own comparison,
+// `BOOKS(W,<realm>) > n`, kept verbatim rather than restated as `>= n+1`; `primary` is
+// `IF (PRIMARY=<realm>)`, the ascension block's five mutually exclusive arms; and `ascension` marks
+// the twenty-one writes behind
+// `IF (SPELLSTATE(W,SMarionetteAscension)<>2) THEN { GOTO "NOTMARIONETTEASCENSION"; }`.
+//
+// `delta` marks the one grant that is an increment rather than an assignment:
+// `SETSTAT(U,SRegeneration,0,GETSTAT(U,SRegeneration,0)+2)`. Everything else is a `SET`, so a card
+// value the record already carries is overwritten, which is what the script does.
+const MARIONETTE_OWNED_GRANTS = Object.freeze({
+  forester: { realm: 'nature', over: 1, label: 'Forester', value: true },
+  mountaineer: { realm: 'nature', over: 1, label: 'Mountaineer', value: true },
+  poisonImmunity: { realm: 'nature', over: 2, label: 'Poison Immunity', value: true },
+  stoningImmunity: { realm: 'nature', over: 4, label: 'Stoning Immunity', value: true },
+  largeShield: { realm: 'sorcery', over: 1, label: 'Large Shield', value: true },
+  missileImmunity: { realm: 'sorcery', over: 2, label: 'Missile Immunity', value: true },
+  resistMagic: { realm: 'sorcery', over: 4, label: 'Resist Magic', value: true },
+  firstStrike: { realm: 'chaos', over: 1, label: 'First Strike', value: true },
+  fireImmunity: { realm: 'chaos', over: 2, label: 'Fire Immunity', value: true },
+  lightningResist: { realm: 'chaos', over: 4, label: 'Lightning Resist', value: true },
+  healer: { realm: 'life', over: 1, label: 'Healer', value: true },
+  illusionImmunity: { realm: 'life', over: 2, label: 'Illusion Immunity', value: true },
+  lucky: { realm: 'life', over: 4, label: 'Lucky', value: true },
+  coldImmunity: { realm: 'death', over: 1, label: 'Cold Immunity', value: true },
+  deathImmunity: { realm: 'death', over: 2, label: 'Death Immunity', value: true },
+  weaponImmunity: { realm: 'death', over: 4, label: 'Weapon Immunity', value: true },
+  poison: { realm: 'nature', primary: true, ascension: true, label: 'Poison 10', value: 10 },
+  stoningTouch: { realm: 'nature', primary: true, ascension: true, label: 'Stoning Touch -2', value: -2 },
+  counterImmunity: { realm: 'sorcery', primary: true, ascension: true, label: 'Counter Immunity', value: true },
+  illusion: { realm: 'sorcery', primary: true, ascension: true, label: 'Illusion', value: true },
+  wallCrusher: { realm: 'chaos', primary: true, ascension: true, label: 'Wall Crusher', value: true },
+  armorPiercing: { realm: 'chaos', primary: true, ascension: true, label: 'Armor Piercing', value: true },
+  exorcise: { realm: 'life', primary: true, ascension: true, label: 'Exorcise -4', value: -4 },
+  bless: { realm: 'life', primary: true, ascension: true, label: 'Bless', value: true },
+  bloodSucker: { realm: 'death', primary: true, ascension: true, label: 'Blood Sucker', value: true },
+  createUndead: { realm: 'death', primary: true, ascension: true, label: 'Create Undead', value: true },
+  regeneration: { realm: 'nature', over: 4, ascension: true, label: 'Regeneration +2', value: 2, delta: true },
+  invisibility: { realm: 'sorcery', over: 4, ascension: true, label: 'Invisibility', value: true },
+  destruction: { realm: 'chaos', over: 4, ascension: true, label: 'Destruction 0', value: 0 },
+  healingAura: { realm: 'life', over: 4, ascension: true, label: 'Healing Aura', value: true },
+  lifeSteal: { realm: 'death', over: 4, ascension: true, label: 'Life Steal -1', value: -1 },
+});
+
+// Does this grant's own test pass, for a package? The branch term is the step's, not this
+// function's: a step's `when` is `marionetteOwned && marionetteOwnedGrantFires(...)`.
+function marionetteOwnedGrantFires(entry, pkg) {
+  if (entry.ascension && !pkg.ascended) return false;
+  if (entry.primary) return pkg.primary === entry.realm;
+  return pkg.books[entry.realm] > entry.over;
+}
+
+// The chain label a reader sees beside the write, built from the entry rather than restated.
+function marionetteOwnedGrantSource(entry) {
+  const realm = entry.realm[0].toUpperCase() + entry.realm.slice(1);
+  if (entry.primary) return `${realm} Ascension`;
+  return `${entry.over + 1}+ ${realm} books${entry.ascension ? ', Ascension' : ''}`;
+}
+
+// Everything a grant's step is except its id and its citation, so the thirty-one `statStep` calls in
+// `stats_sequence.js` state only what is theirs. They are written out one by one rather than mapped,
+// because a formula id is discovered by matching the literal step-constructor call that opens with
+// it, so an id built at run time would carry no anchor at all.
+function marionetteOwnedGrantStep(key, pkg, owned) {
+  const entry = MARIONETTE_OWNED_GRANTS[key];
+  return {
+    sourceId: 'marionetteChanneler',
+    sourceLabel: `Marionette (Channeler): ${marionetteOwnedGrantSource(entry)}`,
+    phase: 'b',
+    writes: [key],
+    when: () => owned && marionetteOwnedGrantFires(entry, pkg),
+    apply: u => {
+      u[key] = entry.delta ? (Number(u[key]) || 0) + entry.value : entry.value;
+    },
+  };
+}
+
+// The display list of what the owned branch confers, in the script's own order. It is a label list
+// and a source of nothing — the thirty-one steps make every write — and it reads the same table they
+// do, so the two cannot drift.
+function marionetteOwnedGrantLabels(pkg) {
+  return Object.values(MARIONETTE_OWNED_GRANTS)
+    .filter(entry => marionetteOwnedGrantFires(entry, pkg))
+    .map(entry => entry.label);
+}
+
+// The package carries the branch, the wizard facts its blocks are gated on, its spell and charge
+// metadata, and — for the owned branch alone — the realm retype value `b:marionette:rangedType`
+// writes. It grants no ability key at all since F244.3f and F244.3g: the strayed branch's eight
+// writes and the owned branch's thirty-one are positioned region-`b` steps, so this function is no
+// longer one of `ABILITY_ORIGIN_TRANSFORMS` (`stats_origins.js`). It carries no permanent
 // ranged type: the Wanderer's own is `UNITS.INI [362] RangedType=30`, read from the roster record.
+// The block's entrance is three tests, not two: `IF ( ISHERO(U) = 0 ) THEN { GOTO "NOTHERO"; }`
+// at `UnitCalcPre.CAS!NOVAMPIRISM!+3 "IF ( ISHERO(U) = 0 ) THEN { GOTO"` stands ahead of the hero-type test, and the whole Marionette
+// region — both branches, the two later augmentation blocks and everything to
+// `UnitCalcPre.CAS!NOTHERO!` — lies inside it. The hero flag was missing here until F244.3f: a
+// record stating hero type 48 with `isHero` false took the strayed branch and received all eight
+// permanent writes the script would have skipped. It is unreachable from the page, because
+// `heroTypeId` comes from the roster record and only the Wanderer carries 48, but the checks
+// themselves constructed exactly that identity, so the invariant could not be asserted instead.
+// **The citations are the branch's own extent, which shrank twice.** They used to run 83-301 and
+// 364-394 — every grant of both branches. The strayed span went when F244.3f made those writes
+// steps, and the grant spans (194-301) go here for the same reason: each is now cited by the step
+// that makes the write, and a formula citing a write it does not make is the defect F244.3f's
+// review named. What is left is exactly what this function still decides: the branch entrance with
+// the initial `SCHARGE` (first span), the five spell-selection arms and their `SRangedType` writes
+// (the next three), the Chaos ascension arm's second retype (the fifth — the value
+// `ascensionRangedType` carries, which stays a package constant, so the write it names has to be
+// here even though `b:marionette:ascensionRangedType` makes it), and the ascension gate with its
+// `SCHARGE` recompute (the last).
+//
+// **The charge store at `UnitCalcPre.CAS!NOTMARIONETTEASCENSION!+2 "SETSTAT(U,SSpellCharges,1,SCHARGE);"` is named
+// and not cited, deliberately.** It is where the engine stores the charge count this function
+// computes, and no span can carry it honestly: the write is unconditional in its own region — both
+// arms converge on `!NOTMARIONETTEASCENSION!` — so the nearest gate that decides whether it runs is
+// the branch entrance 270 lines above, and the audit requires each citation to show a gate beside
+// its write. An earlier revision of this entry reached back to line 354 to pick up the Enchanter
+// retort's `IF`, which gates nothing here, and said so in a comment. Disclosing that a check is
+// being satisfied syntactically does not make the citation true, so the span is gone (F244.3g
+// review, finding 3). What the two `SCHARGE` assignments the citations *do* carry establish is the
+// value; where the engine puts it is a mention.
 // STAT-FORMULA[marionettePackage]
-// PROVENANCE[marionettePackage]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:39:58a1f4eccd319a76072204a6 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:40:278fa1f3acca365b536cf823 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:19:55ebed8c65ed05b617bc2a17 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:37:2a33b53fd826bd83bed71132 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:40:53a8e746ffb95d09d43c6694 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:31:0485f6bca9517d221d1400be | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:31:8e93c3479df43f3aa01d74ab
+// PROVENANCE[marionettePackage]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:39:58a1f4eccd319a76072204a6 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:40:278fa1f3acca365b536cf823 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:19:55ebed8c65ed05b617bc2a17 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4
 function deriveMarionettePackage(identity, abilities, version) {
-  if (version !== MARIONETTE_VERSION || identity.heroTypeId !== MARIONETTE_HERO_TYPE_ID) {
+  if (version !== MARIONETTE_VERSION || !identity.isHero
+      || identity.heroTypeId !== MARIONETTE_HERO_TYPE_ID) {
     return { abilities, package: null };
   }
 
   // A Wanderer recalculated without a Channeler owner takes the one-time strayed branch.
-  // Its persistent, calculator-relevant grants are projected here even though Spell Lock
-  // prevents the source from writing the same package again on later recalculations.
+  // Its eight persistent writes are **not** made here: `UnitCalcPre.CAS!STRAYEDMARIONETTE!` is a
+  // region-`b` block like every other in this file, so each takes its rank in the sequence —
+  // `b:marionette:strayedPackage` for the seven behind the Spell Lock skip and
+  // `b:marionette:spellLock` for the one outside it (`stats_sequence.js`, F244.3f). What the
+  // package still carries is the branch itself, which `marionetteStrayed` supplies as those
+  // steps' `when` and the ranged-slot selection reads.
+  // `grantedAbilities` is the display list of what the branch confers, not a source of any of it.
   if (!abilities.channeler) {
     const grantedAbilities = [
       'Transmute Equipment', 'Rebuild', 'Sage', 'Mechanical Master',
       'Ritual Master', 'Charmed', 'Arcane Ward', 'Spell Lock',
     ];
     return {
-      abilities: {
-        ...abilities,
-        transmuteEquipment: true,
-        rebuild: true,
-        sage: 2,
-        mechanicalMaster: 2,
-        ritualMaster: 2,
-        charmed: true,
-        arcaneWard: 2,
-        spellLock: true,
-      },
+      abilities,
       // The strayed branch writes no ranged type at all (`UnitCalcPre.CAS!STRAYEDMARIONETTE!+0..+28 "!STRAYEDMARIONETTE!" "!NOLONGERSTRAYEDMARIONETTE!"`), so the
       // package projects none: the Wanderer's Chaos ranged type 30 at zero strength is its own
       // roster record's (`UNITS.INI [362]`), and Transmute Equipment's later +2 `SRanged` write
@@ -827,68 +1392,32 @@ function deriveMarionettePackage(identity, abilities, version) {
     : 1 + Math.trunc(primaryBooks / 2);
   const spellSet = MARIONETTE_SPELLS[primary];
   const spell = ascended ? (conjurer ? spellSet.conjurer : spellSet.ascended) : spellSet.base;
-  const grants = { ...abilities };
-  const grantedAbilities = [];
-  const grant = (key, label = key, value = true) => {
-    grants[key] = value;
-    grantedAbilities.push(label);
-  };
 
-  if (books.nature > 1) { grant('forester', 'Forester'); grant('mountaineer', 'Mountaineer'); }
-  if (books.nature > 2) grant('poisonImmunity', 'Poison Immunity');
-  if (books.nature > 4) grant('stoningImmunity', 'Stoning Immunity');
-  if (books.sorcery > 1) grant('largeShield', 'Large Shield');
-  if (books.sorcery > 2) grant('missileImmunity', 'Missile Immunity');
-  if (books.sorcery > 4) grant('resistMagic', 'Resist Magic');
-  if (books.chaos > 1) grant('firstStrike', 'First Strike');
-  if (books.chaos > 2) grant('fireImmunity', 'Fire Immunity');
-  if (books.chaos > 4) grant('lightningResist', 'Lightning Resist');
-  if (books.life > 1) grant('healer', 'Healer');
-  if (books.life > 2) grant('illusionImmunity', 'Illusion Immunity');
-  if (books.life > 4) { grant('lucky', 'Lucky'); grants.luckyPhaseB = true; }
-  if (books.death > 1) grant('coldImmunity', 'Cold Immunity');
-  if (books.death > 2) grant('deathImmunity', 'Death Immunity');
-  if (books.death > 4) grant('weaponImmunity', 'Weapon Immunity');
-
-  if (ascended) {
-    if (primary === 'nature') {
-      grant('poison', 'Poison 10', 10);
-      grant('stoningTouch', 'Stoning Touch -2', -2);
-    } else if (primary === 'sorcery') {
-      grant('counterImmunity', 'Counter Immunity');
-      grant('illusion', 'Illusion');
-    } else if (primary === 'chaos') {
-      grant('wallCrusher', 'Wall Crusher');
-      grant('armorPiercing', 'Armor Piercing');
-    } else if (primary === 'life') {
-      grant('exorcise', 'Exorcise -4', -4);
-      grant('bless', 'Bless');
-    } else if (primary === 'death') {
-      grant('bloodSucker', 'Blood Sucker');
-      grant('createUndead', 'Create Undead');
-    }
-    if (books.nature > 4) grant('regeneration', 'Regeneration +2', 2);
-    if (books.sorcery > 4) grant('invisibility', 'Invisibility');
-    if (books.chaos > 4) grant('destruction', 'Destruction 0', 0);
-    if (books.life > 4) grant('healingAura', 'Healing Aura');
-    if (books.death > 4) grant('lifeSteal', 'Life Steal -1', -1);
-  }
-
+  // The owned branch's thirty-one grants are **not** made here either, since F244.3g. Each is its
+  // own region-`b` step — `b:marionette:books:<key>` for the sixteen book writes and
+  // `b:marionette:ascension:<key>` for the fifteen ascension ones (`stats_sequence.js`), all reading
+  // `MARIONETTE_OWNED_GRANTS` above. What the package
+  // carries is the block's *inputs* — the primary realm, the five book counts and the ascension
+  // flag, all wizard facts the unit record does not hold — plus the three outputs that are not
+  // ability keys at all and stay constants: the spell, the charge count and the two ranged types.
+  // `luckyPhaseB` went with the grants. It was a write-only derived flag standing for no engine
+  // write — the Life-book grant it accompanied is `SETSTAT(U,ALucky,0,1)` and nothing else — so it
+  // is retired the way F198 and F244.3e retired theirs rather than given a step.
   return {
-    abilities: grants,
+    abilities,
     package: {
       state: 'owned', primary, books, ascended, conjurer, baseSkill,
       attackBonus, defenseBonus,
       rangedType: MARIONETTE_RANGED_TYPES[primary],
       ascensionRangedType: ascended ? (MARIONETTE_ASCENSION_RANGED_TYPES[primary] || null) : null,
-      spell, charges, grantedAbilities,
+      spell, charges,
+      grantedAbilities: marionetteOwnedGrantLabels({ books, ascended, primary }),
     },
   };
 }
 
-// Outlander controls expose the researched reform/building conditions, not their
-// derived labels. Fold permanent unit upgrades in before curse gating so downstream
-// mechanics see a single calculated state.
+// Outlander controls expose the researched reform/building conditions, not their derived labels,
+// so these names are outputs and never accepted inputs.
 const DERIVED_OUTLANDER_STATE_KEYS = [
   'armorclad',
   'blackpowder',
@@ -896,125 +1425,222 @@ const DERIVED_OUTLANDER_STATE_KEYS = [
   'energyCannon',
   'energyCannonDestruction',
   'energyWeaponry',
-  'pneumaField',
   'powerEngine',
-  'psychoForce',
-  'temporalGravityDrive',
   'upgradedExplosive',
 ];
 
+// Names that used to be on the list above and are not ability keys of any kind now: each was a
+// label for a block gate no engine flag stands behind, and each is a `reform` field since F244.3e,
+// the way F198 handled `battleArmor` and `magitekEngine`. They are stripped for the reason the
+// list above is — a stale saved state or share link from an older build still carries them, and
+// publishing a name the derivation no longer produces would contradict the record — but they are
+// **not** in the origin table and must not be, because nothing writes them (F244.3e review,
+// finding 1). Two lists rather than one because that difference is the whole point: the keys above
+// are outputs this build still makes.
+const RETIRED_OUTLANDER_STATE_KEYS = [
+  'pneumaField',
+  'psychoForce',
+  'temporalGravityDrive',
+];
+
 // The reform block's eligibility gates, for the versions that have no Outlander reforms at all.
+// Every positioned reform write reads its `when` from here — the four F244.3d gave a `training`
+// step, the region-`b` steps F198 gave one, and the temporal-drive and `!COMBATOVERRIDE!` writes
+// F244.3e positioned — and so do the two research states read outside the block.
 const NO_OUTLANDER_REFORM = Object.freeze({
   sapiensEligible: false, battleArmor: false, magitekEngine: false,
   ballisticsTraining: false, xenopsychology: false, radio: false, xenoveterinary: false,
+  armorclad: false, powerEngine: false, magitekScience: false, militaryDrilling: false,
+  energyBeamWeapons: false, rocketry: false,
+  temporalEngineering: false, psychoConverter: false, pneumaReactor: false,
+  combatSoldierEligible: false,
 });
 
-// Returns the granted ability set **and** the block's eligibility record. Six of the states this
-// used to derive were ability labels no engine flag stands behind — `EncBattleArmor` and
-// `EncMagitek` occur nowhere in the 38 `.CAS` files — and each was only ever the `when` of a step
-// the chain already has, so they are `reform` fields read by those predicates instead of keys
-// merged into the unit's abilities (F198).
+// Returns the ability set with the reform's derived output names stripped, **and** the block's
+// eligibility record. It grants nothing any more, which is why it is no longer named for grants
+// and no longer one of `ABILITY_ORIGIN_TRANSFORMS`.
+//
+// Nine of the states it used to derive were ability labels no engine flag stands behind —
+// `EncBattleArmor` and `EncMagitek` occur nowhere in the 38 `.CAS` files, and neither do the
+// Psycho Force, Pneuma Field and Temporal Gravity Drive names — and each was only ever the `when`
+// of a step the chain already has, so they are `reform` fields read by those predicates instead of
+// keys merged into the unit's abilities (F198, extended by F244.3e). The states that *do* stand
+// for an engine write became positioned steps: Armorclad, Power Engine, Resist Magic and
+// Discipline in F244.3d, and Haste, Flying and Illusion Immunity — the Anti-Gravity Drive block's
+// three permanent writes — plus Energy Weaponry's calculated-record Doom write in F244.3e.
+//
+// **The seven keys F244.3e positioned were not region-`b` grants.** The item filed them as such,
+// and no `UnitCalcPre.CAS` line makes any of them: the file's one Anti-Gravity block
+// (`UnitCalcPre.CAS!NOZOMBIEMASTERY!+5 "IF (SPELLSTATE(W,STMagitekAntiGravityDrive)<>2) THEN { GOTO"`) is an overland stack scan that *reads*
+// `EncHaste` and `AIllusionImmunity` on neighbouring transports and writes `AStealth`, a movement
+// stat outside the calculator's record (F139). The three real writes are `CreateUnit.CAS`'s
+// creation block and `OverlandEndTurn.CAS`'s upgrade pass, both permanent — the `training` phase —
+// and the three `!COMBATOVERRIDE!` states are region `d`.
 //
 // Every `BASEFANTASTIC(U)` here is the **permanent** record: the base unit data "before applying
 // continuous effects such as buffs or curses" (`Reference docs/Script source/CAS reference/
 // Scripts.TXT:286`), which carries Destiny's `B.Fantastic := True` at $0059A390 (F192). The one
 // live-Fantastic gate in the block is Xenoveterinary's `IF FANTASTIC(U)` (`UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {"`),
 // and that term is not here: it is the positional `when` of `b:outlanderXenoveterinary`.
-function applyOutlanderReformGrants(abilities, version, permanentFantastic, isHero = false) {
+function deriveOutlanderReformRecord(abilities, version, permanentFantastic, isHero = false,
+  spiritLinkSentience = false) {
   if (!version || !version.startsWith('com2_warlord')) {
     return { abilities, reform: NO_OUTLANDER_REFORM };
   }
 
   // These names are outputs, never accepted inputs. Besides keeping the UI to one
   // source of truth, stripping them here prevents stale saved state or a caller from
-  // bypassing the reform/building prerequisites.
+  // bypassing the reform/building prerequisites. The retired names go with them: they are
+  // outputs of no build at all now, so a raw mark of one must not reach the published map.
   const fundamentalAbilities = { ...abilities };
   for (const key of DERIVED_OUTLANDER_STATE_KEYS) delete fundamentalAbilities[key];
+  for (const key of RETIRED_OUTLANDER_STATE_KEYS) delete fundamentalAbilities[key];
 
   const baseFantastic = !!permanentFantastic;
   const outlanderWizard = !!fundamentalAbilities.outlanderWizard;
-  // All reform spell states are owned by Outlander wizards. Keep their raw controls in
-  // the UI state, but remove them from the effective unit state when the owner is not
-  // an Outlander so no downstream branch can accidentally consume one ungated.
-  if (!outlanderWizard) {
-    for (const key of [
-      'armorcladReform', 'ballisticsTraining', 'energyBeamWeapons', 'explosive',
-      'heatPowerEngine', 'magitekEngineering', 'magitekScience', 'militaryDrilling',
-      'pneumaReactor', 'psychoConverter', 'radio', 'rocketry', 'temporalEngineering',
-      'xenopsychology', 'xenoveterinary',
-    ]) delete fundamentalAbilities[key];
-  }
+  // All fifteen reform spell states are owned by an Outlander wizard, and that ownership is now an
+  // explicit term on every read rather than a deletion from the map (F244.3d). The deletion made
+  // the gate invisible at the reading site and made the published ability set depend on which
+  // wizard owns the unit, which is not something the engine's unit record carries at all: the
+  // research state is `SPELLSTATE(W,ST…)`, a *wizard* field the scripts test beside the unit's
+  // (`CreateUnit.CAS`, `OverlandEndTurn.CAS`). `research` below is the one home for the test.
+  // Every read inside this function was already spelled `outlanderWizard && …` — directly, or
+  // through `sapiensEligible`, `powerEngine` or the combat-soldier gate, each of which carries the
+  // term — so the deletion changed nothing here. The reads outside it take the gate from the
+  // `reform` record's own fields instead.
+  const research = key => outlanderWizard && !!fundamentalAbilities[key];
   // Rebuild permanently writes Mechanical for non-heroes. Its hero branch is
   // encounter-only and cannot receive overland Power Engine/Armorclad upgrades. Sourced on
   // PROVENANCE[rebuild] (combat_abilities.js) and PROVENANCE[rebuildEffectDerivation]
   // (combat_effects.js), both out of this block's anchor window.
   const permanentMechanical = !!fundamentalAbilities.mechanical
     || (!!fundamentalAbilities.rebuild && !isHero);
-  const armorclad = outlanderWizard && !!fundamentalAbilities.armorcladReform && permanentMechanical;
+  const armorclad = research('armorcladReform') && permanentMechanical;
   // `UnitCalcPre.CAS!NOTSAPIENS!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"` closes the whole tail on `BASEFANTASTIC(U)>0`, and the +3 branch at
   // `UnitCalcPre.CAS!NOTSAPIENS!+6..+12 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)=0)" "}"` restates it beside `EncArmorClad` index 1 and `SCustomAttribute` index 1 — three
   // permanent-record terms in one test.
-  const battleArmor = outlanderWizard && !!fundamentalAbilities.armorcladReform
+  const battleArmor = research('armorcladReform')
     && !baseFantastic && !permanentMechanical;
-  const powerEngine = outlanderWizard && !!fundamentalAbilities.heatPowerEngine && permanentMechanical;
-  // `UnitCalc.CAS!COMBATOVERRIDE!+5..+7 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)" "NOTOUTLANDERSOLDIER"` evaluates left-to-right: non-fantastic non-mechanical units,
-  // heroes, and Armorclad mechanical units pass; fantastic units do not.
-  const outlanderSoldier = outlanderWizard && !baseFantastic && (!permanentMechanical || armorclad);
+  const powerEngine = research('heatPowerEngine') && permanentMechanical;
   // The `NOTSAPIENS` gate, `UnitCalcPre.CAS!NOMAGITEKENGINE!+2..+4 "IF (BASEFANTASTIC(U)>0)" "THEN { GOTO"`. `b:bombsGrenades` reads the same one.
+  //
+  // The full test is `BASEFANTASTIC(U)>0 %AND (GETSTAT(U,SMultiLabel,1)<>14)`, and 14 is the
+  // Sapiens label — `DisAbil.CAS` prints "Sapiens" on it. `sapiens` is the control that states
+  // it, and Spirit Link's cast is a second writer: its `SETSTAT(TU,SMultiLabel,1,14)` runs under
+  // the same `IF BASEFANTASTIC(TU)` as the Fantastic clear, so a Spirit-Linked base-Fantastic
+  // unit carries the label. That is not redundant with the clear, because the label survives a
+  // later write that makes the unit permanently Fantastic again: Destiny's `B.Fantastic := True`
+  // is re-made on every recalculation pass and stands after the clear in the chain, and it does
+  // not touch `SMultiLabel`. So a Spirit Link + Destiny unit is Fantastic here and still labelled
+  // 14, and the script's conjunction admits it (F245 review, finding 2). The label is carried as
+  // this predicate rather than as a record field: it has no other modelled reader, the only
+  // other one being `DisAbil.CAS`'s Bombs & Grenades ability line, which is display text.
   const sapiensEligible = outlanderWizard
-    && (!baseFantastic || !!fundamentalAbilities.sapiens);
-  const temporalDrive = powerEngine && !!fundamentalAbilities.temporalEngineering;
-  const temporalGravityDrive = temporalDrive && !!fundamentalAbilities.sailing;
+    && (!baseFantastic || !!fundamentalAbilities.sapiens || !!spiritLinkSentience);
   // `UnitCalcPre.CAS!NOXENOVET!+2..+4 "IF (GETENCHANTMENTFLAG(U,EncPowerEngine,0)=0)" "NOMAGITEKENGINE"`: the block's own gate is the *calculated* `EncPowerEngine` flag,
   // which no region-`b` write reaches before this point, so the derived permanent state answers it.
-  const magitekEngine = powerEngine && !!fundamentalAbilities.magitekEngineering;
-  // `OverlandEndTurn.CAS!NOMAGITEKSCI!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"`, the fourth site of the same permanent-record term.
-  const militaryDrilling = outlanderWizard && !baseFantastic && !!fundamentalAbilities.militaryDrilling;
+  const magitekEngine = powerEngine && research('magitekEngineering');
+  // Military Drilling's Fantastic term is **not** here, and that is the difference between this
+  // state and the four permanent ones above. `training:militaryDrilling` is the one `training`
+  // step in the reform whose block carries a `BASEFANTASTIC(U)` test
+  // (`OverlandEndTurn.CAS!NOMAGITEKSCI!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"`), and a
+  // `training` step ranks ahead of every permanent-record write the pipeline makes, so gating it
+  // on the record those writes *leave* would be a gate reading a later phase. It reads
+  // `u.fantastic` at its own rank instead, the way `training:temporalDrive` reads `u.powerEngine`
+  // and `training:magitekScience` reads `u.armorclad` (F245, on the user's ruling). The four
+  // states above keep their `baseFantastic` term because every step they gate is region `b` or
+  // later, where the permanent record is the finished one.
+  //
+  // **Which history this represents, and that the source does not settle it.** The block has two
+  // entrances. At creation the unit is being built and no cast has reached it, so
+  // `BASEFANTASTIC(U)` is the template flag and the grant lands. At the `OverlandEndTurn.CAS`
+  // upgrade pass — which runs every turn, on a unit that may have been Apotheosised or Spirit
+  // Linked since — it is the flag those casts left, and the grant is closed. The two genuinely
+  // disagree for such a unit, the calculator models one step at the creation position, and this
+  // gate is therefore the **creation** history. Nothing in the scripts ranks the two entrances
+  // for a given unit; the model picks one, and this comment is the record of which.
+  const militaryDrilling = research('militaryDrilling');
 
   return {
-    abilities: {
-      ...fundamentalAbilities,
-      ...(armorclad ? { armorclad: true } : {}),
-      ...(powerEngine ? { powerEngine: true } : {}),
-      // Large Shield is no longer granted here. It is the block's fourth write,
-      // `SETSTAT(U,ALargeShield,0,1)` at `UnitCalcPre.CAS!NOXENOVET!+9 "SETSTAT(U,ALargeShield,0,1);"`, inside the same reviewed span as
-      // the To-Defend one, so it is a second field of `b:magitekEngine` and lands at that rank —
-      // which is what lets the region-`d` Fortification block see it (F200).
-      ...(temporalDrive ? { haste: true } : {}),
-      ...(temporalGravityDrive
-        ? { temporalGravityDrive: true, flying: true, illusionImmunity: true }
-        : {}),
-      ...(outlanderSoldier && fundamentalAbilities.energyBeamWeapons
-        ? { energyWeaponry: true }
-        : {}),
-      ...(outlanderSoldier && fundamentalAbilities.psychoConverter
-        ? { psychoForce: true }
-        : {}),
-      ...(outlanderSoldier && fundamentalAbilities.pneumaReactor
-        ? { pneumaField: true }
-        : {}),
-      // Despite both prose sources naming Battle Armor, the executing scripts grant Resist
-      // Magic only alongside the permanent EncArmorClad flag (CreateUnit.CAS!HASEVILPRESENCE!+94..+95 "IF (SPELLSTATE(W,STMagitekMaterialScience)=2) THEN {" "SETENCHANTMENTFLAG(U,EncResistMagic,ABase,1);" and
-      // OverlandEndTurn.CAS!NOMECHANICALUPGRADE!+2..+8 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)=0) THEN { GOTO" "}"). The transient +3 Battle Armor branch has no such grant.
-      ...(outlanderWizard && fundamentalAbilities.magitekScience && armorclad
-        ? { resistMagic: true }
-        : {}),
-      ...(militaryDrilling
-        ? { discipline: fundamentalAbilities.discipline === 'combat' ? 'combat' : 'overland' }
-        : {}),
-    },
+    // Nothing is granted here any more. Every write the reform makes is a positioned step, and
+    // this record is what supplies each one's `when`:
+    //   `training:armorclad`, `training:powerEngine`, `training:magitekScience`,
+    //   `training:militaryDrilling` (F244.3d) — the permanent `CreateUnit.CAS` /
+    //   `OverlandEndTurn.CAS` writes of Armorclad, Power Engine, Resist Magic and Discipline;
+    //   `training:temporalDrive` (F244.3e) — the Anti-Gravity Drive block's Haste, Flying and
+    //   Illusion Immunity, permanent writes at the same two entrances;
+    //   `d:energyWeaponry`, `d:psychoForce`, `d:pneumaField` (F244.3e) — the three
+    //   `UnitCalc.CAS!COMBATOVERRIDE!` Outlander-soldier effects;
+    //   `b:battleArmor`, `b:magitekEngine`, `b:outlanderXenoveterinary`, `b:bombsGrenades`,
+    //   `b:outlanderBallisticsTraining`, `b:outlanderXenopsychology`, `b:outlanderRadio` (F198).
+    // Large Shield is not granted here either: it is the Magitek Engine block's fourth write,
+    // `SETSTAT(U,ALargeShield,0,1)` at `UnitCalcPre.CAS!NOXENOVET!+9 "SETSTAT(U,ALargeShield,0,1);"`, inside the same reviewed span as the
+    // To-Defend one, so it is a second field of `b:magitekEngine` and lands at that rank — which
+    // is what lets the region-`d` Fortification block see it (F200).
+    abilities: fundamentalAbilities,
     reform: {
       sapiensEligible,
       battleArmor,
       magitekEngine,
-      ballisticsTraining: sapiensEligible && !!fundamentalAbilities.ballisticsTraining,
-      xenopsychology: sapiensEligible && !!fundamentalAbilities.xenopsychology,
-      radio: sapiensEligible && !!fundamentalAbilities.radio,
+      ballisticsTraining: sapiensEligible && research('ballisticsTraining'),
+      xenopsychology: sapiensEligible && research('xenopsychology'),
+      radio: sapiensEligible && research('radio'),
       // The research state alone. `IF FANTASTIC(U)` (`UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {"`) is the calculated
       // record at region `b`, so it is the step's own `when` and not a term here (F198).
-      xenoveterinary: outlanderWizard && !!fundamentalAbilities.xenoveterinary,
+      xenoveterinary: research('xenoveterinary'),
+      // The `when` of the four positioned training writes (F244.3d). Each is the block's own gate
+      // with the record read left out, because the record cannot answer it at the `training`
+      // phase: `permanentMechanical` carries Rebuild's permanent `SCustomAttribute` write, which
+      // `buffs:rebuild` makes two phases later, and the overland entrance these steps also stand
+      // for reaches a unit that was cast on long before. `armorclad` is the exception in the other
+      // direction — `training:magitekScience` reads the *flag* off the record, which is what
+      // `OverlandEndTurn.CAS`'s own `GETENCHANTMENTFLAG(U,EncArmorClad,1)` gate does — so
+      // `magitekScience` here is the research state alone.
+      armorclad,
+      powerEngine,
+      magitekScience: research('magitekScience'),
+      militaryDrilling,
+      // The two research states read outside this function, gated here so the reading site does
+      // not have to restate the ownership test the deleted map mutation used to make implicitly
+      // (F244.3d). `energyBeamWeapons` is `training:energyCannon`'s and `d:energyCannonThreshold`'s
+      // `SPELLSTATE(W,STMagitekBeamWeapon)=2` — and, since F244.3e, `d:energyWeaponry`'s;
+      // `rocketry` is the Blackpowder source's.
+      energyBeamWeapons: research('energyBeamWeapons'),
+      rocketry: research('rocketry'),
+      // The three research states F244.3e's steps take, each the state alone for the reason
+      // `xenoveterinary` above is: the rest of every one of those blocks' gates is a record read
+      // the step itself makes at its own rank.
+      //
+      // `temporalEngineering` is `training:temporalDrive`'s `SPELLSTATE(W,STMagitekAntiGravityDrive)=2`
+      // (`CreateUnit.CAS!HASEVILPRESENCE!+74 "IF (SPELLSTATE(W,STMagitekAntiGravityDrive)=2) THEN {"`). Its Power Engine term is not here: the overland
+      // entrance spells it `IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0)`
+      // (`OverlandEndTurn.CAS!NOANTIGRAVITY!-8 "IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0) THEN {"`), a permanent-record read the step makes off
+      // `u.powerEngine` — the flag `training:powerEngine` wrote one rank earlier, exactly as
+      // `training:magitekScience` reads `u.armorclad` (F244.3d).
+      // `psychoConverter` and `pneumaReactor` are `d:psychoForce`'s and `d:pneumaField`'s
+      // `SPELLSTATE(W,STMagitekPsycheForceConverter)=2` and `SPELLSTATE(W,STMagitekPneumaReactor)=2`.
+      temporalEngineering: research('temporalEngineering'),
+      psychoConverter: research('psychoConverter'),
+      pneumaReactor: research('pneumaReactor'),
+      // The two terms of the `!COMBATOVERRIDE!` Outlander-soldier gate that no record field can
+      // answer: wizard ownership, and the permanent Fantastic flag F244.3h owns. The other two
+      // terms are record reads the three region-`d` steps make through
+      // `outlanderCombatSoldierAt` below.
+      combatSoldierEligible: outlanderWizard && !baseFantastic,
     },
   };
+}
+
+// The `!COMBATOVERRIDE!` Outlander-soldier gate, at the rank of the step asking:
+// `UnitCalc.CAS!COMBATOVERRIDE!+5..+7 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)" "NOTOUTLANDERSOLDIER"` evaluates left-to-right, so non-fantastic
+// non-mechanical units, heroes, and Armorclad mechanical units pass; fantastic units do not.
+// Two of its four terms are record reads — `GETENCHANTMENTFLAG(U,EncArmorClad,0)` and
+// `GetStat(U,SCustomAttribute,1)` — and by region `d` the record carries both: `training:armorclad`
+// wrote the first and `buffs:rebuild` the second, at the ranks their own blocks make them. Until
+// F244.3e both were pre-sequence constants derived from the same inputs, so this positions the
+// read without moving the answer.
+function outlanderCombatSoldierAt(u, reform) {
+  return !!reform.combatSoldierEligible && (!u.mechanical || !!u.armorclad);
 }
 
 // Hierophany's calculated ability writes run with its Defense write and remove both movement

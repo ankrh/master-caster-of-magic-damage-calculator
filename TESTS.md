@@ -55,6 +55,14 @@ or fail. Do not add them here.
 - Anchor: CLAUDE.md INV-2 (version gating)
 - Checks: the set of items the UI hides per version equals the set the defs' gating disables, asked
   of the app's own `abilityVersionGated`; and a hidden ability cannot leak into the calculation.
+  The leak half covers **both** input paths, which are protected differently. The card is safe
+  because `applyDisabled` clears version-hidden controls, so its readers need no version test. The
+  matrix reads persisted `matrixPropertyState`, which a version switch only *hides* and never
+  clears, so its reader carries the filter itself (`matrixEnchantmentValue`). The matrix case
+  asserts the row is **still stored** after the switch before asserting it reads inactive —
+  otherwise it would pass on a row that had been cleaned up rather than filtered. Added after
+  F258.1 found a Warlord-only `enemyEyeOfHeaven` reaching DOS matrix runs; the card-path test
+  passes with that defect present, so it was not covering it.
 
 ## roster-smoke
 
@@ -122,16 +130,16 @@ or fail. Do not add them here.
 - Tag: scaffolding
 - Anchor: —
 - Checks: `deriveUnitStats` and the engine/combat helpers in isolation, headless, in a `vm` context
-  built from `index.html`'s script manifest. 20,327 assertions across 14 families, including the
+  built from `index.html`'s script manifest. 23,104 assertions across 14 families, including the
   per-rider phase histograms F222.2 and F222.3 emit and the effective-resistance /
   effective-defense chains F222.5 hangs on them, for all five engines, plus INV-1 on every
   distribution a phase publishes and the rider/total partition on a set that cannot overkill.
   It also places every rider that writes a non-normal damage bucket and asserts that category
   reaches the post-combat composition, which is the check that catches a rider missing from the
   joint's damage-tracking gate. It cannot evaluate presets: that path runs through the DOM.
-  The 14th family is `ability_origins` (4,119 assertions, F244.3a): the origin table in
+  The 14th family is `ability_origins` (6,092 assertions, F244.3a to F244.3i): the origin table in
   `Calculator/stats_origins.js` against the code it classifies — that it names exactly the keys the
-  ability/enchantment defs, the seven pre-sequence transforms and the four record-field lists
+  ability/enchantment defs, the three pre-sequence transforms and the four record-field lists
   expose; that every row's origin, version scope and producers are well formed and agree with the
   control's own version gating and with the named step's `STEP_VERSION_SCOPES` entry and phase;
   that each producer form admits only the origins it can stand for, so a global cannot be filed as
@@ -140,8 +148,106 @@ or fail. Do not add them here.
   seeded record field has an origin that can take a position and nothing else is a record field;
   that the compatibility ability keys no def exposes are still read where they are declared to be;
   and that each transform writes exactly the keys the table classifies for it, measured by running
-  the transform rather than reading a list.
-- Runtime: ~80s.
+  the transform rather than reading a list. Its `record_seed` section (F244.3b) asserts the
+  partition the seed rests on: `SEEDED_NON_STAT_KEYS` is exactly the four lists' union; every
+  `TRANSFORM_SEED_CARRY` entry is a seeded key a transform writes, has no template row, and names
+  the subtask that retires it; every seeded key with no template row is either a declared carry or
+  has a positioned step with a scope entry; and each of the nine curse flags is seeded in no
+  version and has its own `debuffs:<curse>:cast` write. It then **executes** the seed rather than
+  describing it: `seedNonStatRecordFields` is run per version and asserted key by key, a transform
+  grant of an undeclared non-template key is asserted to halt, a positioned write with no writer
+  in scope is asserted not to publish, and a committed immunity matrix runs every curse against
+  every immunity source — stated and, for Sancta Basilica, granted — in every version. A last
+  group proves the `immunities` phase is real: it has a chain entry in every version, the seed
+  does **not** carry what those entries write, and the marked immunity still reaches the finished
+  record — which together are the difference between a positioned write and a hoist the phase
+  merely restates. A last group (F244.3c) executes the five `training:lavaSmelter:*` grants: each
+  control writes its own key and no other, the legacy `lavaSmelter` selector reaches the same
+  write, the block's permanent-Fantastic gate refuses all five, a granted key with no control of
+  its own is not an input, and the Fiery Blade grant moves the melee stat and the weapon result
+  field — which is what proves `hasWarlordBladeAt` reads the record rather than a constant.
+  The next group (F244.3d, extended by F244.3e) does the same for the Outlander reform's seven
+  permanent writes: each of
+  `armorclad`, `powerEngine`, `resistMagic`, `discipline`, `haste`, `flying` and
+  `illusionImmunity` names exactly one Warlord-only
+  `training` step, fires for the case its script block admits, is refused both without an Outlander
+  wizard — the explicit gate that replaced a deletion from the ability map — and without the
+  block's own eligibility term, and is asserted through the number its downstream *reader*
+  produces, since a flag that reaches the published set without reaching its reader would pass
+  every other assertion. `d:energyCannonThreshold`'s read is asserted on the step trace instead,
+  because its write is invisible in the finished record. The same group pins the one claim
+  the finished record cannot show at all: a `buffs:*:cast` step reads the card's own ability
+  map, so a Marionette book grant of Resist Magic or Rebuild is `skipped` there while the
+  card's own mark is `applied`. That assertion reads `statExecutionTrace` rather than
+  `statTrace`, because a wrongly admitted cast writes a value the seed already carries and so
+  changes nothing.
+  The last group (F244.3e) covers the two record reads that move created and the three names that
+  stopped being ability keys: `training:temporalDrive` reads the Power Engine flag off the record,
+  `b:bombsGrenades` reads the Flying flag it wrote there — asserted through the Thrown field a
+  zero-melee unit only qualifies for with it — the card's own Haste reaches the record through
+  `buffs:haste:cast` in every version, and `temporalGravityDrive`, `psychoForce` and `pneumaField`
+  are absent from both the published map and the origin table while the effects their gates admit
+  still land. A last section pins the `!COMBATOVERRIDE!` combat-soldier gate as a record read: a
+  Mechanical unit is refused, `training:armorclad`'s flag clears it, a Rebuilt non-hero is refused
+  by the permanent Mechanical write `buffs:rebuild` makes, and `energyWeaponry` — which has no
+  control — publishes nothing from a raw mark.
+  The newest group (F244.3f) covers the strayed Marionette's eight persistent writes, which
+  `b:marionette:strayedPackage` and `b:marionette:spellLock` make: all eight reach the published
+  record at the values the script states — four of them ranks rather than flags — an owned
+  Channeler Marionette receives none of them, the two steps and the two blocks that read their
+  flag execute in the script's line order, the five keys with no control anywhere publish nothing
+  from a raw mark in any version, and the card's own Spell Lock reaches the record through
+  `buffs:spellLock:cast` in each of the three CoM-era engines and neither MoM build — which
+  also asserts the number that scope protects, that a Spell-Locked Fantastic target is refused
+  the Exorcise roll while an unlocked one still takes it. That section is what holds the nine
+  Spell Lock sites together, so a partial revert fails there rather than silently in one
+  version.
+  Its last section calls the step **predicates** directly, by wrapping `statStep` for one run and
+  keeping the composed steps with their closures. That is there because every gate this subtask
+  added or changed reads a record field no control can currently set, so a derivation exercises
+  one arm only and five wrong implementations passed everything above it: dropping the Spell Lock
+  skip from the package, adding one to the Spell Lock write that stands outside it, reverting the
+  Transmute Equipment gate to the branch constant, and dropping either of the two per-write
+  `SETHEAB` skips — which are first-writer-wins rules over a rank, not idempotent guards, so a unit
+  already holding Sage 1 must keep 1. The same section asserts the two hero-region terms the same
+  way, since `heroTypeId` 48 implies a hero in every reachable state.
+  F244.3g closed the transform out and added a section of its own for the owned branch's
+  thirty-one writes. `deriveMarionettePackage` is asserted to add no ability key on any of its seven
+  branches, the way `deriveOutlanderReformRecord` already was, and its label list is asserted
+  separately - 23 for one saturated ascended run, 31 across the five primaries - so a grant deleted
+  from `MARIONETTE_OWNED_GRANTS` fails here rather than passing as a silently smaller package.
+  The new section exists because a mutation battery found three wrong implementations passing
+  everything else: every book threshold is asserted on both sides of its boundary, each step's gate
+  is called directly, and the whole twenty-two-step chain order is asserted against
+  `statExecutionTrace` for a saturated ascended Chaos Marionette - the one shape in which every step
+  fires, and the shape that pins the projectile retype between Armor Piercing and Exorcise. The
+  Regeneration increment is asserted by running the **composed step's** apply on a record already
+  carrying a value, not the table helper: a step that calls the right helper and then overwrites the
+  field passes a helper-level assertion (F244.3g review, finding 6, which proved it). The seed
+  partition lost its third branch with `TRANSFORM_SEED_CARRY`: a transform may now write a seeded key
+  only where that key has a `template` or `immunities` row, any other transform write must halt -
+  including a zero-valued one, which the earlier truthiness test read as absent - and a *deletion*
+  must not.
+  F244.3i's section is the whole assertion for a relocation that moves no number: three gates that
+  asked the card's attack input what the permanent record holds now ask `ctx.base`, and every
+  output is identical either way, so the only falsifiable statement is about the predicates
+  themselves. Each is composed with its live closures - `d:energyCannonThreshold`'s `when`,
+  `c:chaosChannels:fireBreath`'s `when`, and `slots.persistentRanged` reached through the real
+  `slotGateAdmits` arm with the run context's own slot contexts, since fabricating one would
+  fabricate the thing under test - and called against a run context whose `base` says the opposite
+  of the card. A build reading the input answers all six backwards. That covers the ranged-type
+  test the DOS-shaped shared slot carries and the channel one does not, and MoM 1.31's
+  strength ceiling of 3, which is read off the same record.
+  Its second instrument, `deriveWithPatchedBase`, exists because the first was not enough: the
+  F244.3i review demonstrated four wrong implementations that passed every predicate-level
+  assertion, each regressing a production path while leaving the helper the predicate tests
+  untouched - `addToSlot`'s forwarding, the Chaos Channels `apply`'s independent re-check of the
+  gate its `when` already asked, the post-run Destruction rider beside `d:energyCannonThreshold`,
+  and the Energy Cannon type test narrowed to the single token every synthetic base named. The
+  instrument doctors the record `a:baseCopy` publishes and reads a derived output, so it drives
+  each call site whole; the Energy Cannon gate is also asserted over every `RANGED_TYPES` member
+  rather than a chosen one.
+- Runtime: ~85s.
 
 ## persistence
 
@@ -338,6 +444,13 @@ or fail. Do not add them here.
 - Checks: CoM common `0x0800` maps to the literal Exorcise consumer; the two DOS names are gated and
   the other four version mechanics are left intact; and no control hidden in both MoM builds but
   live in a modern one names Dispel Evil in its tooltip, `spiritLink` naming Exorcise (F197).
+  Amended by F244.3f: the `spellLock` entries of its version-gating table for
+  `com2_1.05.11` and `com2_warlord_1.5.12.9` encoded a defect rather than a finding —
+  the spell is `spells.ini` [54] in both modern sets and the shared executable refuses
+  Exorcise on the flag — so both flipped, the matrix-property row with them, and a new
+  `lockedExorcise` assertion pins the number a locked target now takes. What F43 itself
+  established is asserted unchanged: the two DOS names stay gated and the modern Exorcise
+  mechanic is undisturbed.
 
 ## life-steal-healing
 

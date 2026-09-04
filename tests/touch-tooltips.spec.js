@@ -1,7 +1,9 @@
 // Touch tooltip behavior (long-press shows, tap dismisses) and the iOS
 // focus-zoom guard (>=16px input text at phone widths).
 const { test, expect } = require('@playwright/test');
-const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers');
+const {
+  openCalculator, expectNoConsoleErrors, setValue, warmDefaultStateCache,
+} = require('./helpers');
 
 test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
@@ -65,6 +67,10 @@ test('inputs render at >=16px on phones so iOS does not zoom on focus', async ({
 test('long-press exposes the same modifier chain from a calculated output', async ({ page }) => {
   const errors = await openCalculator(page);
   await setValue(page, 'aAbil_highPrayer', true);
+  // Take the deferred rebuild the recalculate above armed, before anything is resolved out of
+  // the render. `#aAtkMod` is a static element of index.html and survives it, but the rebuild
+  // would otherwise still be pending across the touch sequence below.
+  await warmDefaultStateCache(page);
   const target = '#aAtkMod';
   await page.locator(target).scrollIntoViewIfNeeded();
   const expected = await page.locator(target).getAttribute('data-tooltip');
@@ -86,6 +92,10 @@ test('long-press exposes a rider histogram\'s effective-resistance chain', async
   // The rider chains hang on a span inside a scrolling histogram, which is the one place a
   // touch tooltip could be lost to the panel's own scroll handling rather than shown.
   await page.evaluate(() => { applyPreset('stoningTouchBasic'); });
+  // The target lives under #breakdownGrid, which the deferred rebuild wipes with
+  // `innerHTML = ''`. Take that rebuild now, or it lands between the locator resolving and the
+  // scroll acting and the scroll reports `Element is not attached to the DOM` (F241).
+  await warmDefaultStateCache(page);
   const target = '#breakdownGrid .rider-panel[data-rider-key="stoningTouch"] .rider-name';
   await page.locator(target).scrollIntoViewIfNeeded();
   const expected = await page.locator(target).getAttribute('data-tooltip');

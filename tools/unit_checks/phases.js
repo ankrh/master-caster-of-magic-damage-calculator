@@ -945,7 +945,10 @@ function runRiderChainChecks(ctx) {
   };
   const target = {
     figs: 1, def: 4, toBlkMod: 0, res: 8, hp: 4, unitType: 'fantastic_chaos',
-    abilities: { bless: true, resistElements: true, resistMagic: true },
+    // Resist Elements through the `elemArmor` select, which is the control that offers it here:
+    // the raw `resistElements` key is Warlord's Lava Smelter grant alone since F244.3c, so a raw
+    // mark writes nothing outside Warlord and this target would carry no resistance bonus.
+    abilities: { bless: true, elemArmor: 'resistElements', resistMagic: true },
   };
 
   for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
@@ -1051,7 +1054,7 @@ function runRiderChainChecks(ctx) {
     };
     const dosTarget = {
       figs: 1, def: 5, toBlkMod: 0, res: 8, hp: 4, unitType: 'fantastic_chaos',
-      abilities: { bless: true, resistElements: true },
+      abilities: { bless: true, elemArmor: 'resistElements' },
     };
     const result = resolve(version, dosAttacker, dosTarget, { riderChains: true });
     const defender = ctx.deriveUnitStats(
@@ -1097,7 +1100,7 @@ function runRiderChainChecks(ctx) {
     abilities: { stoningGaze: -2, deathGaze: -1 },
   };
   const gazed = { figs: 1, def: 4, toBlkMod: 0, res: 8, hp: 4,
-    abilities: { bless: true, resistElements: true } };
+    abilities: { bless: true, elemArmor: 'resistElements' } };
   const gazeResult = resolve('com2_1.05.11', gazer, gazed, { riderChains: true });
   const gazeRows = (gazeResult.phases || []).filter(phase => /Gaze/.test(phase.label));
   assert(gazeRows.length >= 2, 'F222.5 the modern gazer emits a row per kill gaze');
@@ -1151,7 +1154,7 @@ function runRiderChainChecks(ctx) {
   // why: the figure the roll had to beat is in it.
   const hopeless = resolve('com2_1.05.11',
     { atk: 4, hitChance: 70, hp: 4, figs: 1, abilities: { stoningTouch: 0 } },
-    { figs: 1, def: 0, toBlkMod: 0, res: 10, hp: 4, abilities: { resistElements: true } },
+    { figs: 1, def: 0, toBlkMod: 0, res: 10, hp: 4, abilities: { elemArmor: 'resistElements' } },
     { riderChains: true });
   const zeroRows = allRiders(hopeless).filter(({ rider }) => rider.key === 'stoningTouch');
   assert(zeroRows.length > 0, 'F222.5 a rider that cannot land still emits a row');

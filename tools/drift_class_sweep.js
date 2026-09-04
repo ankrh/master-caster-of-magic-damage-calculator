@@ -265,7 +265,9 @@ function enums(scans) {
 
 // A name written onto the abilities map and named nowhere else in the repository. Counted over
 // the whole repo, not just Calculator/, because the Node checks and Playwright suites read
-// derived flags by name (`luckyPhaseA` lives only in tools/unit_checks).
+// derived flags by name. `luckyPhaseA` was the standing example until F244.3b deleted
+// `markIntrinsicLucky` and `luckyPhaseB` the next until F244.3g deleted the Marionette grant that
+// wrote it; `luckyPhaseBase` is the one that remains.
 function writeonly(scans) {
   const candidates = new Map();
   for (const sc of scans) {

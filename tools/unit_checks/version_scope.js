@@ -34,6 +34,9 @@ const SCOPE_PROVENANCE_GAPS = {
 };
 // M11 gave `tactician` one id across all three CoM engines, so its own PROVENANCE comment now
 // covers it and the exemption this list held is gone. Every scope id carries its own citation.
+// F244.3b briefly reopened it for the two cast-flag writes and then closed it again: those
+// steps carry declared UNVERIFIED provenance naming what is missing, which is what this list
+// would have hidden.
 const SCOPE_IDS_WITHOUT_PROVENANCE = [];
 
 // Ability/enchantment values to probe, taken from the definition tables so a new control is
@@ -383,21 +386,22 @@ function runCanonicalVersionScopeChecks(ctx) {
   try { ctx.effectiveResistance(dosTarget, 'mom_1.31', 'chaos'); } catch (error) { dosThrew = true; }
   assert(dosThrew, 'Calling GetEffectiveResistance with a DOS version is caught by the call-site check');
 
-  // --- 4a. the immunity curse strip, per version ---
-  // Since F199 it is `immunities:immunityCurseGating`, an ordinary step at the head of every chain
-  // writing ten record fields, so the sweep in section 6 reaches it like any other write. What
-  // the sweep cannot say is *which* curses each immunity blocks, so that is checked here — through
-  // `deriveUnitStats`, which is the only path a page can take. Eye of Heaven is Warlord-only,
-  // which is the one arm that must differ by version.
+  // --- 4a. the immunity refusal of a curse, per version ---
+  // Since F244.3b there is no strip: each curse is its own `debuffs:<curse>:cast` write, and the
+  // immunity fields standing on the record at that rank are its gate, so the sweep in section 6
+  // reaches the nine writes like any other. What the sweep cannot say is *which* curses each
+  // immunity refuses, so that is checked here — through `deriveUnitStats`, which is the only path
+  // a page can take. Eye of Heaven is Warlord-only, which is the one arm that must differ by
+  // version.
   const curseGated = (abilities, version) =>
     ctx.deriveUnitStats(baseUnitInput({ version, abilities })).abilities;
   for (const version of engineVersions) {
     assertEqual(!!curseGated({ magicImmunity: true, vertigo: true, weakness: true }, version).vertigo,
-      false, `Magic Immunity strips Vertigo in ${version}`);
+      false, `Magic Immunity refuses Vertigo in ${version}`);
     assertEqual(!!curseGated({ magicImmunity: true, blackPrayer: true }, version).blackPrayer,
       true, `Magic Immunity leaves the bypass list alone in ${version}`);
     assertEqual(!!curseGated({ trueSight: true, mindStorm: true, weakness: true }, version).mindStorm,
-      false, `Illusion Immunity strips Mind Storm in ${version}`);
+      false, `Illusion Immunity refuses Mind Storm in ${version}`);
     assertEqual(!!curseGated({ trueSight: true, mindStorm: true, weakness: true }, version).weakness,
       true, `Illusion Immunity reaches only its own two curses in ${version}`);
     const warlord = version === 'com2_warlord_1.5.12.9';
