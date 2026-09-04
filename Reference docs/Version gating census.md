@@ -358,23 +358,24 @@ Eye of Heaven is a derivation-time read, not a resolution-time one, so it takes 
 Warlord test its sibling at `stats.js:700` already carries rather than a `resolution:` key.
 
 **That round missed one Eye of Heaven read, and the miss is a shape this census does not enumerate.**
-`stats.js`'s `gazeDisabled` reads the top-level `enemyEyeOfHeaven` input rather than the
-`eyeOfHeaven` ability key, and carries no version test, so it zeroes gaze in all five versions.
+`stats.js`’s `gazeDisabled` read the top-level `enemyEyeOfHeaven` input rather than the
+`eyeOfHeaven` ability key, and carried no version test, so it zeroed gaze in all five versions.
 No tool in the repository sets `enemyEyeOfHeaven` at all — `enemyEternalNight` is the only
 top-level enemy input any sweep or check varies — which is why neither
-`hidden_control_leak_sweep.js` nor `tools/unit_checks/hidden_control_gating.js` sees it.
+`hidden_control_leak_sweep.js` nor `tools/unit_checks/hidden_control_gating.js` saw it. That
+blind spot is F259; the read itself was gated by F258.2, which put `isWarlord &&` on it.
 
-**It is not a derivation-layer-only leak: the matrix reaches it.** The two-card UI is safe, and the
-clearing owner is `applyDisabled` inside `updateTypeVisibility` (`ui_abilities.js:471`, clear at
-`:498`), not `updateAbilityVisibility` (`:614`), which only controls presentation. But matrix rows
-persist separately (`ui_matrix_properties.js:203`); a Warlord-only row is merely hidden on a switch
-to a DOS version (`:313`), not cleared; and `matrixHasActiveEnchantment` (`:272`) reads it with no
-version check, unlike `matrixAppliedEnchantments` (`:250`). `ui_matrix.js:217,302` pass the result
-through as `enemyEyeOfHeaven`. So a DOS matrix run can carry it, which is a live INV-2 violation.
-`enemyEternalNight` (`ui_matrix.js:216,301`) has the same shape and was not checked.
+**It was not a derivation-layer-only leak: the matrix reached it.** The two-card UI is safe, and
+the clearing owner is `applyDisabled` inside `updateTypeVisibility` (`ui_abilities.js`), not
+`updateAbilityVisibility`, which only controls presentation. Matrix rows persist separately and a
+Warlord-only row is merely hidden on a switch to a DOS version, never cleared, and the two matrix
+readers disagreed about whether to check the version. Both go through one version-filtered reader
+now, `matrixEnchantmentValue` (`ui_matrix_properties.js`), with the regression in
+`tests/version-gating.spec.js`. `enemyEternalNight` (`ui_matrix.js`) has the same shape and rides
+the same reader.
 
-Recorded with the engine evidence in `Caster binary/F258.1 Eye of Heaven gaze zeroing.md`; F258.2
-decides what moves.
+The engine evidence is in `Caster binary/F258.1 Eye of Heaven gaze zeroing.md`; F258.2 moved the
+gaze zeroing to its own region-`d` step and closed the item.
 
 **Whether the table should grow a namespace for derivation-time non-step reads was settled by
 F157: no.** The discriminator is not derivation versus resolution but whether an exact version

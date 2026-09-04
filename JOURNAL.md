@@ -4,6 +4,73 @@
 
 # Journal
 
+## 2026-09-04 — F258.2: the gaze zeroing becomes a region-`d` step, and the DOS cases go to zero
+
+Executed F258.1's adjudication. Four changes in `Calculator/`, one new step.
+
+**The gate took the version test.** `gazeDisabled` (`stats.js`) was `enemyEyeOfHeaven` bare; it is
+`isWarlord && enemyEyeOfHeaven` now. It was the one `eyeOfHeaven` read in the calculation layer
+with no version test, and the input names a Warlord combat global.
+
+**The zeroing left both wrong ranks and became one step.** `d:eyeOfHeaven:enemyGaze`, in
+`magicCalcScriptStatSteps`, between `d:energyCannonThreshold` and `d:blazeOfGlory`. Resolving every
+Warlord `UnitCalc.CAS` span in `stats_sequence.js` back to line numbers confirms the rank
+mechanically rather than by reading: colossalStrength 1219, vampirism 1237, shadowStrike 1254,
+energyWeaponry 1396, psychoForce 1405, pneumaField 1411, energyCannonThreshold 1427,
+**eyeOfHeaven 1475**, blazeOfGlory 1482, beatOfSwiftness 1501, hierophany 1547. That technique is
+worth keeping: a one-liner over `provenance_audit.parseSourceCitation` turns every span citation in
+a source file into a line-ordered list, which is how a new step's rank inside a region can be
+checked against the script instead of argued.
+
+**`doomGazeFloorKeeps` is gone.** Its DOS arm was `hasDoomGazeSlot`; its modern arm carried only
+Eye of Heaven's zeroing, so the region-`e` Doom Gaze floor is now DOS-only. Measured before
+deciding rather than assumed: no modern step can drive `doomGaze` negative — `c:darkness`'s
+subtracting arm is its DOS branch, `c:blazingEyes`, `c:chaosSurge` and `c:nodeAura` only add, and
+`c:warpAttack` halves — so dropping the modern `Math.max(0, …)` moves nothing today.
+
+**The two sentinel writes stayed at resolution.** `SETSTAT(U,SStoningGaze,0,100)` and
+`SETSTAT(U,SDeathGaze,0,100)` name fields this model carries as card marks, not record fields —
+neither is in `SEEDED_NON_STAT_KEYS` — so there is nothing on the record for a step to write. One
+engine block is therefore modelled in two places, and that is a real seam: the step and the strip
+in `stats.js` have to be changed together, and the strip's `doomGaze: 0` is only there because the
+modern arm of `shapedGazeAbilities` does not project the derived field onto the published set.
+
+**Measurement, and why the digest could not do it.** `derivation_equivalence.js` reports 0 of
+52,440 and that zero is worthless here — `enemyEyeOfHeaven` is not in its `ENVS` list, so it never
+varies (F259). Two hand probes against a `git worktree` of the parent commit did the work: 264 of
+464 cases differ across the five engines, and the DOS invariant — turning the input on must change
+nothing in a build that has no such enchantment — went from **522 of 648 violated to 0**, 32 of
+those being the Chaos Channels class F244.3i's sixteen belonged to. A `git worktree` of the
+baseline commit is much the better way to run a before/after probe than stashing:
+`loadCalculatorContext` takes its root from `tools/calculator_sources`, so pointing `require` at
+the worktree loads the old calculator with no mutation of the working tree at all.
+
+**Mutation battery, 8 of 8 caught**, including the cheap fix F258.1 named (version test only, seed
+placement kept) and both rank errors. Two were initially "caught" for the wrong reason: the battery
+re-read the *saved* buffer for each edit, so two edits to one file silently kept only the last. A
+multi-edit patch has to accumulate in memory and write once, and a per-file sha check does not
+catch the bug, because the file did change.
+
+**The review found four wrong implementations my own battery missed**, and the shape of the miss is
+worth keeping: every one of them agrees with a correct build on a *positive* Doom Gaze.
+
+- The modern region-`e` floor restored as `if (isCoM2) u.doomGaze = Math.max(0, u.doomGaze)` beside
+  a correct DOS arm. My battery's version of that mutation also zeroed a Blazing Eyes grant, so it
+  failed for a reason the mutation did not have to have.
+- The step written as `if (u.doomGaze > 0) u.doomGaze = 0` — a floor where the script has an
+  assignment.
+- The resolution strip narrowed to `gazeDisabled && !!shapedGazeAbilities.doomGaze`, which my
+  Doom-only fixture could not see because it compared two *absent* Stoning/Death values.
+- Psycho Force moved past the Eye block in the manifest: asserting the band's two endpoints does
+  not constrain what sits between them.
+
+The fix in all four cases was a fixture, not a stronger assertion: a **negative** Doom Gaze (`-4`,
+reachable — `doomGaze` declares no `min`, so its control takes the default floor of -50), a card
+that actually states Stoning and Death Gaze, and an increasing-rank walk over the whole run of
+blocks from Spirit Link to Blaze of Glory. The general lesson: when a write is an assignment to a
+constant, the fixture has to hold a value on the *other* side of that constant, or every
+floor-shaped wrong implementation passes.
+
 ## 2026-09-04 — F258.1: Eye of Heaven's gaze zeroing is a region-`d` write, no DOS build has the enchantment, and the matrix leaks the input anyway
 
 Adjudication only; no `Calculator/` file changed. The finding is

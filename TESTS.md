@@ -130,7 +130,7 @@ or fail. Do not add them here.
 - Tag: scaffolding
 - Anchor: —
 - Checks: `deriveUnitStats` and the engine/combat helpers in isolation, headless, in a `vm` context
-  built from `index.html`'s script manifest. 23,104 assertions across 14 families, including the
+  built from `index.html`'s script manifest. 23,206 assertions across 14 families, including the
   per-rider phase histograms F222.2 and F222.3 emit and the effective-resistance /
   effective-defense chains F222.5 hangs on them, for all five engines, plus INV-1 on every
   distribution a phase publishes and the rider/total partition on a set that cannot overkill.
@@ -247,6 +247,21 @@ or fail. Do not add them here.
   instrument doctors the record `a:baseCopy` publishes and reads a derived output, so it drives
   each call site whole; the Energy Cannon gate is also asserted over every `RANGED_TYPES` member
   rather than a chosen one.
+  The last section of that group (F258.2) covers Eye of Heaven’s gaze zeroing, moved off the
+  seed and the region-`e` floor onto its own region-`d` step. Both wrong ranks published the
+  same finished number, so what is asserted is the record `a:baseCopy` publishes, the step’s
+  rank inside `d` against the neighbours whose blocks bracket it in `UnitCalc.CAS`, the chain
+  the tooltip shows carrying exactly one write, and — for the four engines that have no such
+  enchantment — that the `enemyEyeOfHeaven` input moves nothing at all. That last assertion is
+  the standing form of F244.3i’s sixteen cases, and it is the only coverage the input has: it
+  is a top-level field rather than an ability key, so no sweep in the suite and no `ENVS` entry
+  in `derivation_equivalence.js` varies it (F259).
+  Four of those assertions exist because the F258.2 review proved wrong implementations passing
+  without them: a **negative** Doom Gaze separates the step’s unconditional assignment from a
+  floor and the removed modern region-`e` floor from a restored one, where a positive value
+  cannot; the sentinel strip is asked of a card that actually states Stoning and Death Gaze,
+  since a Doom-only fixture compares two absent values; and the rank is asserted over the whole
+  run of blocks between the Outlander section and Blaze of Glory rather than its two endpoints.
 - Runtime: ~85s.
 
 ## persistence

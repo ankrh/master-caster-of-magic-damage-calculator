@@ -1915,7 +1915,7 @@ function makeSecondaryHitPick(active, thrownValue) {
 function magicCalcScriptStatSteps(ctx) {
   const {
     abilByPhase, abilities, blazeOfGloryActive, channels, colossalScaled,
-    colossalStrength, energyCannonResearchAt, energyCannonHitField,
+    colossalStrength, energyCannonResearchAt, energyCannonHitField, gazeDisabled,
     hasDarkness, hurricaneActive, identity, isWarlord, outlanderReform,
     rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
@@ -2148,6 +2148,29 @@ function magicCalcScriptStatSteps(ctx) {
       apply: u => {
         u.energyCannonToHit = Math.min(100, u.toHit + u[energyCannonHitField]);
       } }),
+    // Eye of Heaven's gaze half, the first block past `!IMMUNETOROT!`'s tactical-combat guard
+    // (`UnitCalc.CAS!IMMUNETOROT!+8..+11 "IF (HASCOMBATGLOBAL(W,CGEyeOfHeaven,2)>0) THEN {" "SETSTAT(U,SDoomGaze,0,0);"`), so it follows the whole
+    // Outlander block above and precedes Blaze of Glory below. `I=2` selects the wizard's current
+    // *opponent's* combat global, which is why the gate is the `enemyEyeOfHeaven` input and not
+    // the unit's own mark: `b:eyeOfHeaven` is the friendly-side block in `UnitCalcPre.CAS`, a
+    // different write in a different file, and it grants True Sight and nothing else.
+    //
+    // All three engine statements are record writes; only `SETSTAT(U,SDoomGaze,0,0)` names a
+    // field **this model** carries on the derived record. The other two set the sentinel `100`
+    // into `SStoningGaze`/`SDeathGaze`, which are card marks here rather than record fields, so
+    // their stand-in is the resolution-time strip in `stats.js`. The assignment is unconditional
+    // in the script and is unconditional here: a negative Doom Gaze becomes 0, not more negative
+    // and not left alone.
+    //
+    // The zeroing used to be applied at the seed and again at the region-`e` floor, and at
+    // neither of those is it an engine write: region `a` copies the permanent record's unzeroed
+    // strength, so `a:baseCopy` must publish it, and the modern tail floors no Doom Gaze field at
+    // all (F258).
+    // PROVENANCE[eyeOfHeaven:enemyGaze]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:6:ef403578ab7851feb3ddfdff
+    statStep({ id: 'eyeOfHeaven:enemyGaze', sourceId: 'eyeOfHeaven',
+      sourceLabel: 'Eye of Heaven', phase: 'd', writes: ['doomGaze'],
+      when: () => gazeDisabled,
+      apply: u => { u.doomGaze = 0; } }),
     // The three effects that close `UnitCalc.CAS`, in its own line order: Blaze of Glory
     // (UnitCalc.CAS!IMMUNETOROT!+14 ", gain first strike, and doom damage but lose all base defense, lose original range attack and become throw power instead :"), Beat of Swiftness (UnitCalc.CAS!NOBLAZEOFGLORY!+2 ", all friendly units with melee more than range get +3 movement, or else get +2 :"), Hierophany (UnitCalc.CAS!NOTCOMBATSUBMARINE!+2 ": Hierophany, combat-only unit curse, unit lose half of defense and lose all of its immunities and lightning resistance :"). All three follow Colossal
     // Strength, and — now that the Warps are in `c` — all three follow those too.
@@ -2237,7 +2260,7 @@ function magicCalcScriptStatSteps(ctx) {
 // `e`: the binary's post-hook tail.
 function postHookStatSteps(ctx) {
   const {
-    abilByPhase, channels, doomGazeFloorKeeps, hasGazeRangedSlot,
+    abilByPhase, channels, hasDoomGazeSlot, hasGazeRangedSlot,
     hasMeleeAttackAt,
     isCoM1, isCoM2, recordContext, secondaryHitFields, strengthFields, supremeLightEligibleAt,
   } = ctx;
@@ -2317,11 +2340,12 @@ function postHookStatSteps(ctx) {
         // earlier step raised keeps what it holds, exactly as the slot beside it does (F122).
         // The modern tail names no Doom Gaze field at all — its floor list is Defense, melee,
         // Ranged, Thrown and the two Breaths (Units.RecalculateUnits.pas:2482-2487) — and the
-        // modern field carries no type, so there is no slot fact for the modern arm to ask. What
-        // it does still answer is Eye of Heaven's zeroing, and `doomGazeFloorKeeps` (stats.js) is
-        // the one term that carries both readings (F174).
+        // modern field carries no type, so there is no slot fact for the modern arm to ask
+        // either. The one reading the modern arm used to carry was Eye of Heaven's zeroing, and
+        // that is a region-`d` step now (`d:eyeOfHeaven:enemyGaze`), one region ahead of this
+        // one, so the modern arm has nothing left to say and makes no write (F174, F258).
         u.gaze = hasGazeRangedSlot ? Math.max(0, u.gaze) : 0;
-        u.doomGaze = doomGazeFloorKeeps ? Math.max(0, u.doomGaze) : 0;
+        if (!isCoM2) u.doomGaze = hasDoomGazeSlot ? Math.max(0, u.doomGaze) : 0;
       } }),
     // The aura pass: Holy Bonus (type 1), Resistance to All (type 3), and Misfortune (type 10).
     ...abilByPhase.e,

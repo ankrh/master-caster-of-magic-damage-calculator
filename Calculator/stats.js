@@ -1234,9 +1234,24 @@ function deriveUnitStats(input) {
       || !!abilities.wraithForm || !!abilities.rulerOfUnderworld
       || !!abilities.blazingMarch || wofDefenderBonusActive || heavenlyLightActive);
 
-  // Eye of Heaven is the only effect that switches a gaze off: `UnitCalc.CAS!IMMUNETOROT!+7 ", is also shut off gaze attack of opponent :"` zeroes
-  // `SStoningGaze`/`SDeathGaze`/`SDoomGaze` and nothing else in any source does.
-  const gazeDisabled = enemyEyeOfHeaven;
+  // Eye of Heaven switches a gaze off: `UnitCalc.CAS!IMMUNETOROT!+7 ", is also shut off gaze attack of opponent :"` zeroes
+  // `SStoningGaze`/`SDeathGaze`/`SDoomGaze`, and it is the only write of those three fields in the
+  // shipped Warlord script set — a search result over that set, not a claim about the DOS
+  // binaries, where whether some differently named effect suppresses a gaze is open (F258.1 §3.3).
+  //
+  // Warlord only, and the version test is this read's own. `CGEyeOfHeaven` is combat global 21
+  // (`MASTER.CAS~"CGEyeOfHeaven = 21"`), a Warlord addition implemented as a *scripted* combat
+  // global; the DOS builds have no script system for one to live in and none of the three names
+  // the enchantment anywhere, and neither does the CoM2 1.05.11 base script set (F258.1). The
+  // other two `eyeOfHeaven` reads in the calculation layer already carry the test
+  // (`stats_sequence.js`, `stats_identity.js`); this one did not, and a Warlord matrix row
+  // surviving a version switch reached DOS runs through it (F258).
+  //
+  // What it gates is now the *step* below — `d:eyeOfHeaven:enemyGaze` (`stats_sequence.js`) —
+  // and the resolution-time strip of the two sentinel-written gaze marks. The seed and the
+  // region-`e` floor no longer read it: the engine's write is one block in `UnitCalc.CAS`, which
+  // is region `d`, so the permanent record `a:baseCopy` publishes carries the unzeroed strength.
+  const gazeDisabled = isWarlord && enemyEyeOfHeaven;
   // A gaze's strength lives in the same `.ranged` slot Chaos Surge writes, so MoM and
   // CoM 1 boost all three DOS gaze types. CoM2/Warlord (separate engine) are left unchanged.
   // Level bonus to a gaze's strength, from the same shared `.ranged` slot. MoM's level
@@ -1895,14 +1910,18 @@ function deriveUnitStats(input) {
   // written by the same steps, with the narrower set of modifiers a gaze takes: the ability lump,
   // node aura, Darkness/True Light, Chaos Surge and their own level ladder, but no weapon, no
   // per-attack-type ranged bonus, and no Shatter.
-  const baseGazeRanged = gazeDisabled ? 0 : recordContext.dosGazeStrength;
+  const baseGazeRanged = recordContext.dosGazeStrength;
   // DOS type 104 uses the shared strength as Doom Gaze damage — Automatic Damage assigns
   // `hits = attack_strength` and jumps past both rolls (0x9A1E6 -> 0x9A204), as the gaze
   // distribution in `combat_special_attacks.js` records. The modern engines instead carry an
   // independent Doom Gaze field.
-  const baseDoomGaze = gazeDisabled ? 0
-    : (!isCoM2 && recordContext.gazeType === 'gaze_multiple'
-      ? recordContext.calcBaseRtb : (effectiveAbilities.doomGaze || 0));
+  //
+  // The seed is the *permanent* record, so Eye of Heaven does not reach it: its zeroing is a
+  // block in `UnitCalc.CAS`, which is region `d`, and the permanent record is never zeroed at all
+  // (F258). `a:baseCopy` therefore publishes the unit's real Doom Gaze, which is what the
+  // consumers reading `ctx.base` — `ccDosBreathEligibleAt` among them — must see.
+  const baseDoomGaze = !isCoM2 && recordContext.gazeType === 'gaze_multiple'
+    ? recordContext.calcBaseRtb : (effectiveAbilities.doomGaze || 0);
   // Whether a gaze *stands in* the record, which is not the same question as what strength it
   // carries. In the DOS record one `.ranged` byte holds conventional ranged, Thrown, Breath or a
   // gaze, and what says a gaze stands there is the record's **type** — RAT 103/104/105 — not the
@@ -1913,15 +1932,18 @@ function deriveUnitStats(input) {
   // strength decides nothing (F122). The modern engines carry an independent Doom Gaze field with
   // no type of its own, so no such slot question exists there — and their tail makes no Doom Gaze
   // write at all, its floor list being Defense, melee, Ranged, Thrown and the two Breaths
-  // (Units.RecalculateUnits.pas:2482-2487). `hasDoomGazeSlot` is therefore a DOS fact; the modern
-  // arm of the floor answers only Eye of Heaven's zeroing (F174).
-  const hasGazeRangedSlot = !gazeDisabled
-    && (recordContext.gazeType === 'gaze_stoning' || recordContext.gazeType === 'gaze_death')
+  // (Units.RecalculateUnits.pas:2482-2487). `hasDoomGazeSlot` is therefore asked only by DOS
+  // consumers — the region-`e` floor, `gazeMirrors` and `shapedGazeAbilities`, each gated on
+  // `!isCoM2` — though its second disjunct evaluates on a modern card too, so it is the readers
+  // that are DOS-only rather than the predicate. The modern tail has no Doom Gaze write for it to
+  // answer for at all: the one reading the modern arm of the floor used to carry was Eye of
+  // Heaven's zeroing, which is a region-`d` step of its own now, so the floor is DOS-only and
+  // `doomGazeFloorKeeps` is gone with it (F174, F258).
+  const hasGazeRangedSlot =
+    (recordContext.gazeType === 'gaze_stoning' || recordContext.gazeType === 'gaze_death')
     && !isCoM2;
-  const hasDoomGazeSlot = !gazeDisabled
-    && ((!isCoM2 && recordContext.gazeType === 'gaze_multiple')
-      || baseDoomGazeStat > 0);
-  const doomGazeFloorKeeps = isCoM2 ? !gazeDisabled : hasDoomGazeSlot;
+  const hasDoomGazeSlot = (!isCoM2 && recordContext.gazeType === 'gaze_multiple')
+    || baseDoomGazeStat > 0;
   // Focus Magic's ranged branch reads the record's Thrown field and writes its Ranged one, so the
   // two ends of `U.ranged := U.thrown` (Units.RecalculateUnits.pas:885-891) are slot identities.
   // The DOS-shaped shared slot is both at
@@ -1962,9 +1984,10 @@ function deriveUnitStats(input) {
   //
   // The Doom Gaze half is the record's own `doomGaze`, read here rather than off the card's
   // ability value. In the DOS engines that field is a mirror of the same shared byte, seeded by
-  // `template:stat:base`, so a permanent record whose Doom Gaze the card does not state — or
-  // whose Doom Gaze an enemy Eye of Heaven has zeroed before the copy — is answered as the record
-  // has it, not as the card does.
+  // `template:stat:base`, so a permanent record whose Doom Gaze the card does not state is
+  // answered as the record has it, not as the card does. Eye of Heaven is no longer one of the
+  // ways the two can disagree: its zeroing is a Warlord region-`d` step, which is both after
+  // `a:baseCopy` and in a version this gate never runs in (F258.2).
   //
   // Whether the slot is free for the write stays the block's own live read.
   const ccDosBreathEligibleAt = (runCtx, context) => {
@@ -2264,7 +2287,7 @@ function deriveUnitStats(input) {
     fieryFuryRtbWrite, focusMagicBranchSlots, poxHostIsGoblin, shadowStrikeActive,
     soulFlayLevels, warlordFlameBladeOwnsSlot, weaknessBinaryHits, weaknessPenalty,
     flameBladeStep, focusMagicActive,
-    gazeLvlMod, gazeWarpHalves, goblinPoxAtkMod, hasGazeRangedSlot, doomGazeFloorKeeps,
+    gazeLvlMod, gazeWarpHalves, goblinPoxAtkMod, hasGazeRangedSlot, hasDoomGazeSlot, gazeDisabled,
     blazingEyesActive,
     goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod, goodMoonActive,
     greatUnbindingActive, hasDarkness, hasMeleeAttackAt,
@@ -2608,6 +2631,16 @@ function deriveUnitStats(input) {
   const shapedGazeAbilities = !isCoM2 && hasDoomGazeSlot
     ? { ...combatAbilitiesBase, doomGaze: effectiveDoomGaze }
     : combatAbilitiesBase;
+  // Eye of Heaven's other two writes. `SETSTAT(U,SStoningGaze,0,100)` and
+  // `SETSTAT(U,SDeathGaze,0,100)` write the block's "no gaze attack" sentinel, and the two fields
+  // they name are card marks in this model rather than record fields — neither is in
+  // `SEEDED_NON_STAT_KEYS`, so there is nothing on the record for a step to write and no
+  // `ctx.base` to read them off. Their stand-in is therefore this resolution-time strip, which is
+  // where the marks live. The block's third write, `SETSTAT(U,SDoomGaze,0,0)`, *is* a record write
+  // and is `d:eyeOfHeaven:enemyGaze` (`stats_sequence.js`); `doomGaze` is repeated here only
+  // because the modern arm of `shapedGazeAbilities` above does not project the derived field onto
+  // the published ability set, so without it the set would still echo the card's mark while the
+  // record the step left reads 0.
   let combatAbilities = gazeDisabled
     ? { ...shapedGazeAbilities, stoningGaze: null, deathGaze: null, doomGaze: 0 }
     : shapedGazeAbilities;

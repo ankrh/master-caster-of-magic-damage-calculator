@@ -1888,6 +1888,149 @@ function runPermanentAttackRecordChecks(ctx) {
   assert(drillAt >= 0 && copyAt >= 0 && drillAt < copyAt,
     'training:militaryDrilling runs before a:baseCopy publishes the permanent record, so a gate '
     + 'reading that record would be reading a later phase');
+
+  // (e) Eye of Heaven's gaze zeroing (F258.2). The gate is the top-level `enemyEyeOfHeaven` input
+  // rather than an ability key, so `hidden_control_gating.js` and `derivation_equivalence.js` —
+  // which vary ability keys and record fields — never move it, and these are the only assertions
+  // over it in the suite (the blind spot itself is F259). The write is
+  // `UnitCalc.CAS!IMMUNETOROT!+8..+11 "IF (HASCOMBATGLOBAL(W,CGEyeOfHeaven,2)>0) THEN {" "SETSTAT(U,SDoomGaze,0,0);"`, one block of region `d`, and it used to be applied at the
+  // seed and again at the region-`e` floor. Both wrong ranks published the same finished number,
+  // so the falsifiable statements are about the record `a:baseCopy` publishes, the step's rank,
+  // and which engines the input reaches at all.
+  const eyeInput = (version, over) => baseUnitInput({
+    version, atk: 4, def: 3, res: 5, hp: 6, figs: 2,
+    ...(version.startsWith('com2') ? { modernAttacks: {} } : { rtb: 0, rtbType: 'none' }),
+    ...over });
+
+  const eyeOn = derive(eyeInput(WARLORD, { abilities: { doomGaze: 4 }, enemyEyeOfHeaven: true }));
+  assertEqual(eyeOn.baseDoomGaze, 4,
+    'the permanent record a:baseCopy publishes carries the unzeroed Doom Gaze — region `a` copies '
+    + 'the permanent record, which Eye of Heaven never touches');
+  assertEqual(eyeOn.effectiveDoomGaze, 0, 'and the finished record still reads 0');
+  const eyeChain = eyeOn.modifierTraces.doomGaze;
+  assertEqual(eyeChain.base, 4, 'so the displayed chain starts at the strength the unit has');
+  const eyeWrites = eyeChain.entries.filter(entry => !entry.boundary);
+  assertEqual(eyeWrites.length, 1, 'and carries exactly one write, not one per wrong rank');
+  assertEqual(eyeWrites[0].id, 'eyeOfHeaven:enemyGaze', 'which is Eye of Heaven\'s own step');
+  assertEqual(eyeWrites[0].phase, 'd', 'at region d, where UnitCalc.CAS runs');
+  assertEqual(eyeWrites[0].from, 4, 'reading the strength standing there');
+  assertEqual(eyeWrites[0].to, 0, 'and zeroing it');
+  // The rank inside `d`, over the whole run of blocks `UnitCalc.CAS` puts between the file's
+  // Outlander section and Blaze of Glory — not the two endpoints alone. Asserting only the ends
+  // let a manifest that moved Psycho Force past the Eye block pass (F258.2 review, finding 5).
+  const eyeTrace = (eyeOn.statExecutionTrace || []).filter(entry => entry.phase === 'd')
+    .map(entry => entry.id);
+  const eyeBand = ['spiritLink', 'energyWeaponry', 'psychoForce', 'pneumaField',
+    'energyCannonThreshold', 'eyeOfHeaven:enemyGaze', 'blazeOfGlory'];
+  let previousRank = -1;
+  eyeBand.forEach((id, position) => {
+    const rank = eyeTrace.indexOf(id);
+    assert(rank > previousRank, position === 0
+      ? `region d runs ${id}, the head of the band UnitCalc.CAS puts before Blaze of Glory`
+      : `region d runs ${id} after ${eyeBand[position - 1]}, which is UnitCalc.CAS line order`);
+    previousRank = rank;
+  });
+  assert(eyeTrace.indexOf('shadowStrike:thrown') >= 0
+    && eyeTrace.indexOf('shadowStrike:thrown') < eyeTrace.indexOf('spiritLink'),
+    'and Shadow Strike ahead of that whole band');
+  // The two sentinel writes the record has no field for, kept at resolution. Asked of a card that
+  // actually states them: the Doom-only fixture above compares two absent values, and a strip
+  // narrowed to `gazeDisabled && !!shapedGazeAbilities.doomGaze` passed it (F258.2 review,
+  // finding 4).
+  const eyeTouchOn = derive(eyeInput(WARLORD,
+    { abilities: { stoningGaze: -2, deathGaze: -3 }, enemyEyeOfHeaven: true }));
+  assertEqual(eyeTouchOn.abilities.stoningGaze, null,
+    'SETSTAT(U,SStoningGaze,0,100) removes a stoning gaze the card states');
+  assertEqual(eyeTouchOn.abilities.deathGaze, null,
+    'and SETSTAT(U,SDeathGaze,0,100) a death gaze the card states, with no Doom Gaze in reach');
+  const eyeTouchOff = derive(eyeInput(WARLORD,
+    { abilities: { stoningGaze: -2, deathGaze: -3 } }));
+  assertEqual(eyeTouchOff.abilities.stoningGaze, -2,
+    'while without the enchantment the stoning gaze keeps its modifier');
+  assertEqual(eyeTouchOff.abilities.deathGaze, -3, 'and the death gaze keeps its own');
+  assertEqual(eyeOn.abilities.doomGaze, 0, 'and the published Doom Gaze agrees with the record');
+  // The other arm, so none of the above passes on a build that zeroes unconditionally.
+  const eyeOff = derive(eyeInput(WARLORD, { abilities: { doomGaze: 4 } }));
+  assertEqual(eyeOff.effectiveDoomGaze, 4,
+    'without the enchantment the Warlord Doom Gaze survives to the finished record');
+  assertEqual(eyeOff.modifierTraces.doomGaze.entries.filter(e => !e.boundary).length, 0,
+    'and its chain carries no write at all');
+  // `SETSTAT(U,SDoomGaze,0,0)` is an assignment, not a floor, and the modern tail has no Doom
+  // Gaze floor of its own. A negative Doom Gaze separates the two claims from every wrong
+  // implementation that agrees with them on a positive one: `if (u.doomGaze > 0) u.doomGaze = 0`
+  // in the step, and a restored modern `Math.max(0, u.doomGaze)` in region `e`, both passed the
+  // suite without these (F258.2 review, findings 2 and 3). The value is reachable: `doomGaze` has
+  // no `min`, so its control takes the default floor of -50 (`ui_abilities.js`).
+  for (const version of ['com2_1.05.11', WARLORD]) {
+    const negative = derive(eyeInput(version, { abilities: { doomGaze: -4 } }));
+    assertEqual(negative.effectiveDoomGaze, -4,
+      `${version}: region e floors no Doom Gaze field, so a negative one survives the tail`);
+    assertEqual(negative.modifierTraces.doomGaze.entries.filter(e => !e.boundary).length, 0,
+      'and the chain shows the tail making no write on it');
+  }
+  const negativeUnderEye = derive(eyeInput(WARLORD,
+    { abilities: { doomGaze: -4 }, enemyEyeOfHeaven: true }));
+  assertEqual(negativeUnderEye.effectiveDoomGaze, 0,
+    'while the region-d write assigns 0 rather than flooring, so a negative Doom Gaze rises to 0');
+  const negativeWrites = negativeUnderEye.modifierTraces.doomGaze.entries
+    .filter(entry => !entry.boundary);
+  assertEqual(negativeWrites.length, 1, 'in one write');
+  assertEqual(negativeWrites[0].id, 'eyeOfHeaven:enemyGaze', 'which is the step');
+  assertEqual(negativeWrites[0].from, -4, 'from the negative value');
+  assertEqual(negativeWrites[0].to, 0, 'to exactly zero');
+  // The region-`e` floor no longer touches the modern Doom Gaze field, so a grant made after the
+  // seed must still reach the finished record: `c:blazingEyes` writes 3 onto a unit whose card
+  // states none, and the floor used to be what re-published it.
+  const blazingCard = { abilities: { blazingEyes: true }, unitType: 'fantastic_chaos' };
+  const blazing = derive(eyeInput(WARLORD, blazingCard));
+  assertEqual(blazing.effectiveDoomGaze, 3,
+    'c:blazingEyes still reaches the finished record with the modern arm of the region-e floor gone');
+  // ...and the step, running one region later, still takes that grant away — which the seed
+  // placement could not have done, the grant not existing when the seed was written.
+  const blazingUnderEye = derive(eyeInput(WARLORD,
+    { ...blazingCard, enemyEyeOfHeaven: true }));
+  assertEqual(blazingUnderEye.effectiveDoomGaze, 0,
+    'while d:eyeOfHeaven:enemyGaze, one region after c:blazingEyes, still zeroes what it granted');
+
+  // `CGEyeOfHeaven` is a Warlord combat global implemented in a script, and the other four engines
+  // have no such enchantment — the three DOS builds have no script system at all. So the input
+  // must move nothing in any of them, which is the invariant behind F244.3i's sixteen cases: they
+  // were DOS runs in which the seed's zeroing opened the Chaos Channels breath conversion.
+  const eyeDigest = (version, over) => {
+    const result = derive(eyeInput(version, over));
+    return JSON.stringify([result.rtb, result.rtbType, result.thrownType, result.gaze,
+      result.effectiveGazeRanged, result.effectiveDoomGaze, result.baseDoomGaze,
+      result.abilities.stoningGaze, result.abilities.deathGaze, result.abilities.doomGaze,
+      result.modernAttacks ? JSON.stringify(result.modernAttacks) : null]);
+  };
+  // The shared byte's type has to vary: a record already typed as a gaze refuses the Chaos
+  // Channels conversion whatever the Doom Gaze field says, so a grid that only ever states
+  // `gaze_multiple` would assert the sixteen cases' shape without building it.
+  const dosSlots = [{ rtb: 0, rtbType: 'none' }, { rtb: 2, rtbType: 'gaze_multiple' },
+    { rtb: 1, rtbType: 'gaze_stoning' }, { rtb: 3, rtbType: 'thrown' }];
+  for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11']) {
+    const slots = version.startsWith('com2') ? [{ modernAttacks: {} }] : dosSlots;
+    for (const shared of slots) {
+      for (const abilities of [{ doomGaze: 4 }, { doomGaze: 4, ccFireBreath: true },
+        { stoningGaze: -2, deathGaze: -2 }, { ccFireBreath: true }]) {
+        assertEqual(eyeDigest(version, { ...shared, abilities, enemyEyeOfHeaven: true }),
+          eyeDigest(version, { ...shared, abilities }),
+          `enemyEyeOfHeaven moves nothing in ${version}, which has no Eye of Heaven to model`);
+      }
+    }
+  }
+  // F244.3i's sixteen cases by name, so the shape is asserted rather than merely covered by the
+  // grid: a DOS unit with a Doom Gaze, Chaos Channels and an untyped shared byte. The seed's
+  // zeroing made `ctx.base.doomGaze` 0, `ccDosBreathEligibleAt` admitted the conversion, and the
+  // byte became Fire Breath. The permanent record carries the gaze now, so it is refused.
+  for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
+    const ccDoom = derive(eyeInput(version, { rtb: 0, rtbType: 'none',
+      abilities: { doomGaze: 4, ccFireBreath: true }, enemyEyeOfHeaven: true }));
+    assertEqual(ccDoom.thrownType, 'none',
+      `${version}: an Eye-of-Heaven'd Doom Gaze unit takes no Chaos Channels breath, the `
+      + 'permanent record the copy published carrying the gaze');
+    assertEqual(ccDoom.rtb, 0, 'and the shared byte keeps the strength it had');
+  }
 }
 
 module.exports = { runAbilityOriginChecks };

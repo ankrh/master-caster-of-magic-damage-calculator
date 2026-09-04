@@ -439,6 +439,9 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   'd:shadowStrike:thrown',
   'd:spiritLink', 'd:energyWeaponry', 'd:psychoForce', 'd:pneumaField',
   'd:energyCannonThreshold',
+  // `UnitCalc.CAS!IMMUNETOROT!+8..+11 "IF (HASCOMBATGLOBAL(W,CGEyeOfHeaven,2)>0) THEN {" "SETSTAT(U,SDoomGaze,0,0);"`, the first block past the file's
+  // tactical-combat guard and immediately ahead of Blaze of Glory.
+  'd:eyeOfHeaven:enemyGaze',
   'd:blazeOfGlory', 'd:beatOfSwiftness', 'd:hierophany', 'e:modernClampCommon', 'e:clamp',
   'e:holyBonus', 'e:guidingBeaconAura', 'e:resistanceToAll', 'e:divineBarrierAura',
   'e:soulLinkerAura', 'e:leadershipAura', 'e:mislead', 'e:supremeLight',

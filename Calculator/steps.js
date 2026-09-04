@@ -383,6 +383,7 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'd:beatOfSwiftness': SCOPE_WARLORD,
   'd:blazeOfGlory': SCOPE_WARLORD,
   'd:energyCannonThreshold': SCOPE_WARLORD,
+  'd:eyeOfHeaven:enemyGaze': SCOPE_WARLORD,
   'd:hurricane': SCOPE_WARLORD,
   'd:trueSight': SCOPE_WARLORD,
   'd:colossalStrength': SCOPE_WARLORD,
