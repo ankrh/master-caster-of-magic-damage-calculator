@@ -198,10 +198,12 @@ function isConstructCatapultUnit(identity, abilities, version, meta = {}) {
 // Surge random-enchantment table makes the whole package at `R=43` (`SpellMysticSurge.CAS`); the
 // calculator models one cast, so those are the same write reached another way.
 //
-// This is the pre-sequence spelling of `buffs:spiritLink:fantastic`, for the gates that still
-// read the permanent Fantastic flag ahead of the run — `permanentFantastic` here and in
-// `stats.js`. It is not the step's own `when`: the step reads the record at its own position, and
-// the assertion in `deriveUnitStats` is what keeps the two answers equal (F245).
+// This is the pre-sequence spelling of `buffs:spiritLink:fantastic`, and since F262 it has one
+// reader left: the `spiritLinkSentience` argument of `deriveOutlanderReformRecord`, which stands
+// for the cast's *other* write under the same gate — `SETSTAT(TU,SMultiLabel,1,14)`. The Sapiens
+// label is not a record field yet, so that term cannot be read off the record; **F263** makes it
+// one and retires this function with it. It is not the step's own `when`: the step reads the
+// record at its own position (F245, F244.3h, F262).
 function spiritLinkClearsPermanentFantastic(identity, abilities, version) {
   return !!(version && version.startsWith('com2_warlord'))
     && !!(abilities && abilities.spiritLink)
@@ -217,9 +219,10 @@ function spiritLinkClearsPermanentFantastic(identity, abilities, version) {
 // base predicates remain intact; a conversion mutates only the two live fields.
 //
 // **This list is complete: every write of `race` or `fantastic` the derivation makes is here,
-// and no step here writes anything else.** That is what lets `targetingIdentity` below run the
-// conversions out without running the stat sequence, which two cast-time targeting predicates
-// need (F183, F188). It is the reason five conversions still carry a `:race` qualifier where the
+// and no step here writes anything else.** Completeness is what lets a reader name the record it
+// wants by naming a position — the permanent record for a targeting gate, the record the run
+// left for a combat-time classification — and know that no unlisted write can move it (F246).
+// It is the reason five conversions still carry a `:race` qualifier where the
 // engine block also writes a stat, and `SPEC.md`, *Deliberate deviations*, records it as such.
 // Three of the five are separately gated anyway, so only two are a grouping the evidence would
 // merge: `b:fieryFury:race` is the THEN arm of the one `IF (BASEFANTASTIC(U))` whose ELSE arm is
@@ -251,14 +254,10 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
   // (`Reference docs/Script source/CAS reference/Scripts.TXT:286`) — the record the permanent-record phases
   // leaves, so `buffs:destiny`'s `B.Fantastic := True` ($0059A390) is in it, and the unit's own
   // training-time flag is not the whole of it (F192).
-  // Spirit Link's cast clears the same flag (`buffs:spiritLink:fantastic` below), so this is
-  // `stats.js`'s `permanentFantastic` restated on the same two terms: Destiny's per-pass
-  // `B.Fantastic := True`, which stands after the clear in the chain, and the clear itself
-  // (F245). The two spellings are the same statement in two files, and F244.3h is what replaces
-  // both with a `ctx.base.fantastic` read.
-  const permanentFantastic = destinyActiveForUnit(abilities, version)
-    || (!!identity.baseFantastic
-      && !spiritLinkClearsPermanentFantastic(identity, abilities, version));
+  // Spirit Link's cast clears the same flag (`buffs:spiritLink:fantastic` below) and Destiny's
+  // re-asserts it per pass, so the answer is the record those two `buffs` writes leave — which is
+  // what `a:baseCopy` publishes as `ctx.base`, read at `b:fieryFury:race`'s own position rather
+  // than restated as a constant here (F244.3h, F245).
   const isHero = typeof meta.isHero === 'boolean' ? meta.isHero : !!identity.isHero;
   // One predicate for Spirit Link's two conversions: both blocks gate on the same
   // `GetEnchantmentFlag(U,EncSpiritLink,1)`, and neither tests the unit's realm or Fantastic
@@ -314,8 +313,8 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // span, $0059A35E..$0059A633, carries the permanent writes and the calculated package alike.
     // `B.attackflags.supernatural := True` at $0059A3EB is the third permanent write of that same
     // block, and it is `buffs:destiny:supernatural` (`stats_sequence.js`) rather than a field of
-    // this step: a conversion that wrote a third field would cost `targetingIdentity` its
-    // exactness, which is the deviation *An identity conversion is its own step even where its
+    // this step: a conversion writes `race` and `fantastic` and nothing else, which is the
+    // deviation *An identity conversion is its own step even where its
     // engine block also writes a stat* already records for Chaos Channels and Black Channels. The
     // two entries are chain-adjacent, so no number can depend on the split (F201).
     statStep({ id: 'destiny', sourceLabel: 'Destiny', phase: 'buffs',
@@ -387,7 +386,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // PROVENANCE[fieryFury:race]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:17:e0211f9ae323b4ad5ba16aa7
     statStep({ id: 'fieryFury:race', sourceId: 'fieryFury', sourceLabel: 'Fiery Fury',
       phase: 'b', writes: ['race', 'fantastic'],
-      when: () => hasAbil(abilities, 'fieryFury') && permanentFantastic,
+      when: (u, ctx) => hasAbil(abilities, 'fieryFury') && !!ctx.base.fantastic,
       apply: u => { u.race = 'Chaos'; u.fantastic = true; } }),
     // Sanctify writes the Life realm unconditionally; its separate Fantastic write is gated on
     // a non-hero clergy unit. Two writes, not the three-branch compact-token approximation the
@@ -399,13 +398,10 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // four `STypeID` branches (`CreateUnit.CAS!NOFROSTCLUB!+5..+14 "SETSTAT(U,SResist,1,(GetStat(U,SResist,1)+3));" "SETENCHANTMENTFLAG(U,EncSanctify,ABase,1);"`), and it carries a stat delta rather than a bare
     // flag, so it is already
     // `training:sanctaBasilica`. F200 stage 3 widens that step onto these branches, at which point the
-    // flag is a positioned write and this gate must read the record. What blocks doing it here is
-    // `targetingIdentity` below: it replays the conversion list alone on a scratch record and does
-    // not run `training:sanctaBasilica`, so a record read would make the projection disagree with the
-    // sequence exactly when the building grants the flag. Seeding the scratch record from the
-    // ability set does not close that gap — the sequence's value would be the seed *plus* the
-    // positioned write. The choice between widening the projection to replay the permanent-record grants and
-    // keeping the gate pre-sequence belongs to F200 stage 3, which makes the write.
+    // flag is a positioned write and this gate must read the record. What used to block doing it
+    // here was the identity projection, which replayed the conversion list alone and so could not
+    // see `training:sanctaBasilica`; F246 deleted the projection, so nothing stands in the way of
+    // the record read any more and F200 stage 3 can simply make it.
     // PROVENANCE[sanctify]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:9:e23e1931b3ccaf4ea86bae2e
     statStep({ id: 'sanctify', sourceLabel: 'Sanctify', phase: 'b',
       writes: ['race', 'fantastic'],
@@ -485,26 +481,11 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
   ];
 }
 
-// The identity this recalculation *leaves*, which is what a **cast-time targeting** predicate is
-// evaluated against — not a term of any block, so it has no chain position of its own (F183,
-// F188). Spirit Link is the citation and states the mechanism outright: it asserts Fantastic at
-// the head of the routine so the unit takes fantastic bonuses (`UnitCalcPre.CAS!NOSPIRITLINK!-16..-13 "IF GETENCHANTMENTFLAG(U,EncDummyArmor,1) THEN { SETOLENCHANTMENTFLAG(U,EncHolyArmor,0,1); }" "IF (GetEnchantmentFlag(U,EncSpiritLink,1)=0) THEN { GOTO"`) and
-// clears it at the tail so the "enchanted fantastic unit could not be targeted by fantastic-only
-// spell" (`UnitCalc.CAS!NOTICEAGE!+2..+3 ": Effect of Sentience, enchanted fantastic unit could not be targeted by fantastic-only spell and gain +2 resistance :" "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }"`). The engine manipulates the recalculated flag *in order to*
-// change targetability, so the answer is the whole conversion list run out.
-//
-// This is a projection of the one conversion list, not a second list, and it is exact: no
-// conversion's gate reads a stat, so running the conversions alone leaves the same `race` and
-// `fantastic` the full sequence does. The calculator has no previous recalculation to read, so
-// the record this derivation leaves stands in for the one the cast was made against.
-function targetingIdentity(identity, abilities, version, meta = {}) {
-  const live = { ...identity, race: identity.baseRace, fantastic: identity.baseFantastic };
-  const steps = filterStepsToVersionScope(
-    identityConversionSteps(identity, abilities, version, meta), version);
-  runStatSteps(orderStatStepsBySource(steps, statChain(version)), live,
-    { version, base: identity });
-  return live;
-}
+// F246 deleted `targetingIdentity` from here. It replayed the conversion list on a scratch
+// record so that a read wanting the record the recalculation *leaves* could be answered ahead of
+// the sequence. Every such read is now classified: a cast-time **targeting** gate reads the
+// permanent record `a:baseCopy` publishes, and a **combat-time** classification reads the record
+// the run itself left, resolved below the run in `deriveUnitStats`.
 
 // The ability keys a grant hoist can write that some step then reads. Each is a field of
 // `statRecord`, seeded from the effective ability set, so the step that reads it asks the record
@@ -1448,12 +1429,13 @@ const RETIRED_OUTLANDER_STATE_KEYS = [
 // step, the region-`b` steps F198 gave one, and the temporal-drive and `!COMBATOVERRIDE!` writes
 // F244.3e positioned — and so do the two research states read outside the block.
 const NO_OUTLANDER_REFORM = Object.freeze({
-  sapiensEligible: false, battleArmor: false, magitekEngine: false,
+  sapiensOwned: false, sapiensLabelled: false,
+  battleArmorEligible: false, magitekEngine: false,
   ballisticsTraining: false, xenopsychology: false, radio: false, xenoveterinary: false,
   armorclad: false, powerEngine: false, magitekScience: false, militaryDrilling: false,
   energyBeamWeapons: false, rocketry: false,
   temporalEngineering: false, psychoConverter: false, pneumaReactor: false,
-  combatSoldierEligible: false,
+  combatSoldierOwned: false,
 });
 
 // Returns the ability set with the reform's derived output names stripped, **and** the block's
@@ -1477,12 +1459,17 @@ const NO_OUTLANDER_REFORM = Object.freeze({
 // creation block and `OverlandEndTurn.CAS`'s upgrade pass, both permanent — the `training` phase —
 // and the three `!COMBATOVERRIDE!` states are region `d`.
 //
-// Every `BASEFANTASTIC(U)` here is the **permanent** record: the base unit data "before applying
-// continuous effects such as buffs or curses" (`Reference docs/Script source/CAS reference/
-// Scripts.TXT:286`), which carries Destiny's `B.Fantastic := True` at $0059A390 (F192). The one
-// live-Fantastic gate in the block is Xenoveterinary's `IF FANTASTIC(U)` (`UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {"`),
-// and that term is not here: it is the positional `when` of `b:outlanderXenoveterinary`.
-function deriveOutlanderReformRecord(abilities, version, permanentFantastic, isHero = false,
+// Every `BASEFANTASTIC(U)` in this block is the **permanent** record: the base unit data "before
+// applying continuous effects such as buffs or curses" (`Reference docs/Script source/CAS
+// reference/Scripts.TXT:286`), which carries Destiny's `B.Fantastic := True` at $0059A390 (F192).
+// No such term is computed here any more, because this function runs before the sequence and the
+// permanent record is only published at `a:baseCopy`: each of the three states that carried one —
+// the `NOTSAPIENS` tail, Battle Armor and the `!COMBATOVERRIDE!` soldier gate — is a predicate
+// below, reading `ctx.base.fantastic` at the rank of the step asking. Every step they gate is
+// region `b` or later, so the copy has been published (F262). The one live-Fantastic gate in the
+// block is Xenoveterinary's `IF FANTASTIC(U)` (`UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {"`),
+// and that term is not here either: it is the positional `when` of `b:outlanderXenoveterinary`.
+function deriveOutlanderReformRecord(abilities, version, isHero = false,
   spiritLinkSentience = false) {
   if (!version || !version.startsWith('com2_warlord')) {
     return { abilities, reform: NO_OUTLANDER_REFORM };
@@ -1496,7 +1483,6 @@ function deriveOutlanderReformRecord(abilities, version, permanentFantastic, isH
   for (const key of DERIVED_OUTLANDER_STATE_KEYS) delete fundamentalAbilities[key];
   for (const key of RETIRED_OUTLANDER_STATE_KEYS) delete fundamentalAbilities[key];
 
-  const baseFantastic = !!permanentFantastic;
   const outlanderWizard = !!fundamentalAbilities.outlanderWizard;
   // All fifteen reform spell states are owned by an Outlander wizard, and that ownership is now an
   // explicit term on every read rather than a deletion from the map (F244.3d). The deletion made
@@ -1505,7 +1491,7 @@ function deriveOutlanderReformRecord(abilities, version, permanentFantastic, isH
   // research state is `SPELLSTATE(W,ST…)`, a *wizard* field the scripts test beside the unit's
   // (`CreateUnit.CAS`, `OverlandEndTurn.CAS`). `research` below is the one home for the test.
   // Every read inside this function was already spelled `outlanderWizard && …` — directly, or
-  // through `sapiensEligible`, `powerEngine` or the combat-soldier gate, each of which carries the
+  // through the Sapiens tail, `powerEngine` or the combat-soldier gate, each of which carries the
   // term — so the deletion changed nothing here. The reads outside it take the gate from the
   // `reform` record's own fields instead.
   const research = key => outlanderWizard && !!fundamentalAbilities[key];
@@ -1519,8 +1505,9 @@ function deriveOutlanderReformRecord(abilities, version, permanentFantastic, isH
   // `UnitCalcPre.CAS!NOTSAPIENS!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"` closes the whole tail on `BASEFANTASTIC(U)>0`, and the +3 branch at
   // `UnitCalcPre.CAS!NOTSAPIENS!+6..+12 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,1)=0)" "}"` restates it beside `EncArmorClad` index 1 and `SCustomAttribute` index 1 — three
   // permanent-record terms in one test.
-  const battleArmor = research('armorcladReform')
-    && !baseFantastic && !permanentMechanical;
+  // The `BASEFANTASTIC(U)>0` term is not here: `b:battleArmor` reads it off `ctx.base` at its own
+  // region-`b` rank through `outlanderBattleArmorAt` (F262). What stays is the rest of the test.
+  const battleArmorEligible = research('armorcladReform') && !permanentMechanical;
   const powerEngine = research('heatPowerEngine') && permanentMechanical;
   // The `NOTSAPIENS` gate, `UnitCalcPre.CAS!NOMAGITEKENGINE!+2..+4 "IF (BASEFANTASTIC(U)>0)" "THEN { GOTO"`. `b:bombsGrenades` reads the same one.
   //
@@ -1533,10 +1520,18 @@ function deriveOutlanderReformRecord(abilities, version, permanentFantastic, isH
   // is re-made on every recalculation pass and stands after the clear in the chain, and it does
   // not touch `SMultiLabel`. So a Spirit Link + Destiny unit is Fantastic here and still labelled
   // 14, and the script's conjunction admits it (F245 review, finding 2). The label is carried as
-  // this predicate rather than as a record field: it has no other modelled reader, the only
+  // this term rather than as a record field: it has no other modelled reader, the only
   // other one being `DisAbil.CAS`'s Bombs & Grenades ability line, which is display text.
-  const sapiensEligible = outlanderWizard
-    && (!baseFantastic || !!fundamentalAbilities.sapiens || !!spiritLinkSentience);
+  //
+  // The gate's two halves are split, because only one of them can be read off the record today.
+  // `BASEFANTASTIC(U)>0` is `outlanderSapiensAt`'s `ctx.base.fantastic` read, made at the rank of
+  // whichever of the four Sapiens-tail steps is asking (F262). `GETSTAT(U,SMultiLabel,1)<>14`
+  // stays a **pre-sequence** read: the Sapiens label is not a record field, so neither the
+  // `sapiens` control nor Spirit Link's `SMultiLabel` write has a record slot to be read from.
+  // Neither mark changes during the sequence, so the answer is right — it is incomplete, not
+  // wrong, and **F263** finishes it by making the label a field and Spirit Link's write a step.
+  const sapiensOwned = outlanderWizard;
+  const sapiensLabelled = !!fundamentalAbilities.sapiens || !!spiritLinkSentience;
   // `UnitCalcPre.CAS!NOXENOVET!+2..+4 "IF (GETENCHANTMENTFLAG(U,EncPowerEngine,0)=0)" "NOMAGITEKENGINE"`: the block's own gate is the *calculated* `EncPowerEngine` flag,
   // which no region-`b` write reaches before this point, so the derived permanent state answers it.
   const magitekEngine = powerEngine && research('magitekEngineering');
@@ -1579,12 +1574,17 @@ function deriveOutlanderReformRecord(abilities, version, permanentFantastic, isH
     // is what lets the region-`d` Fortification block see it (F200).
     abilities: fundamentalAbilities,
     reform: {
-      sapiensEligible,
-      battleArmor,
+      // The two halves of the `NOTSAPIENS` gate that no record read can supply, for
+      // `outlanderSapiensAt` to finish at the asking step's rank (F262).
+      sapiensOwned,
+      sapiensLabelled,
+      battleArmorEligible,
       magitekEngine,
-      ballisticsTraining: sapiensEligible && research('ballisticsTraining'),
-      xenopsychology: sapiensEligible && research('xenopsychology'),
-      radio: sapiensEligible && research('radio'),
+      // The research state alone: the `NOTSAPIENS` gate the same tail puts in front of these
+      // three is `outlanderSapiensAt`, made at each step's own rank rather than folded in here.
+      ballisticsTraining: research('ballisticsTraining'),
+      xenopsychology: research('xenopsychology'),
+      radio: research('radio'),
       // The research state alone. `IF FANTASTIC(U)` (`UnitCalcPre.CAS!COMRADENOTSURVIVE!+16 "IF FANTASTIC(U) THEN {"`) is the calculated
       // record at region `b`, so it is the step's own `when` and not a term here (F198).
       xenoveterinary: research('xenoveterinary'),
@@ -1622,25 +1622,62 @@ function deriveOutlanderReformRecord(abilities, version, permanentFantastic, isH
       temporalEngineering: research('temporalEngineering'),
       psychoConverter: research('psychoConverter'),
       pneumaReactor: research('pneumaReactor'),
-      // The two terms of the `!COMBATOVERRIDE!` Outlander-soldier gate that no record field can
-      // answer: wizard ownership, and the permanent Fantastic flag F244.3h owns. The other two
-      // terms are record reads the three region-`d` steps make through
-      // `outlanderCombatSoldierAt` below.
-      combatSoldierEligible: outlanderWizard && !baseFantastic,
+      // The one term of the `!COMBATOVERRIDE!` Outlander-soldier gate that no record field can
+      // answer: wizard ownership. The other three are record reads the three region-`d` steps
+      // make through `outlanderCombatSoldierAt` below — the permanent Fantastic flag included,
+      // since F262.
+      combatSoldierOwned: outlanderWizard,
     },
   };
+}
+
+// The permanent Fantastic flag, for the reform predicates below. `a:baseCopy` publishes it and
+// every step that asks one of them is region `b` or later, so a missing copy is a composition
+// defect rather than a rank a caller can legitimately ask from (`CLAUDE.md`, *Architecture*:
+// fail-loud on out-of-range values).
+function outlanderBaseFantastic(runCtx) {
+  if (!runCtx || !runCtx.base) {
+    throw new Error(
+      'deriveOutlanderReformRecord: an Outlander reform gate asked for the permanent Fantastic '
+      + 'flag before a:baseCopy published it. Every step these gates serve is region `b` or '
+      + 'later; a `training`-phase or earlier caller is a positioning defect.');
+  }
+  return !!runCtx.base.fantastic;
+}
+
+// The `NOTSAPIENS` tail's gate, at the rank of the step asking:
+// `BASEFANTASTIC(U)>0 %AND (GETSTAT(U,SMultiLabel,1)<>14)` (`UnitCalcPre.CAS!NOMAGITEKENGINE!+2..+4 "IF (BASEFANTASTIC(U)>0)" "THEN { GOTO"`).
+// The first term is the permanent record at that rank; the second is `sapiensLabelled`, still a
+// pre-sequence read until F263 gives the Sapiens label a record field. Six region-`b` steps ask:
+// `b:bombsGrenades`, `b:outlanderBallisticsTraining`, `b:outlanderXenopsychology`,
+// `b:outlanderRadio`, and — through `explosiveEligibleAt` (`stats.js`) —
+// `b:upgradedExplosive:ranged` and `b:upgradedExplosive:fireBreath` (F262).
+function outlanderSapiensAt(runCtx, reform) {
+  return !!reform.sapiensOwned
+    && (!outlanderBaseFantastic(runCtx) || !!reform.sapiensLabelled);
+}
+
+// Battle Armor's own gate, at the rank of `b:battleArmor`:
+// `UnitCalcPre.CAS!NOTSAPIENS!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"` closes the whole tail on
+// `BASEFANTASTIC(U)>0`, read here off the permanent record the copy published (F262); the rest of
+// the test is `battleArmorEligible`.
+function outlanderBattleArmorAt(runCtx, reform) {
+  return !!reform.battleArmorEligible && !outlanderBaseFantastic(runCtx);
 }
 
 // The `!COMBATOVERRIDE!` Outlander-soldier gate, at the rank of the step asking:
 // `UnitCalc.CAS!COMBATOVERRIDE!+5..+7 "IF (GETENCHANTMENTFLAG(U,EncArmorClad,0)=0)" "NOTOUTLANDERSOLDIER"` evaluates left-to-right, so non-fantastic
 // non-mechanical units, heroes, and Armorclad mechanical units pass; fantastic units do not.
-// Two of its four terms are record reads — `GETENCHANTMENTFLAG(U,EncArmorClad,0)` and
-// `GetStat(U,SCustomAttribute,1)` — and by region `d` the record carries both: `training:armorclad`
-// wrote the first and `buffs:rebuild` the second, at the ranks their own blocks make them. Until
-// F244.3e both were pre-sequence constants derived from the same inputs, so this positions the
-// read without moving the answer.
-function outlanderCombatSoldierAt(u, reform) {
-  return !!reform.combatSoldierEligible && (!u.mechanical || !!u.armorclad);
+// Three of its four terms are record reads — `GETENCHANTMENTFLAG(U,EncArmorClad,0)`,
+// `GetStat(U,SCustomAttribute,1)` and `BASEFANTASTIC(U)` — and by region `d` the record carries
+// all three: `training:armorclad` wrote the first, `buffs:rebuild` the second and `a:baseCopy`
+// published the third, at the ranks their own blocks make them. Until F244.3e the first two were
+// pre-sequence constants and until F262 the third was; each move positioned the read without
+// moving the answer.
+function outlanderCombatSoldierAt(u, runCtx, reform) {
+  return !!reform.combatSoldierOwned
+    && !outlanderBaseFantastic(runCtx)
+    && (!u.mechanical || !!u.armorclad);
 }
 
 // Hierophany's calculated ability writes run with its Defense write and remove both movement

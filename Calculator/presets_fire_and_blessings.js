@@ -429,7 +429,7 @@ definePresets({
     expected: { dmgToA: 0.000, dmgToB: 6.000 },
     vacuity: {
       'a.unitType=hero':
-        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The block\'s only eligibility test is BASEFANTASTIC(U) (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), so the gate is `!permanentFantastic` (stats.js:868) and admits both; no ablation between the two can move a number. a.ability.wallOfFireBoost is the live half at delta 1, and wallOfFireWarlordBoostOnAttacker pins the same 6.000 on the normal identity.',
+        'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The block\'s only eligibility test is BASEFANTASTIC(U) (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), so the gate is `!runCtx.base.fantastic` (`wofDefenderBonusActiveAt`, stats.js) and admits both; no ablation between the two can move a number. a.ability.wallOfFireBoost is the live half at delta 1, and wallOfFireWarlordBoostOnAttacker pins the same 6.000 on the normal identity.',
     },
   },
   wallOfFireWarlordBoostBoulder: {

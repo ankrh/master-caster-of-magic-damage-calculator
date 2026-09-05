@@ -37,7 +37,7 @@ const TEST_TREE = [
       { name: 'Giant Strength', keys: ['giantStrengthMelee', 'giantStrengthThrown', 'giantStrengthNotMissile'] },
       { name: 'Guardian Wind', keys: ['guardianWindBlocksMissile'] },
       { name: 'Haste', keys: ['hasteMeleeDoubles', 'hasteRangedDoubles', 'hasteMagicRangedDoublesNoCaster', 'hasteMagicRangedDoublesForCaster', 'hasteThrownDoubles', 'hasteGazeNotDoubled', 'hasteCounterDoublesMoM', 'hasteFirstStrikeSecondConcurrent'] },
-      { name: 'Heavenly Light', keys: ['heavenlyLightRangedCoM2', 'heavenlyLightNotBreathCoM2', 'heavenlyLightMeleeCoM', 'heavenlyLightToHitNeedsBareWeaponCoM', 'heavenlyLightMissileCoM', 'heavenlyLightBreathStrengthNoToHitCoM', 'heavenlyLightMagicWeaponCoM'] },
+      { name: 'Heavenly Light', keys: ['heavenlyLightRangedCoM2', 'heavenlyLightNotBreathCoM2', 'heavenlyLightTailRefusedByApotheosisWarlord', 'heavenlyLightTailReachesSpiritLinkedFantasticWarlord', 'heavenlyLightRangedTailRefusedByApotheosisWarlord', 'heavenlyLightRangedTailReachesSpiritLinkedFantasticWarlord', 'heavenlyLightMeleeCoM', 'heavenlyLightToHitNeedsBareWeaponCoM', 'heavenlyLightMissileCoM', 'heavenlyLightBreathStrengthNoToHitCoM', 'heavenlyLightMagicWeaponCoM'] },
       { name: 'High Prayer', keys: ['highPrayerMeleeAtk', 'highPrayerDefense', 'highPrayerResistance', 'highPrayerToHit', 'highPrayerToBlock', 'highPrayerMeleeNotRanged', 'highPrayerCombined'] },
       { name: 'Holy Armor', keys: ['holyArmorDef', 'holyArmorVsRanged', 'holyArmorStacksWithStoneSkin'] },
       { name: 'Holy Bonus', keys: ['holyBonusMeleeAtk', 'holyBonusDef', 'holyBonusRes', 'holyBonusRangedMoM'] },
@@ -330,6 +330,8 @@ const TEST_TREE = [
         keys: [
           'breakthroughLiveFantasticStillNormalCoM2',
           'breakthroughLiveFantasticStillNormalWarlord',
+          'breakthroughRefusedByDestinyPermanentFantasticCoM2',
+          'breakthroughReachesSpiritLinkedFantasticWarlord',
           'breakthroughMeleeCoM2',
           'breakthroughMeleeDefAttackCoM2',
           'breakthroughMeleeDefDefenseCoM2',
@@ -379,6 +381,8 @@ const TEST_TREE = [
           'destinyDefenseAndHealthCoM2',
           'destinyFireBreathDoublesCoM2',
           'destinyGrantsSupernaturalCoM2',
+          'apotheosisKeepsWeaponMaterialWarlord',
+          'spiritLinkApotheosisKeepsPermanentFantasticWarlord',
           'destinyLightningBreathDoublesCoM2',
           'destinyMeleeRemovesLevelsCoM2',
           'destinyRangedDoublesBaseCoM2',
@@ -990,6 +994,8 @@ const TEST_TREE = [
           'soulFlayRangedRecruitWarlord',
           'soulFlayArmorRecruitWarlord',
           'soulFlayResistanceRecruitWarlord',
+          'soulFlayRefusedByApotheosisPermanentFantasticWarlord',
+          'soulFlayReachesSpiritLinkedFantasticWarlord',
         ],
       },
       {
@@ -1011,7 +1017,6 @@ const TEST_TREE = [
           'spiritLinkBlessNoBonusWarlord',
           'spiritLinkResistanceWarlord',
           'spiritLinkCastResetsLevelWarlord',
-          'spiritLinkWeaponMaterialWarlord',
         ],
       },
       {

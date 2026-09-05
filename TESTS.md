@@ -33,7 +33,8 @@ or fail. Do not add them here.
   source of truth, and each preset is one instance of that claim. The per-effect evidence is the
   `PROVENANCE` citation on the step the preset exercises, checked by `npm run provenance`; the
   preset's `desc` states the arithmetic that citation implies. That preset-to-step link is
-  conceptual, not machine-checked — 172 of 1151 `desc` fields name a game-source location inline.
+  conceptual, not machine-checked — 120 of 1161 `desc` fields name a game-source location inline
+  (recounted 2026-09-05 under the rule below; the previous 172 does not reproduce from it).
   Recount that under the rule rather than incrementing it: test each `desc` of the **evaluated**
   `PRESETS` object (not the file text) against
   `/[\w./\\-]+\.(?:CAS|INI|pas|c|EXE):\d+|0x[0-9A-Fa-f]{4,}|\$[0-9A-Fa-f]{6,}/i`. The `c` extension
@@ -130,7 +131,7 @@ or fail. Do not add them here.
 - Tag: scaffolding
 - Anchor: —
 - Checks: `deriveUnitStats` and the engine/combat helpers in isolation, headless, in a `vm` context
-  built from `index.html`'s script manifest. 23,206 assertions across 14 families, including the
+  built from `index.html`'s script manifest. 23,210 assertions across 14 families, including the
   per-rider phase histograms F222.2 and F222.3 emit and the effective-resistance /
   effective-defense chains F222.5 hangs on them, for all five engines, plus INV-1 on every
   distribution a phase publishes and the rider/total partition on a set that cannot overkill.

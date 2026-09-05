@@ -517,6 +517,44 @@ definePresets({
         'Keep, and the absence is the rule under test: the modern strength half is gated on `isConventionalRangedSlot` (stats_sequence.js:956-960), and the To Hit half answers for kinds ranged and thrown only, returning 0 for anything else (stats_sequence.js:1450-1457). heavenlyLightRangedCoM2 is the same card with a missile Ranged channel instead and pins 1.200; the 0.800 and 0.900 the desc names are what a Breath arm on either half would give here.',
     },
   },
+  heavenlyLightTailRefusedByApotheosisWarlord: {
+    desc: 'The material tail is `not B.Fantastic and not B.ishero` (Units.RecalculateUnits.pas:1447-1448) — the `B.` selector, so the permanent record, which the Apotheosis cast (Warlord renames Destiny to Apotheosis, `enchantments.js`) writes Fantastic at $0059A390 ahead of `a:baseCopy`. The strength half has no such gate and still lands: melee 2 doubled by that cast is 4, +1 from the block is 5, and the To Hit stays at the base 30% -> 1.500. Negative claim on the tail alone; reading the training-time flag instead granted the +10% for 5 at 40% = 2.000.',
+    version: V_WARLORD,
+    a: { atk:2, hp:10, abilities: { apotheosis: true, heavenlyLight: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.500 },
+    vacuity: {
+      'a.ability.heavenlyLight':
+        'Keep: the enchantment supplies the +1 melee this card scores, so ablating it drops 5 to 4 and the number to 1.200. What is asserted is the *absence of its To Hit tail*, which is why the pinned value is 1.500 rather than the 2.000 the same card gives with the tail. a.ability.apotheosis is the other live half.',
+    },
+  },
+  heavenlyLightTailReachesSpiritLinkedFantasticWarlord: {
+    desc: 'The positive direction of the same permanent-record read: the `SETSTAT(TU,AFantastic,1,0)` of Spirit Link clears the flag ahead of the copy, so a base-Fantastic unit passes `not B.Fantastic` and takes the tail. melee 2 + 1 = 3 at 40% -> 1.200; reading the training-time flag instead withheld the tail for 3 at 30% = 0.900.',
+    version: V_WARLORD,
+    a: { unitType: 'fantastic_nature', atk:2, hp:10,
+      abilities: { spiritLink: true, heavenlyLight: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 1.200 },
+  },
+  heavenlyLightRangedTailRefusedByApotheosisWarlord: {
+    desc: 'The secondary To Hit half of the same tail, which takes a different picker path from the melee one (`makeSecondaryHitPick`, stats_sequence.js): the Ranged threshold is withheld on an Apotheosis unit for the same `not B.Fantastic` reason. Missile 2 doubled by that cast is 4, +1 from the block is 5, at the base 30% -> 1.500, against the 2.000 the granted threshold gives. Paired with heavenlyLightTailRefusedByApotheosisWarlord, the melee half of the same claim.',
+    version: V_WARLORD,
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hp:10,
+      abilities: { apotheosis: true, heavenlyLight: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.500 },
+  },
+  heavenlyLightRangedTailReachesSpiritLinkedFantasticWarlord: {
+    desc: 'The positive direction of the secondary half: missile 2 + 1 = 3 at 40% -> 1.200 on a Spirit-Linked base-Fantastic unit, against 3 at 30% = 0.900 when the tail is read off the training-time flag.',
+    version: V_WARLORD,
+    a: { unitType: 'fantastic_nature',
+      modernAttacks: { ranged: { strength:2, type:'missile' } }, hp:10,
+      abilities: { spiritLink: true, heavenlyLight: true } },
+    b: { hp:10 },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, dmgToB: 1.200 },
+  },
   heavenlyLightMeleeCoM: {
     desc: 'Heavenly Light (CoM 1), the defender-side city block at com1:0x905BB: a positive melee attack gains +1, and a unit carrying no weapon material also gains +10% melee To Hit → 3 at 40% = 1.200. Without the enchantment this is 2 at 30% = 0.600.',
     version: V_COM,
@@ -718,7 +756,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
     vacuity: {
       'a.ability.metalFires':
-        'Keep, and the absence is the rule under test: `c:metalFires` is gated on `!u.fantastic` (combat_abilities.js:996), so a Fantastic card takes neither the melee +1 (combat_abilities.js:999) nor the secondary +1 (combat_abilities.js:1003), and ablating the enchantment must leave 1.000. The live candidate is the unitType: metalFiresMelee is this fixture with `unitType: \'fantastic_chaos\'` removed and nothing else changed, and pins 2.000. The block states the same exclusion a second time for the magic-weapon upgrade (`metalFiresActive`, stats.js:903), but that arm cannot move this number - the defender has no Weapon Immunity.',
+        'Keep, and the absence is the rule under test: `c:metalFires` is gated on `!u.fantastic` (combat_abilities.js:996), so a Fantastic card takes neither the melee +1 (combat_abilities.js:999) nor the secondary +1 (combat_abilities.js:1003), and ablating the enchantment must leave 1.000. The live candidate is the unitType: metalFiresMelee is this fixture with `unitType: \'fantastic_chaos\'` removed and nothing else changed, and pins 2.000. The block states the same exclusion a second time for the magic-weapon upgrade (`metalFiresActiveAt`, stats.js), but that arm cannot move this number - the defender has no Weapon Immunity.',
     },
   },
   metalFiresFantasticMissileUnaffected: {
@@ -802,7 +840,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 3.000 },
     vacuity: {
       'a.ability.metalFires':
-        'Keep, and the absence is the rule under test: `c:metalFires` will not fire while Flame Blade is on the card - `!(hasAbil(abilities, \'flameBlade\') || ...)` (combat_abilities.js:997) - so only Flame Blade\'s +2 lands and the melee stays 3. Drop that disjunct and Metal Fires\' +1 joins it for 4.000. flameBladeMelee is this fixture without Metal Fires and pins the same 3.000; metalFiresMelee is this fixture without Flame Blade and pins 2.000, so the pair brackets the non-stacking from both sides. `metalFiresActive` states the same exclusion again for the magic-weapon upgrade (stats.js:904), but that arm cannot move this number - the defender has no Weapon Immunity.',
+        'Keep, and the absence is the rule under test: `c:metalFires` will not fire while Flame Blade is on the card - `!(hasAbil(abilities, \'flameBlade\') || ...)` (combat_abilities.js:997) - so only Flame Blade\'s +2 lands and the melee stays 3. Drop that disjunct and Metal Fires\' +1 joins it for 4.000. flameBladeMelee is this fixture without Metal Fires and pins the same 3.000; metalFiresMelee is this fixture without Flame Blade and pins 2.000, so the pair brackets the non-stacking from both sides. `metalFiresActiveAt` states the same exclusion again for the magic-weapon upgrade (stats.js), but that arm cannot move this number - the defender has no Weapon Immunity.',
     },
   },
   flameBladeMeleeCoM2: {
@@ -937,7 +975,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
     vacuity: {
       'a.ability.fieryFury':
-        'Keep, and the absence is the rule under test: the stat package is the ELSE arm of Fiery Fury\'s one base-Fantastic test - `ffRegularBonus = isWarlord && !!abilities.fieryFury && !permanentFantastic` (stats.js) - and it gates both the phase-b `b:fieryFury` write (stats_sequence.js) and `ffMeleeBonusAt` (stats.js), so a base-Fantastic card takes nothing and ablating the enchantment must leave 1.000. The THEN arm is not dead in this version, it simply has nothing to act on here: its First Strike (`applyFieryFuryEffects`, combat_effects.js) faces a defender with no attack, and its Chaos realm (`b:fieryFury:race`, stats_identity.js) has no Chaos Surge to feed, this fixture setting none. Drop `!permanentFantastic` and atk 1 becomes 4 for 4.000, which fieryFuryMeleeWarlord - this fixture with `unitType: \'fantastic_nature\'` removed and nothing else changed - pins.',
+        'Keep, and the absence is the rule under test: the stat package is the ELSE arm of Fiery Fury\'s one base-Fantastic test - `ffRegularBonusAt = runCtx => isWarlord && !!abilities.fieryFury && !runCtx.base.fantastic` (stats.js) - and it gates both the phase-b `b:fieryFury` write (stats_sequence.js) and `ffMeleeBonusAt` (stats.js), so a base-Fantastic card takes nothing and ablating the enchantment must leave 1.000. The THEN arm is not dead in this version, it simply has nothing to act on here: its First Strike (`applyFieryFuryEffects`, combat_effects.js) faces a defender with no attack, and its Chaos realm (`b:fieryFury:race`, stats_identity.js) has no Chaos Surge to feed, this fixture setting none. Drop the base-Fantastic term and atk 1 becomes 4 for 4.000, which fieryFuryMeleeWarlord - this fixture with `unitType: \'fantastic_nature\'` removed and nothing else changed - pins.',
     },
   },
   fieryFuryFantasticFirstStrike: {
@@ -964,7 +1002,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
     vacuity: {
       'a.ability.fieryFury':
-        'Keep. Both of the enchantment\'s arms are already answered on this card, so ablating it cannot move the number: the stat package needs `!permanentFantastic` (stats.js:909) and this unit is base-Fantastic, while the Chaos realm its THEN arm writes at `b:fieryFury:race` (stats_identity.js:311-314) is overwritten by `c:undead`\'s `u.race = \'Death\'` (stats_identity.js:367-369), which ranks after it (stats_manifests.js:262, :280), so `chaosSurgeCount` finds no Chaos realm and returns 0 (stats.js:600-602). The live half is the Undead flag, which is what the fixture measures. Rank `b:fieryFury:race` after `c:undead` and the Chaos Surge melee bonus lands for 4.000 - the value fieryFuryFantasticChaosConversion pins on a base-Fantastic card that does reach the Chaos realm, differing from this one in two fields: `unitType` fantastic_nature rather than fantastic_death, and no `undead`.',
+        'Keep. Both of the enchantment\'s arms are already answered on this card, so ablating it cannot move the number: the stat package needs `!runCtx.base.fantastic` (`ffRegularBonusAt`, stats.js) and this unit is base-Fantastic, while the Chaos realm its THEN arm writes at `b:fieryFury:race` (stats_identity.js:311-314) is overwritten by `c:undead`\'s `u.race = \'Death\'` (stats_identity.js:367-369), which ranks after it (stats_manifests.js:262, :280), so `chaosSurgeCount` finds no Chaos realm and returns 0 (stats.js:600-602). The live half is the Undead flag, which is what the fixture measures. Rank `b:fieryFury:race` after `c:undead` and the Chaos Surge melee bonus lands for 4.000 - the value fieryFuryFantasticChaosConversion pins on a base-Fantastic card that does reach the Chaos realm, differing from this one in two fields: `unitType` fantastic_nature rather than fantastic_death, and no `undead`.',
     },
   },
   fieryFurySanctifyNoChaosConversionWarlord: {
@@ -976,7 +1014,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
     vacuity: {
       'a.ability.fieryFury':
-        'Keep. Same shape as fieryFuryUndeadNoChaosConversion, with the override coming from the other source: the stat package needs `!permanentFantastic` (stats.js:909) and this unit is base-Fantastic, while the Chaos realm `b:fieryFury:race` writes (stats_identity.js:311-314) is replaced by `b:sanctify`\'s `u.race = \'Life\'` (stats_identity.js:338), which ranks later inside the same region (stats_manifests.js:262, :267), so `chaosSurgeCount` returns 0 (stats.js:600-602). Ablating Fiery Fury changes neither answer; Sanctify is the live half, and fieryFuryFantasticChaosConversion is this fixture with Sanctify removed and nothing else changed, pinning 4.000.',
+        'Keep. Same shape as fieryFuryUndeadNoChaosConversion, with the override coming from the other source: the stat package needs `!runCtx.base.fantastic` (`ffRegularBonusAt`, stats.js) and this unit is base-Fantastic, while the Chaos realm `b:fieryFury:race` writes (stats_identity.js:311-314) is replaced by `b:sanctify`\'s `u.race = \'Life\'` (stats_identity.js:338), which ranks later inside the same region (stats_manifests.js:262, :267), so `chaosSurgeCount` returns 0 (stats.js:600-602). Ablating Fiery Fury changes neither answer; Sanctify is the live half, and fieryFuryFantasticChaosConversion is this fixture with Sanctify removed and nothing else changed, pinning 4.000.',
     },
   },
   fieryFuryFieryBladeNoStack: {
@@ -989,7 +1027,7 @@ definePresets({
       'every-feature-inert':
         'Inert by construction, and the inertness is the whole assertion: the claim is that the two sources supply one +3 melee between them, so removing either has to leave 4.000. The third candidate, `race: \'Dwarf\'`, is not read by the Lava Smelter grant: the step\'s admission test is the mineral-pair mark and the permanent unitType (stats_identity.js, the caller passing `baseUnitType` through the sequence context), and it reads the five Lava Smelter ability flags and the legacy selector. No race test appears anywhere in the block.',
       'a.ability.fieryFury':
-        'Keep, and the absence is the rule under test: with a Warlord blade on the card `ffMeleeBonusAt` is forced to 0 by `ffRegularBonus && !hasWarlordBladeAt(u)` (stats.js), and the whole +3 comes from the phase-c blade step instead (`flameBladeStep`, stats.js), so ablating Fiery Fury leaves 4.000 - and ablating the Fiery Blade grant also leaves 4.000, because `ffMeleeBonusAt` then returns 3. Drop the `!hasWarlordBladeAt(u)` term and the two stack for 7.000. fieryFuryMeleeWarlord and fieryBladeMeleeWarlord each pin the single-source 4.000 this fixture has to match.',
+        'Keep, and the absence is the rule under test: with a Warlord blade on the card `ffMeleeBonusAt` is forced to 0 by `ffRegularBonusAt(runCtx) && !hasWarlordBladeAt(u)` (stats.js), and the whole +3 comes from the phase-c blade step instead (`flameBladeStep`, stats.js), so ablating Fiery Fury leaves 4.000 - and ablating the Fiery Blade grant also leaves 4.000, because `ffMeleeBonusAt` then returns 3. Drop the `!hasWarlordBladeAt(u)` term and the two stack for 7.000. fieryFuryMeleeWarlord and fieryBladeMeleeWarlord each pin the single-source 4.000 this fixture has to match.',
     },
   },
   fieryFuryWeaponImmunityBypass: {
@@ -1000,7 +1038,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 7.000 },
     vacuity: {
       'b.ability.weaponImmunity':
-        'Keep, and the absence is the rule under test: the defender\'s flag has to be unable to add anything, or there is no bypass. `ffRegularBonus` is one of `modernEncMagicOtherTermsAt`\' disjuncts (stats.js), so `modernAttackIsMagic` is true (combat_special_attacks.js), `wi` is false (combat_effects.js) and no Weapon Immunity bonus is ever added - the melee 4 + 3 lands whole. Remove that disjunct and Warlord\'s +10 Weapon Immunity Defence bonus (`effectiveDefense:weaponImmunity`, combat_effects.js) meets a 7-strength attack against Defence 0, the same pairing rustStripsMagicWeaponWarlord asserts at 0.000. Fiery Fury is the live candidate.',
+        'Keep, and the absence is the rule under test: the defender\'s flag has to be unable to add anything, or there is no bypass. `ffRegularBonusAt(runCtx)` is one of `modernEncMagicOtherTermsAt`\' disjuncts (stats.js), so `modernAttackIsMagic` is true (combat_special_attacks.js), `wi` is false (combat_effects.js) and no Weapon Immunity bonus is ever added - the melee 4 + 3 lands whole. Remove that disjunct and Warlord\'s +10 Weapon Immunity Defence bonus (`effectiveDefense:weaponImmunity`, combat_effects.js) meets a 7-strength attack against Defence 0, the same pairing rustStripsMagicWeaponWarlord asserts at 0.000. Fiery Fury is the live candidate.',
     },
   },
 
@@ -1013,7 +1051,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 1.000 },
     vacuity: {
       'a.ability.exorcise':
-        'Keep, and the absence is the rule under test: `exorciseFailProb` returns 0 on its first line for any defender whose unit type does not begin `fantastic_` (combat_special_attacks.js:121), and the type it is handed is the finished one (combat_phases.js:88 passes `other.unitType`, which is `finishedUnitType`, stats.js:2584). `d:spiritLink` clears Fantastic at the tail of the derivation (stats_identity.js:385-387), which is the identity a cast-time targeting predicate reads (stats_identity.js:391-395), and `legacyUnitTypeFromLiveIdentity` then answers `normal_death` (stats_identity.js:154), so there is no banish roll for the ablation to remove and only the physical melee 1 lands. Spirit Link is the live half: without it the base fantastic_death survives to that read and the -4 fires.',
+        'Keep, and the absence is the rule under test: `exorciseFailProb` returns 0 on its first line for any defender whose unit type does not begin `fantastic_` (combat_special_attacks.js:121), and the type it is handed is the finished one (combat_phases.js:88 passes `other.unitType`, which is `finishedUnitType`, the unit type the stat run left, stats.js). `d:spiritLink` clears Fantastic at the tail of the derivation (`stats_identity.js`), which is the identity a combat-time classification reads, and `legacyUnitTypeFromLiveIdentity` then answers `normal_death` (stats_identity.js:154), so there is no banish roll for the ablation to remove and only the physical melee 1 lands. Spirit Link is the live half: without it the base fantastic_death survives to that read and the -4 fires.',
     },
   },
   spiritLinkWeaponImmunityBypassWarlord: {
@@ -1060,15 +1098,26 @@ definePresets({
       'a.ability.spiritLink':
         'Keep, and the inertness is the rule under test: the two routes to Recruit meet on this card. With the enchantment the cast’s own `buffs:spiritLink:level` writes it (stats_sequence.js); without it the permanent record stays Fantastic and `c:level:fantastic` writes it instead (stats_sequence.js). Ablating the enchantment therefore cannot move the number, and that it cannot is the claim — before F245 this same card read 3.000, the widening having suppressed `c:level:fantastic` while nothing replaced it. a.unitType is the live half: dropped to normal, neither route fires and the Elite ladder row survives for 3.000.',
       'a.level=elite':
-        'Keep for the same reason and from the other side: the field is what the cast discards, so ablating it to normal reaches the same 1.000 by construction. Its presence is what makes the discard visible at all — with the card already at Recruit the step would write the value that stands there. spiritLinkWeaponMaterialWarlord is where the same cast’s Fantastic clear is the live half.',
+        'Keep for the same reason and from the other side: the field is what the cast discards, so ablating it to normal reaches the same 1.000 by construction. Its presence is what makes the discard visible at all — with the card already at Recruit the step would write the value that stands there. The cast’s Fantastic clear is the live half of badMoonSkipsDestinyPermanentFantasticCoM2’s Warlord sibling and of rustAppliesToSpiritLinkedFantasticWarlord; it is not the loadout gate’s, which reads the record four phases earlier (F262).',
     },
   },
-  spiritLinkWeaponMaterialWarlord: {
-    desc: 'The other side of the same cast: `SETSTAT(TU,AFantastic,1,0)` (OLSpell.CAS!NOTAIRSUPPORT!+9 "SETSTAT(TU,AFantastic,1,0);") takes the Fantastic flag off the permanent record, so the loadout gate `loadoutEligible = !permanentFantastic` (stats.js) stops discarding the stated weapon material and `training:weaponQuality` writes it. Adamantium gives the Warlord melee +2 (c:weapon): atk 1 → 3, 100% hit vs def 0 → 3.0, against the 1.0 the same base-Fantastic card reaches without the enchantment, unequipped (F245).',
+  apotheosisKeepsWeaponMaterialWarlord: {
+    desc: 'The material is a stored flag the training city writes once, and no block in either engine family gates the read on Fantastic: `Caster.exe` reads `BaseUnits[i].EnchantmentFlags[EncMagic] or EncMithril or EncAdamant` ($00598D91) and the DOS builds `_UNITS[si].mutations & UM_WEAPON_QUALITY_MASK`. Destiny’s permanent identity write, `B.race := 19; B.Fantastic := True` ($0059A390), touches no material flag, so a normal unit that was equipped when it was built stays equipped after the cast: `training:weaponQuality` reads `u.fantastic` at its own `training` rank, four phases ahead of `buffs:destiny` (F262). `c:destiny` doubles the melee first (atk 1 → 2) and `c:weapon` adds adamantium’s +2 behind it (→ 4), the Warlord chain ranking `c:destiny` at 126 and `c:weapon` at 128: 100% hit vs def 0 → 4.0. Both named features are live — without Destiny the same card reaches 3.0, without the material 2.0. Until F262 the gate was an end-of-`buffs` snapshot and this card read 2.0, the cast having discarded a material it never writes.',
     version: V_WARLORD,
-    a: { atk:1, hitChance:70, hp:10, weapon:'adamantium', unitType: 'fantastic_nature', abilities: { spiritLink: true } },
+    a: { atk:1, hitChance:70, hp:10, weapon:'adamantium', abilities: { apotheosis: true } },
     b: { def:0, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, dmgToB: 4.000 },
+  },
+  spiritLinkApotheosisKeepsPermanentFantasticWarlord: {
+    desc: 'The two permanent identity writes on one card, and the chain order between them is what the number measures. Spirit Link’s cast clears the flag once — `SETSTAT(TU,AFantastic,1,0)` (OLSpell.CAS!NOTAIRSUPPORT!+9 "SETSTAT(TU,AFantastic,1,0);") — while Apotheosis’ `B.race := 19; B.Fantastic := True` ($0059A390) is a write the recalculation re-makes on every pass, so `buffs:destiny` stands behind `buffs:spiritLink:fantastic` and the record `a:baseCopy` publishes is Fantastic. Bad Moon is the probe: its `(not B.Fantastic)` arm ($005A273C) therefore refuses the unit and the −3 Resistance is never written. res 6 + 2 (Spirit Link’s cast) + 4 (Apotheosis) = 12, Stoning Gaze −3 → effRes 9 → pFail 0.1 against hp 10 × 2 (Apotheosis) = 20 → 2.0. Ranking the two writes the other way round would leave the copied record non-Fantastic, Bad Moon would land for res 9 → effRes 6 → 0.4 → 8.0, and this is the only fixture in the corpus that marks both (F262).',
+    version: V_WARLORD,
+    a: { hp:10, abilities: { stoningGaze: -3 } },
+    b: { res:6, hp:10, unitType: 'fantastic_nature', abilities: { spiritLink: true, apotheosis: true, badMoon: true } },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'b.ability.badMoon':
+        'Keep, and the absence is the rule under test: `badMoonActiveAt` carries `&& !runCtx.base.fantastic` (stats.js), and Apotheosis’ permanent write re-asserts that flag behind Spirit Link’s clear, so the step’s `when` refuses it and the −3 Resistance is never written (stats_sequence.js). Bad Moon has to be on the card for the exclusion to be what is measured, and it is what makes the chain order observable at all: swap `buffs:spiritLink:fantastic` and `buffs:destiny` in CHAIN_COM2_WARLORD_1_5_12_9 (stats_manifests.js) and this fixture reads 8.000. Both other marks are live — without Spirit Link’s +2 Resistance the card reads 6.000, and without Apotheosis the clear stands, Bad Moon lands, and it reads 8.000 by the other route.',
+    },
   },
 
   // --- Chaos Channels ---

@@ -770,6 +770,25 @@ definePresets({
     b: { hp:10 },
     expected: { dmgToA: 0, dmgToB: 2.000 },
   },
+  breakthroughRefusedByDestinyPermanentFantasticCoM2: {
+    desc: 'The other side of the same `not B.Fantastic` test ($005A376D..$005A3DDE): `B.` is the permanent record, and Destiny writes `B.Fantastic := True` at $0059A390 before the recalculation copies it, so a unit trained as a regular one is outside the normal package. Negative claim, the absence being the rule under test: melee 1 doubled by Destiny is 2 at 100% hit vs def 0 -> 2.0, which is what its Destiny-only sibling destinyMeleeRemovesLevelsCoM2 measures. Reading the training-time flag instead admitted the package for 3 -> 3.000. Paired with breakthroughLiveFantasticStillNormalCoM2, which is the live-Fantastic direction of the same gate.',
+    version: V_COM2,
+    a: { atk:1, hitChance:70, hp:10, abilities: { destiny: true, breakthrough: 'melee' } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+    vacuity: {
+      'a.ability.breakthrough':
+        'Keep, and the absence is the rule under test: the enchantment has to be on the card for the exclusion to be what is measured. `c:breakthrough:normal` is composed unconditionally now and refuses at its own `when`, `!combatSummoned && !ctx.base.fantastic` (combat_abilities.js), so ablating Breakthrough leaves the same 2.000. a.ability.destiny is the live half, doubling melee 1 to 2; breakthroughMeleeCoM2 is this card without Destiny and pins 2.000 from base 1 + 1 instead.',
+    },
+  },
+  breakthroughReachesSpiritLinkedFantasticWarlord: {
+    desc: 'The positive direction of the same permanent-record read: Spirit Link clears the permanent flag with `SETSTAT(TU,AFantastic,1,0)`, and that clear stands ahead of `a:baseCopy`, so a base-Fantastic unit passes `not B.Fantastic` and takes the normal package. melee 1 + 1 = 2 at 100% hit vs def 0 -> 2.0; reading the training-time flag instead refused it for 1.000, which is what the same card without Breakthrough gives.',
+    version: V_WARLORD,
+    a: { unitType: 'fantastic_nature', atk:1, hitChance:70, hp:10,
+      abilities: { spiritLink: true, breakthrough: 'melee' } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, dmgToB: 2.000 },
+  },
   breakthroughMeleeDefDefenseCoM2: {
     desc: 'Breakthrough (CoM2) derives its normal package from identity: the exceptional +def label cannot override a normal unit, so defense stays 0 and 1 hit deals 1 damage.',
     version: V_COM2,
@@ -906,7 +925,7 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 6.000 },
     vacuity: {
       'b.ability.badMoon':
-        'Keep, and the absence is the rule under test: Destiny is one of the two things that make permanentFantastic true (stats.js:80), and badMoonActive carries `&& !permanentFantastic` (stats.js:573), so the step\'s `when` refuses it and the -3 Resistance is never written (stats_sequence.js:1253-1254). Bad Moon has to be on the card for that exclusion to be what is measured. destinyResistanceAndHpCoM2 is the same card without b.abilities.badMoon and pins the same 6.000; b.ability.destiny is the live half, at +4 Resistance and doubled HP (stats_sequence.js:725).',
+        'Keep, and the absence is the rule under test: Destiny writes the permanent Fantastic flag (`buffs:destiny`, stats_identity.js), and `badMoonActiveAt` carries `&& !runCtx.base.fantastic` (stats.js), so the step\'s `when` refuses it and the -3 Resistance is never written (stats_sequence.js:1253-1254). Bad Moon has to be on the card for that exclusion to be what is measured. destinyResistanceAndHpCoM2 is the same card without b.abilities.badMoon and pins the same 6.000; b.ability.destiny is the live half, at +4 Resistance and doubled HP (stats_sequence.js:725).',
     },
   },
   goodMoonSkipsDestinyPermanentFantasticCoM2: {

@@ -204,18 +204,28 @@ function runDerivationStageChecks(ctx) {
   // F245: the cast's three permanent writes. `buffs:spiritLink:fantastic` clears the Fantastic
   // flag ahead of `a:baseCopy`, so it is off the record every later gate reads;
   // `buffs:spiritLink:level` puts the base level back to Recruit behind it. Asserted through
-  // derived outputs at four production call sites rather than by reading the record: the loadout
-  // gate (`loadoutEligible` -> `training:weaponQuality` -> `c:weapon`), the level ladder
-  // (`training:veterancy` overwritten at `buffs:spiritLink:level`, with `c:level:fantastic` no
-  // longer firing), Bad Moon's `!permanentFantastic` arm, and the reform's `NOTSAPIENS` gate.
-  // Mutation-tested: reverting any one of those consumers to the template flag
-  // (`!isFantasticBase`) fails exactly one assertion below, and reverting `permanentFantastic`
-  // or ranking `buffs:spiritLink:fantastic` behind `buffs:destiny` trips the base-record
-  // assertion in `deriveUnitStats` instead. Restoring the retired `spiritLinkLevelWidening` term
+  // derived outputs at three production call sites rather than by reading the record: the level
+  // ladder (`training:veterancy` overwritten at `buffs:spiritLink:level`, with
+  // `c:level:fantastic` no longer firing), Bad Moon's `!runCtx.base.fantastic` arm (F244.3h
+  // retired the pre-sequence `permanentFantastic` spelling there), and the reform's `NOTSAPIENS`
+  // gate. Mutation-tested: reverting any one of those consumers to the template flag
+  // (`!isFantasticBase`) fails exactly one assertion below. The *relative rank* of
+  // `buffs:spiritLink:fantastic` and `buffs:destiny` is not asserted anywhere in this suite and
+  // deliberately is not: the manifest is the ordering authority, so a check restating it would
+  // assert a constant against itself. It is defended by measurement instead — the preset
+  // `spiritLinkApotheosisKeepsPermanentFantasticWarlord` is the one fixture in the corpus that
+  // marks both, and swapping the two chain entries moves the damage it pins from 2.0 to 8.0
+  // (F262). Restoring the retired `spiritLinkLevelWidening` term
   // does **not** fail, and that is the retirement being complete rather than a gap here: its
   // training occurrence was already vacuous (Warlord satisfies `isCoM2`) and its
   // `c:level:fantastic` occurrence is now a no-op, `ctx.base.fantastic` being false wherever it
   // would have fired.
+  //
+  // The loadout gate is no longer one of those call sites, and that is F262 rather than a gap:
+  // `training:weaponQuality` reads the permanent Fantastic flag as it stands at its own
+  // `training` rank, four phases ahead of the cast, so a base-Fantastic card is unequipped
+  // whether or not Spirit Link is marked. The material is a stored flag the training city writes
+  // once and no later cast re-runs.
   const linkedCard = over => baseUnitInput({
     version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature', atk: 4, def: 4, res: 6,
     rtb: 0, rtbType: 'none', modernAttacks: {}, level: 'elite', ...over });
@@ -225,8 +235,18 @@ function runDerivationStageChecks(ctx) {
     weapon: 'adamantium', abilities: {} }));
   assertEqual(unlinkedEquipped.weapon, 'normal',
     'a base-Fantastic Warlord unit is unequipped: the loadout gate discards the stated material');
-  assertEqual(linkedEquipped.weapon, 'adamantium',
-    'Spirit Link clears the permanent Fantastic flag, so the stated material reaches the record');
+  assertEqual(linkedEquipped.weapon, 'normal',
+    'and Spirit Link does not equip it retroactively: the cast clears the permanent Fantastic '
+    + 'flag at buffs, four phases behind the training write that reads it (F262)');
+  const normalEquipped = ctx.deriveUnitStats(linkedCard({
+    unitType: 'normal', weapon: 'adamantium', abilities: {} }));
+  const destinyEquipped = ctx.deriveUnitStats(linkedCard({
+    unitType: 'normal', weapon: 'adamantium', abilities: { destiny: true } }));
+  assertEqual(normalEquipped.weapon, 'adamantium',
+    'a normal Warlord unit keeps the material its city gave it');
+  assertEqual(destinyEquipped.weapon, 'adamantium',
+    "and Destiny's later B.Fantastic := True does not take it away: no material block in either "
+    + 'engine family carries a Fantastic gate, and the flag it reads is never cleared (F262)');
   assertEqual(unlinkedEquipped.lvl.atk, 0,
     'and c:level:fantastic zeroes the stated level for the unlinked one');
   assertEqual(linkedEquipped.lvl.atk, 0,
@@ -243,13 +263,35 @@ function runDerivationStageChecks(ctx) {
     "Bad Moon's permanent-record arm refuses a base-Fantastic unit");
   assertEqual(linkedBadMoon.res, 5,
     'and admits the same unit once Spirit Link has cleared that flag');
+  // F244.3h: Breakthrough's `not B.Fantastic` admission ($005A376D..$005A3DDE) moved from a
+  // decision not to *create* `c:breakthrough:normal` to the step's own `when` over `ctx.base`.
+  // The damage both directions produce is pinned by two presets; what is asserted here is the
+  // structural half those cannot express — that the step is composed either way and reports
+  // itself skipped rather than being absent, which is what makes the exclusion visible in the
+  // chain dump and to `STEP_VERSION_SCOPES`' complement check (the F244.1 census's defect 4).
+  const breakthroughCard = over => baseUnitInput({
+    version: 'com2_1.05.11', unitType: 'normal', atk: 1, def: 0, res: 3, hp: 10,
+    rtb: 0, rtbType: 'none', modernAttacks: {}, ...over });
+  const breakthroughEvent = card => ctx.deriveUnitStats(card).statExecutionTrace
+    .find(event => event.id === 'breakthrough:normal');
+  const plainBreakthrough = breakthroughEvent(breakthroughCard({
+    abilities: { breakthrough: 'melee' } }));
+  const destinyBreakthrough = breakthroughEvent(breakthroughCard({
+    abilities: { breakthrough: 'melee', destiny: true } }));
+  assert(plainBreakthrough && plainBreakthrough.status === 'applied',
+    'c:breakthrough:normal is composed and fires on a permanently non-Fantastic unit');
+  assert(destinyBreakthrough && destinyBreakthrough.status === 'skipped',
+    'and is still composed, reporting itself skipped, once Destiny writes the permanent flag '
+    + '- a step present and unfired rather than a step never built (F244.3h)');
+  assert(!breakthroughEvent(breakthroughCard({ abilities: {} })),
+    'while a card with no Breakthrough composes no step at all, which is the enchantment gate '
+    + 'rather than the block term');
+
   // Destiny's `B.Fantastic := True` is a write the recalculation re-makes on every pass and it is
-  // ranked after the clear, so it wins on the flag.
-  const linkedDestiny = ctx.deriveUnitStats(linkedCard({
-    weapon: 'adamantium', abilities: { spiritLink: true, destiny: true } }));
-  assertEqual(linkedDestiny.weapon, 'normal',
-    'Destiny re-asserts the permanent Fantastic flag after the Spirit Link clear');
-  // But `SMultiLabel := 14` is not re-asserted away with it, so the reform's `NOTSAPIENS` gate
+  // ranked after the clear, so it wins on the flag. Read through the reform's `NOTSAPIENS` gate,
+  // which is a `ctx.base` reader: the loadout gate used to show it too and does not any more, its
+  // `training` rank standing ahead of both writes (F262).
+  // `SMultiLabel := 14` is not re-asserted away with the flag, so the reform's `NOTSAPIENS` gate
   // still admits the unit. Read through the three Sapiens-gated reform states rather than off
   // the record: without Spirit Link the same Destiny card needs the `sapiens` control.
   const reformCard = over => baseUnitInput({

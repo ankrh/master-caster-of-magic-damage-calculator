@@ -11,12 +11,13 @@
 //
 // Two of its jobs outlive it, and both are here rather than in a diagnostic outside the suites.
 //
-// (1) **The reads that are still taken outside a step must each be declared.** Four named values
-//     carry a calculated fact across the sequence boundary — three the calculated identity, one
-//     the finished immunity set — and every one of them is a deliberate exception with a
-//     citation. An occurrence of one that no row below claims halts,
-//     which is the property the census's channel scan gave and the reason a new unpositioned read
-//     cannot enter the code unnoticed (`SPEC.md`, *Out-of-range values stop the run*).
+// (1) **The identity reads taken outside a step must each be declared.** F246 retired the last
+//     read that crossed the sequence boundary — the projection `targetingIdentity` computed
+//     ahead of the run — so what these rows now hold is the weaker but still load-bearing
+//     property that each named value is read *below* the run and nowhere else. An occurrence
+//     inside a step's symbol, which is where the projection's readers used to sit, halts
+//     (`SPEC.md`, *Out-of-range values stop the run*). That is what stops the shape F163 and
+//     F246 removed from re-entering the code unnoticed.
 //
 // (2) **The landed record-choice corrections keep a named regression.** The census reproduced
 //     sixteen through its own oracle and threw if it ever stopped; that check cannot survive the
@@ -41,35 +42,28 @@ const { assert, assertSameKeyList } = require('./assertions');
 const CROSS_BOUNDARY_READS = [
   {
     token: 'finishedIdentity',
-    why: 'The record the recalculation leaves. Combat resolution is handed the finished unit '
-      + '(post-chain), and the two cast-time *targeting* predicates are evaluated against it '
-      + 'because the engine manipulates the recalculated flag in order to change targetability '
-      + '(F183 Rust, F188 Shatter).',
+    why: 'The identity the run left, read off `statUnit` below the run. Every consumer is a '
+      + 'combat-time classification, which is the class `SPEC.md`, *The step model* gives the '
+      + 'finished record. The cast-time *targeting* predicates that used to share it are gone: '
+      + "Rust's Fantastic exclusion reads the permanent record at `rustActiveAt`, and Metal "
+      + "Fires' block term reads the calculated record at its own rank (F246).",
     sites: [
-      'Calculator/stats.js#finishedIdentity',        // the declaration
-      'Calculator/stats.js#finishedUnitType',        // its compact projection
-      'Calculator/stats.js#rustActive',              // targeting: "Target: enemy regular unit"
-      'Calculator/stats.js#metalFiresActive',        // the weapon-upgrade half, read post-chain
-      'Calculator/stats.js#effectiveAbilities',      // liveRace/liveFantastic for combat
+      'Calculator/stats.js#finishedIdentity',        // the declaration, below the run
       'Calculator/stats.js#identityAtRank',          // the fallback when no step reaches the rank
-      // The sequence's own agreement check, which is what makes the projection's exactness a
-      // measured claim rather than a stated one. It sits directly under `const statUnit`, which
-      // is the record it checks the projection against.
-      'Calculator/stats.js#statUnit',
+      'Calculator/stats.js#curseGatedAbilities',     // liveRace/liveFantastic for combat
     ],
   },
   {
     token: 'finishedUnitType',
-    why: 'The compact projection of the same record, for the post-chain readers that still take '
-      + 'the token: the returned `unitType`, the ability map combat resolution reads, Supreme '
-      + "Light's published eligibility, and Shatter's target class.",
+    why: 'The compact projection of the same record, for the post-run readers that take the '
+      + 'token: the returned `unitType`, the ability map combat resolution reads, and Supreme '
+      + "Light's published eligibility. Shatter's target class left the list with F246: "
+      + '`c:shatter` outranks every identity conversion in the four chains that evaluate the '
+      + 'term, so the step reads its own record.',
     sites: [
       'Calculator/stats.js#finishedUnitType',
-      'Calculator/stats.js#effectiveAbilities',
+      'Calculator/stats.js#curseGatedAbilities',
       'Calculator/stats.js#result',
-      'Calculator/stats.js#rawStatSteps',
-      'Calculator/stats_sequence.js#magicCalcBinaryStatSteps',
-      'Calculator/stats_sequence.js#step:shatter',
     ],
   },
   {
@@ -130,10 +124,10 @@ function runCrossBoundaryIdentityReadChecks() {
     const observed = [...seen.get(entry.token)].sort();
     const allowed = [...declared.get(entry.token)].sort();
     assertSameKeyList(observed, allowed,
-      `Every read of \`${entry.token}\` is a declared cross-boundary read. It is the calculated `
-      + 'identity taken outside the step that would read it at its own position, which is the '
-      + 'shape F163 removed everywhere else, so each occurrence needs a row in '
-      + '`tools/unit_checks/identity_record_choice.js` saying why');
+      `Every read of \`${entry.token}\` is a declared post-run identity read. Each names the record `
+      + 'the stat run left, which only a consumer below the run can legitimately ask for; an '
+      + 'occurrence inside a step symbol is the ahead-of-run projection F163 and F246 removed, so '
+      + 'each occurrence needs a row in `tools/unit_checks/identity_record_choice.js` saying why');
   }
 }
 
@@ -141,9 +135,15 @@ function runCrossBoundaryIdentityReadChecks() {
 //
 // `at` is the chain entry or gate the correction settled; `record` is which record it turned out
 // to want — `positional` (the calculated record where the block stands), `permanent` (the base
-// record), `finished` (the record the recalculation leaves, for a cast-time targeting class), or
-// `hero` (the block asks a hero question, which is not an identity read at all). `preset` is the
-// regression that holds it.
+// record, which is what a **cast-time targeting** gate takes: `SPEC.md`, *Architecture*),
+// `finished` (the record the recalculation leaves, which is what a **post-run** consumer takes —
+// combat resolution and the published result fields), or `hero` (the block asks a hero question,
+// which is not an identity read at all). `preset` is the regression that holds it.
+//
+// F246 emptied the case that used to make `finished` interesting: a targeting class read ahead of
+// the sequence. Shatter is the one row that still says `finished`, and it says it without a
+// projection — `c:shatter` outranks every identity conversion in the four chains that evaluate its
+// term, so the record standing at the step already is the finished one.
 const LANDED_CORRECTIONS = [
   { id: 'F167', at: 'training:altarOfTheMoon and the four other Warlord building gates',
     record: 'permanent', preset: 'altarOfTheMoonNonGnollWarlord' },
@@ -167,7 +167,11 @@ const LANDED_CORRECTIONS = [
     preset: 'chaosSurgeChaosChannelsArmorMoM' },
   { id: 'F179', at: 'c:breakthrough:normal', record: 'permanent',
     preset: 'breakthroughLiveFantasticStillNormalCoM2' },
-  { id: 'F183', at: "Rust's target class", record: 'finished',
+  // F183 filed this as a `finished` read and F246 moved it, on the user's ruling that spell
+  // targeting reads the permanent record. The preset is unmoved: F245 established that Spirit
+  // Link's cast clears the permanent Fantastic flag too, so the Spirit-Linked Fantastic target
+  // F183 was filed for is a legal Rust target on either record.
+  { id: 'F183+F246', at: "Rust's target class", record: 'permanent',
     preset: 'rustAppliesToSpiritLinkedFantasticWarlord' },
   // F184's second row, "Warp Reality's Immolation To Hit arm", stood here. F190 deleted the arm,
   // so there is no longer a second read to fix a record for.
@@ -186,6 +190,8 @@ const LANDED_CORRECTIONS = [
     preset: 'tacticianHeroCcDefenseWarpAttackWarlord' },
   { id: 'F187', at: 'buffs:rebuild', record: 'hero',
     preset: 'rebuildHeroCcDefenseLionheartWarlord' },
+  // `c:shatter` outranks every identity conversion in the four chains that evaluate the term, so
+  // the step reads the finished record by reading its own (F246).
   { id: 'F188', at: "Shatter's target class", record: 'finished',
     preset: 'magicImmunityGatesShatter' },
   { id: 'F192', at: 'c:badMoon', record: 'permanent',

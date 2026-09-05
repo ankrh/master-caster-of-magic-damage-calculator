@@ -42,9 +42,9 @@ function unitTypeTokenAgreesWithIdentity(token, identity) {
 // `unitType` token is projected from those fields wherever it is needed.
 //
 // F163 adds a second bound to the same list, and it is load-bearing rather than stylistic: every
-// conversion writes *only* those two fields, which is what makes `targetingIdentity` — the
-// projection the two cast-time targeting predicates and the post-chain reads take — computable
-// without running the stat sequence. These are the structural
+// conversion writes *only* those two fields, so the conversion list is the complete inventory of
+// what can move `race` or `fantastic` — which is what lets a reader name the record it wants by
+// naming a position (F246). These are the structural
 // bounds that stop an effect rule from drifting back onto the compatibility projection — a
 // conversion that read or wrote the token would fuse realm and Fantastic again, which is what
 // forced Sanctify's realm-less `hero` special case before the split.
@@ -52,9 +52,12 @@ function runIdentityProjectionChecks(ctx) {
   const identitySource = calculatorSource('Calculator/stats_identity.js');
   const conversionsStart = identitySource.indexOf('function identityConversionSteps(');
   assert(conversionsStart >= 0, 'The identity conversions are found in stats_identity.js');
-  const conversionsEnd = identitySource.indexOf('\nfunction ', conversionsStart + 1);
-  const conversions = identitySource.slice(conversionsStart,
-    conversionsEnd === -1 ? identitySource.length : conversionsEnd);
+  // The function's own closing brace, at column 0. Bounding on the next `function` declaration
+  // made the scanned region depend on what happened to follow the conversions in the file, and
+  // F246's deletion of `targetingIdentity` silently widened it over two `const` tables.
+  const conversionsEnd = identitySource.indexOf('\n}\n', conversionsStart);
+  assert(conversionsEnd >= 0, 'identityConversionSteps has a closing brace at column 0');
+  const conversions = identitySource.slice(conversionsStart, conversionsEnd);
   assert(!/unitType/.test(conversions),
     'No identity conversion reads or writes the compact unitType token');
   const declaredWrites = [...conversions.matchAll(/writes:\s*\[([^\]]*)\]/g)]

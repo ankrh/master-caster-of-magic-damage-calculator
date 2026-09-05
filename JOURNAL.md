@@ -4,6 +4,311 @@
 
 # Journal
 
+## 2026-09-05 — The identity object read against `Typedec.pas` (F267 filed)
+
+Asked why `identity` exists at all. Read the engine record rather than arguing from our code.
+
+`Reference docs/Script source/CAS reference/Typedec.pas` — one flat `UnitT`:
+
+    Fantastic,LargeShield,Planeshifting,wallcrusher,healer,...  : boolean;   { :199 }
+    firststrike, lightningresist, healingaura,bloodsucker: boolean;          { :201 }
+    ishero : boolean;                                                        { :203 }
+    ...
+    unittype : smallint;                                                     { :246 }
+    herotype : smallint;                                                     { :247 }
+
+`ishero` sits among the stat flags, not apart from them. `BaseUnits[]` and `Units[]` are both
+arrays of this record.
+
+Dependency trace above `stats.js:2531` (the seed), done to size F267:
+
+| Milestone | Line |
+|---|---|
+| `deriveUnitStats` opens | 8 |
+| `identity` | 23 |
+| `suppliedAbilities` | 31 |
+| `abilities` (post-Outlander) | 121 |
+| `recordContext` / `derivationContexts` | 1618 / 1733 |
+| `effectiveAbilities` | 1892 |
+| `sampledStatSteps` | 2448 |
+| `statRecord` | 2531 |
+
+The seed's transitive inputs are `abilities`, `input` and the base identity triple. No record.
+Almost everything between :23 and :2531 is a closure over `u` / `runCtx` and does not need the
+record to exist at definition time; the eager scalars are `baseUnitType` :24, `isHero` :25,
+`isFantasticBase` :26, `baseUnitRace` :65 and their dependents (`trainingLevelEligible` :240,
+`weaponEligibleAt` :389, `armorTrainingInputAt` :428, `baseNormalTrainingUnit` :455,
+`naturalSelectionEligibleAt` :1061, `survivalInstinctToBlkBonus` :1089, `pillarOfFaithCountAt`
+:1201). That is the whole cost of moving the seed up, and it is why F267 splits six ways rather
+than one or twenty.
+
+`createUnitIdentity` / `createRosterUnitIdentity` / `createCustomUnitIdentity` have ~90 call sites
+across `tests/` and `tools/`. Keeping them as the input-shape declaration is what keeps F267 out of
+those files.
+
+## 2026-09-05 — F262: `permanentFantastic` and `loadoutEligible` are gone
+
+The last pre-sequence spelling of the permanent Fantastic flag is deleted, and with it the
+post-run assertion that kept it honest. Three kinds of reader were separated:
+
+- **The two `training` loadout gates read the permanent flag at their own rank.**
+  `weaponEligibleAt()` and `armorTrainingInputAt()` test `identity.baseFantastic` instead of an
+  end-of-`buffs` snapshot. That is the creation-time state, which is what the question is: the
+  material is a stored flag a training city writes once (`CreateUnit.CAS`, the Alchemist retort
+  and the ore block) and every engine only ever *reads* it afterwards —
+  `BaseUnits[i].EnchantmentFlags[EncMagic] or EncMithril or EncAdamant` at `$00598D91`,
+  `_UNITS[si].mutations & UM_WEAPON_QUALITY_MASK` in the DOS builds. No material block in either
+  engine family carries a Fantastic gate at all, so no later cast can equip or unequip a unit.
+- **The three Outlander reform states read `ctx.base.fantastic`.** `sapiensEligible` split into
+  `sapiensOwned` + `sapiensLabelled` behind `outlanderSapiensAt(ctx, reform)`; `battleArmor`
+  became `battleArmorEligible` behind `outlanderBattleArmorAt`; `combatSoldierEligible` became
+  `combatSoldierOwned` and `outlanderCombatSoldierAt` grew the third record read.
+  `deriveOutlanderReformRecord` no longer takes the snapshot. `b:battleArmor` is now composed and
+  reported skipped rather than never built, the shape F244.3h gave `c:breakthrough:normal`.
+- **`sapiensLabelled` stays a pre-sequence read on purpose.** The Sapiens label is not a record
+  field; F263 makes it one and deletes `spiritLinkClearsPermanentFantastic` with it.
+
+**The ordering check.** The deleted assertion also caught a manifest ranking `buffs:destiny` ahead
+of `buffs:spiritLink:fantastic`. On the user's 2026-09-05 ruling it is **not** replaced by a rank
+assertion — the manifest is the ordering authority, so restating it would assert a constant
+against itself. It is replaced by measurement: the preset
+`spiritLinkApotheosisKeepsPermanentFantasticWarlord` is the only fixture in the corpus marking
+both writes. Mutation-verified: swapping the two chain entries in
+`CHAIN_COM2_WARLORD_1_5_12_9` makes exactly that one preset fail, 2.000 → 8.000, and nothing else
+in the 1,161-preset suite moves.
+
+**Numbers moved, 3,576 of 182,560 saturated-census cases, in two classes and nothing else.**
+Before-tree = the working tree with the five behavioural changes reversed *and the deleted
+assertion restored*; it never fired, which is the zero-movement proof for the reform half and for
+`explosiveEligibleAt` (`ctx.base.fantastic` equals the old snapshot on every case).
+
+| Cases | Class |
+|---|---|
+| 2,400 | modern Destiny/Apotheosis on a normal unit — the stated material survives the cast (1,200 CoM2 + 1,200 Warlord) |
+| 1,176 | Warlord Spirit Link on a base-Fantastic unit — the cast does not equip it retroactively |
+
+**The loadout gates read `identity.baseFantastic`, not the running `u.fantastic`, and the GPT
+review is why.** The first draft read the running record at the `training` rank, which moved a
+further 1,200 **CoM 1** cases — combat summons and Construct Catapults losing their stated
+material, because `template:summonBranch` and `template:constructCatapult` write `fantastic` on
+the *calculated* record inside the `template` phase. The engine does the opposite: in
+`BU_UnitLoadToBattle`, `Load_Battle_Unit` (`combat.c`, com1:0x75C8A) makes the quality read at
+com1:0x8F024 and returns **before** the combat-summon path reaches
+`bu->Abilities |= UA_FANTASTIC` at com1:0x75D6C, and the Catapult constructor writes
+`_UNITS[si].mutations = UM_MAGIC_WEAPONS` at com1:0x8EEAF ahead of the same read. So a calculated
+Fantastic conversion cannot erase a stored DOS material. `identity.baseFantastic` is the permanent
+flag at the `training` rank in all five versions — identical to the running record in the four
+whose `template` phase writes nothing past the seed — and it is what the file's two other
+`training`-phase Fantastic gates (`trainingLevelEligible`, `baseNormalTrainingUnit`) already read.
+DOS movement after the fix: **zero**.
+
+The widened thrown seed (`bombsGrenadesCanWriteThrown` lost its `NOTSAPIENS` term) moved nothing:
+an empty typeless channel no step writes is not published. Probed directly, both trees.
+
+**The preset that had to be re-derived, not re-baselined.** `spiritLinkWeaponMaterialWarlord` pinned
+3.000 on the claim that Spirit Link's permanent clear lets the stated adamantium reach the record.
+The claim is false against the sources — the cast writes no material flag — so the preset is
+replaced rather than re-numbered: `apotheosisKeepsWeaponMaterialWarlord` pins the Destiny side
+(atk 1 × 2 at `c:destiny`, +2 at `c:weapon` → 4.000, both marks live), and
+`spiritLinkApotheosisKeepsPermanentFantasticWarlord` pins the ordering.
+
+
+## 2026-09-05 — F246: the identity projection is gone
+
+`targetingIdentity` is deleted. Every read it answered is now classified and rebound.
+
+**The permanent-record half (one gate, and it moves numbers).** `rustActive` became
+`rustActiveAt(u, runCtx)`. Its three `d`-phase halves read `ctx.base.fantastic`;
+`debuffs:rust:material` stands ahead of `a:baseCopy` and reads the running record, which at that
+rank *is* the permanent one — verified, no identity conversion sits between Warlord chain rank 53
+and rank 63.
+
+**The post-run half (four reads, no movement).** `finishedIdentity`, `finishedUnitType` and
+`identityAtRank` are re-declared below the run from `statUnit`; `unitType`, `liveRace`,
+`liveFantastic` and the Supreme Light normalization moved from `effectiveAbilities` (pre-run) to
+`curseGatedAbilities` (post-run); `metalFiresActive` became `metalFiresActiveAt(statUnit)`;
+`c:shatter` reads `unitTypeAt(u)`. The assertion that the projection matched the sequence is
+deleted; the separate `permanentFantastic` / `a:baseCopy` assertion beside it stays.
+
+**Two of the item's four "targeting" reads were misclassified, and were not moved.**
+Metal Fires' `!(bu->Abilities & UA_FANTASTIC)` at 131:0x9069A is a term of the block, on the
+calculated record at its own position — not a target class. Mislead's is
+`inferred_AuraMisfortune: if not U.Fantastic` in the region-`e` aura pass, likewise positional and
+already spelt that way. Both keep the calculated record. The reviewer confirmed both readings.
+
+**Shatter was not in the item text and needed handling.** Its target class read
+`finishedUnitType` from inside a `c`-phase step, which no post-run value can serve. `c:shatter`
+outranks every identity conversion in the four chains that evaluate the term (57/61 MoM 1.31,
+56/60 CP, 70/79 CoM 1, 85/98 base CoM2; last conversion 38, 37, 46, 51), and Warlord
+short-circuits the term away through `isWarlord ||`, so the record standing at the step already
+*is* the finished one and `unitTypeAt(u)` is exact.
+
+**Measured.** Two saturated censuses against a before-tree carrying the restored projection:
+census A (five versions x 8 identity shapes x singles and pairs over 23 race/Fantastic controls,
+11,080 cases) moved 14; census B (Warlord x 8 shapes x every subset up to 4 marks of the 14
+controls that can make the two records disagree, Rust always on, 11,768 cases) moved 2,117.
+Every moving case is Warlord Rust, in exactly two classes:
+
+- **1,485 "Rust now lands"** — the permanent record is not Fantastic but a calculated-record
+  conversion made the unit Fantastic during the recalculation: Chaos Channels (flight, armor,
+  fire breath), Undead, Animate Dead, Blood Lust, Mystic Surge, Raise Dead, a clergy Sanctify, a
+  Marionette channeler. The effect is the whole curse landing: -3 melee, -3 physical ranged, the
+  Large Shield clear, the Thrown clear, the weapon-quality clear.
+- **632 "Rust no longer lands"** — Spirit Link **and** Destiny both marked. The cast clears the
+  permanent flag, Destiny's permanent write re-asserts it, while the per-pass `b:spiritLink` /
+  `d:spiritLink` pair still leaves the calculated record non-Fantastic.
+
+`derivation_equivalence` moved 39 of 52,440, all Warlord combos — corroboration only; its
+identity axis draws no base-Fantastic row beside Spirit Link (F259).
+
+**The record choice is a ruling, not a reading, and the reviewer said so.** No reconstruction of
+Warlord's `SpellTypeGroup=16` target dispatch exists. The contract's *Architecture* line gives
+targeting the permanent record, and the item is approved on it — but `UnitCalc.CAS`'s own comment
+at the Spirit Link tail clear says the *calculated* flag is what changes targetability, and that
+is evidence pointing the other way in exactly the 632-case class. Both the code comment and the
+preset prose now say the choice is ruled rather than proven. Reading that dispatch is a candidate
+task.
+
+**Two unblockings fell out.** `b:sanctify`'s gate could not read the record while the projection
+existed (the projection did not run `training:sanctaBasilica`); that obstacle is gone, so F200
+stage 3 can simply make the read. And `tools/unit_checks/identity.js` bounded its conversion-list
+scan on the next top-level `function`, which happened to be `targetingIdentity`; deleting it
+silently widened the scan over two `const` tables and tripped the scan's own assertion. The bound
+is now the function's column-zero closing brace.
+
+**The three cross-boundary rows were kept, not deleted.** The item said to delete them. Retargeted
+to the post-run symbols they still halt if one of the three tokens reappears inside a step symbol,
+which is the shape F163 and F246 removed. The reviewer preferred this to literal deletion.
+
+**Review round (Method A, GPT 5.6 Sol).** `.reviews/F246.review-of-Claude.md`. No functional
+defect. Three findings, all taken: qualify the Rust record choice as ruled-not-proven in both the
+code comment and the preset prose; fix the `soulFlayActiveAt` comment that still said Rust reads
+the finished record; redefine `finished` in the `LANDED_CORRECTIONS` vocabulary as the post-run
+class rather than the targeting class, and reword the cross-boundary assertion message.
+
+## 2026-09-05 — F244.3h: the permanent Fantastic flag stops being a pre-sequence constant
+
+Eleven gates named in the item. **Nine** of them stand at or behind `a:baseCopy` and now read
+`ctx.base.fantastic` at their own rank: `b:fieryFury:race`, `c:badMoon`, `c:goodMoon`,
+`c:natureConjunction`, `b:wallOfFire:garrison`, `b:fieryFury` (`ffRegularBonusAt`), `b:soulFlay`,
+`c:heavenlyLight`'s material tail, and `c:breakthrough:normal`.
+
+**Two cannot, and that is a phase fact, not a shortcut.** `pillarOfFaithCount` and
+`naturalSelectionEligible` gate `training` steps, four phases ahead of the only publisher of
+`ctx.base`. What a `CreateUnit.CAS` training gate asks about is the permanent record the training
+phase is *building*, before any cast — which is the running `u.fantastic` at that rank, and that is
+what both read now. It is the same value the template flag gave (nothing writes `fantastic` ahead
+of `training` in any Warlord chain), so no number moves; what changes is that the read is
+positional. `loadoutEligible` and the Outlander reform's `NOTSAPIENS` gate were the same class and
+were why `permanentFantastic` survived F244.3h at all.
+
+**The assertion stayed — until F262 (2026-09-05), which retired both.** The item expected
+`stats.js`'s post-run Fantastic assertion to become redundant and F244.3h left it standing,
+because `permanentFantastic` still had those two `training` readers. F262 moved them and deleted
+the snapshot, the assertion and the manifest-ordering mutation test it doubled as; the ordering is
+defended by the preset `spiritLinkApotheosisKeepsPermanentFantasticWarlord` instead.
+
+**`targetingIdentity` had to grow a base copy** — and then F246 deleted the whole function, so
+this is history. It replayed the conversion list without the stat sequence, so it carried no
+`a:baseCopy` and passed `base: identity`. Once `b:fieryFury:race` reads `ctx.base.fantastic`, a
+Destiny or Spirit-Link card would have made the projection disagree with the sequence. F244.3h
+split its ordered list at the `debuffs`/`a` boundary and snapshotted between the halves; F246
+retired the projection instead.
+
+**Breakthrough moved from creation-gating to a `when`.** `identityPredicates.baseFantastic` is gone;
+`c:breakthrough:normal` carries `!combatSummoned && !ctx.base.fantastic` itself, so the exclusion is
+a step present and unfired rather than a step that was never built — one instance of the F244.1
+census's defect 4 closed as a side effect. `tools/unit_checks/ability_origins.js`'s
+`COMPATIBILITY_ABILITY_KEYS` lost the `combat_abilities.js` site for `baseFantastic` (the check
+caught it, which is the check working).
+
+**Numbers moved: 33 of 52440 digest cases**, `com2_1.05.11` and Warlord only, every one with Destiny
+on beside Heavenly Light, Breakthrough or Soul Flay. Hand probe, both directions, Warlord unless
+said: normal + Destiny + Heavenly Light `toHitMelee` 0.4 → 0.3 (defect 2); base-Fantastic + Spirit
+Link + Heavenly Light 0.3 → 0.4; modern normal + Destiny + Breakthrough loses melee +1 (defect 3);
+base-Fantastic + Spirit Link + Breakthrough gains it; normal + Destiny + Soul Flay loses the
+penalty; base-Fantastic + Spirit Link + Soul Flay takes it. The digest's identity axis never draws
+`unitType: 'fantastic_*'` beside Spirit Link, so the four gaining directions are probe-only — a
+concrete instance of what its header warns a zero does not cover (F259).
+
+A **saturated census** over the surface the digest cannot reach settles completeness: both modern
+versions x four identity shapes (normal, base-Fantastic, hero, combat-summoned) x three
+Breakthrough values x every <=3-flag subset of the twelve controls that gate on the flag, 7176
+derivations. **806 move, and zero of them lack one of Heavenly Light, Soul Flay or Breakthrough** —
+so the other eight gates moved nothing, which is the claim that the six already-`permanentFantastic`
+terms and the two `training` terms carry no delta. The driver is Destiny on a non-base-Fantastic
+unit (574 cases) or Spirit Link on a base-Fantastic one (131); the remainder are cards carrying
+both.
+
+**Soul Flay is the judgment call.** Its block carries no Fantastic test at all — the whole gate is
+`IF (GetEnchantmentFlag(U,EncSoulFlay,0)=0)` (`UnitCalcPre.CAS`, after `!NOTCOMBATSUBMARINE!`) — so
+the exclusion is a *targeting* term read off the helptext. `CLAUDE.md`, *Architecture*, gives
+targeting the permanent (base) record, which is what it now reads. Rust's structurally identical
+exclusion reads the **finished** record instead, on F183's Spirit-Link evidence that this block has
+no counterpart to. If F183's reading generalises, Soul Flay belongs with Rust and this is the site
+to revisit.
+
+**Review round (Method A, GPT 5.6 Sol).** `.reviews/F244.3h.review-of-Claude.md`. No blocking
+findings. It agreed the nine positioned reads take the record their engine gate takes, agreed the
+two `training` gates are right despite the item's literal `ctx.base` wording, agreed the assertion
+should stay, checked the `targetingIdentity` split reproduces `a:baseCopy`, and ruled Soul Flay
+belongs with the contract's permanent-record default rather than with Rust — Rust's
+`finishedIdentity` is F183 reasoning F246 is already scheduled to move, so it is not a precedent.
+Its one should-fix was accepted: the three corrections had no durable regression, so reverting any
+of them left the suite green. **Eight presets** now pin both directions of each —
+`breakthroughRefusedByDestinyPermanentFantasticCoM2`,
+`breakthroughReachesSpiritLinkedFantasticWarlord`,
+`soulFlayRefusedByApotheosisPermanentFantasticWarlord`,
+`soulFlayReachesSpiritLinkedFantasticWarlord`, `heavenlyLightTailRefusedByApotheosisWarlord`,
+`heavenlyLightTailReachesSpiritLinkedFantasticWarlord` and the two `…RangedTail…` siblings that
+cover the second picker path — plus three `derivation_stages` assertions that
+`c:breakthrough:normal` is composed and reports itself *skipped* rather than being absent. All
+eleven were mutation-tested: every one fails against `HEAD`. Warlord cards had to state
+`apotheosis`, not `destiny` — the CoM2-named control is version-hidden there and the preset path
+goes through the real controls, which is a difference a Node probe does not see.
+
+Line-number citations inside four preset `vacuity` notes were rewritten to name the new predicates
+instead; the `stats.js:NNN` numbers in the untouched notes have drifted by this change like every
+other edit to that file, which is the standing cost of citing a line rather than a name.
+
+## 2026-09-05 — Where the Playwright suite's time actually goes, and why the presets are browser-bound
+
+Measured while answering “why can't the core math run without the browser”. Numbers are this
+laptop, headless Chrome, `workers: 1`. Re-measure before leaning on them.
+
+**The suite.** 144 tests, 196.5 s of test time, 3.3 min wall. `presets.spec.js` 42.1 s (one test,
+1152 presets), `roster-smoke.spec.js` 30.6 s, the other 34 files 124 s at ~0.9 s each. The floor per
+test is ~0.52 s, so roughly **75 s of the 196 s is page loads** — 2.86 MB of `Calculator/*.js`
+parsed 144 times, ~0.8 MB of which is the preset fixtures every test loads whether it uses them or
+not. Peak headless Chrome RSS ~398 MB.
+
+**One preset pass**, 1152 presets, 36.6 s (mean of three interleaved baselines): `resolveCombat`
+~17 s, `refreshAbilityFieldVisibility` ~6 s, `onVersionChange` ~6 s over **329 version switches**,
+`readUnitStats` ~6 s (of which `deriveUnitStats` ~4 s), rendering ~9 s — and of that rendering only
+`renderDistPanel`'s `.avg` text is ever read. About half the pass is the page maintaining itself.
+
+**Two harness-only levers, measured against interleaved controls.** Iterating the presets grouped by
+version (329 switches → 4) costs 26.4 s, **−28%**. Dropping the four renders `runTests` never reads
+plus the `riderChains` the card's histograms alone consume costs 33.0 s, −10%. Both together 24.5 s,
+−33%. Neither touches production code. Grouping changes iteration order, so a preset that depends on
+residual state would surface — which is worth knowing either way.
+
+**Why Node cannot just run them.** The math is already Node-runnable and already run there:
+`deriveUnitStats` and `resolveCombat` are `core`-scope and `node_unit_checks.js` exercises both.
+What is browser-bound is the *fixture translation*. `readUnitStats` is a thin adapter — 25
+`getElementById` reads handed to a pure function — but the path into it is not: version gating
+clears gated controls, several controls merge onto one `calcKey`, roster records are applied through
+`applyUnit`, and legacy identity is translated. Filed as F260.
+
+**Method note.** Two of the runs behind these numbers were wasted: a full-suite log piped through
+`tail -60` threw away the per-test timings it was run to collect, and a measurement run concurrently
+with the suite read 50.2 s where the clean run read 38.8 s — a 29% distortion that produced a wrong
+conclusion (“version grouping saves 4%”) and had to be redone. On this suite, concurrent measurement
+is not merely slower, it is wrong.
+
+**Found while mapping F260.** The card and the matrix use different version-gating tests, and six
+Warlord enchantments sit in the gap. Filed as F261; detail there.
+
 ## 2026-09-04 — F258.2: the gaze zeroing becomes a region-`d` step, and the DOS cases go to zero
 
 Executed F258.1's adjudication. Four changes in `Calculator/`, one new step.
@@ -2025,6 +2330,15 @@ regions. Two blocking findings, two should-fix, two nits.
   `permanentFantastic` as a pre-sequence read, and F245's body expects this exact gate to move.
   Fixing it here would move numbers against an item whose contract is that none move. Reported to
   the user as a decision instead; category faithfulness.
+  **Correction, 2026-09-05 (F244.3h).** F244.3h did *not* retire the term here. `loadoutEligible`
+  feeds `training:weaponQuality` / `training:armorQuality`, which rank four phases ahead of
+  `a:baseCopy`, so there is no `ctx.base` for the gate to read — the item's premise held for the
+  nine gates at or behind the copy and not for this one. The Mithril/Orihalcon finding is still
+  open and still needs a decision.
+  **Closed 2026-09-05 (F262).** The gate is gone. `training:weaponQuality` and
+  `training:armorQuality` test the permanent Fantastic flag as it stands at their own `training`
+  rank — `identity.baseFantastic` — so a Destiny'd normal unit keeps its Mithril and its
+  Orihalcon. Measured: 2,400 of 182,560 census cases, both modern builds.
 
 ## 2026-09-02 — F244.1: census of the pre-sequence constants a step's gate or magnitude reads
 
@@ -2198,7 +2512,7 @@ training, cast and region-`b` writes at once, which is exactly the problem F244.
 
 | Constant | `stats.js` | Read by | Computed from | Engine write it stands for | Versions |
 |---|---|---|---|---|---|
-| `rustActive` | 320 | the patched ability `rust` step (`stats.js:1816-1821`) and its `rust:ranged` subformula, applied from inside it rather than composed on its own — which is why `steps.js` scopes `d:rust` and has no `d:rust:ranged` row — and `weapon` | `version`, `abilities.rust`, `finishedIdentity.fantastic` | **cast**: the Rust cast's permanent clears (`COSpell.CAS`, the `SRust` block after `!NOTHIEROPHANY!`), nine flags (F242) | Warlord |
+| `rustActive` | 320 | the patched ability `rust` step and its `rust:ranged` subformula, applied from inside it rather than composed on its own — which is why `steps.js` scopes `d:rust` and has no `d:rust:ranged` row — and `weapon` | `version`, `abilities.rust`, `finishedIdentity.fantastic` (F246 made it `rustActiveAt`, over the permanent record) | **cast**: the Rust cast's permanent clears (`COSpell.CAS`, the `SRust` block after `!NOTHIEROPHANY!`), nine flags (F242) | Warlord |
 | `destinyActive` | 80 | `c:destiny[when]` | `destinyActiveForUnit(suppliedAbilities, version)` | **cast**: Destiny's `B.race := 19; B.Fantastic := True; B.experience := 0; B.level := 1` ($0059A35E..$0059A633). `cast:destiny` and `cast:destiny:supernatural` already exist; the constant is a third reader | modern |
 | `permanentFantastic` | 81 | `b:fieryFury:race[when]` | `isFantasticBase \|\| destinyActive` | **template or cast**: the permanent `Fantastic` flag, which `a:baseCopy` now publishes as `ctx.base.fantastic`; the post-run assertion at `stats.js:2400` checks the two agree | Warlord |
 | `marionette` | 67 | `b:marionette:rangedType[apply]`, `b:marionette:ascensionRangedType[when]+[apply]` | `deriveMarionettePackage(identity, markIntrinsicLucky(suppliedAbilities), version)` | **region `b`**, not cast: the `UnitCalcPre.CAS` Marionette package. Its 30+ ability grants are merged into `abilities` pre-sequence | Warlord |
@@ -2226,7 +2540,7 @@ them and they are not counted in the 68. `ccFireBreathAbil` is the Chaos Channel
 | `inputBaseAtk` | 483 | `c:heavenlyLight[apply]` | the card's melee input | `if B.attack > 0` (`Units.RecalculateUnits.pas:1431`, and `:1450` in the $0059E2B8 tail) — the **permanent** record, which `training:artificer` (+1) and `cast:rebuild` (+2) write. **Defect 1** | `c:heavenlyLight` is `SCOPE_COM_PLUS`; the `inputBaseAtk` branch is the modern one |
 | `heavenlyLightMeleeToHitAt` | 1186 | `c:heavenlyLight[apply]` | `heavenlyLightMaterialTail` and (CoM 1) `u.atk` / (modern) `inputBaseAtk` | same; the CoM 1 arm is already positional | CoM 1, modern |
 | `baseFigs` | 482 | `b:bombsGrenades[apply]` | `input.figs` | the finished `U.figures`; **F243 owns it** | Warlord |
-| `finishedUnitType` | 112 | `c:shatter[when]` | the identity projection | the calculated record at the block's rank; **F246 owns it** | all (`c:shatter` is `SCOPE_ALL`) |
+| `finishedUnitType` | 112 | `c:shatter[when]` | the identity projection | the calculated record at the block's rank; F246 made it `unitTypeAt(u)` | all (`c:shatter` is `SCOPE_ALL`) |
 | `ccGrantsThisSlot` | 1917 | `chaosChannelsFireBreathWrite`'s `when` and `apply` — `a:chaosChannels:fireBreath` (modern), `c:chaosChannels:fireBreath` (DOS), and MoM 1.31's recompute copy | `context.ccFireBreathGranted` (from `abilities.ccFireBreath`), `context.ccOwnsThisSlot`, `context.ccDosBreathEligible` (the template's ranged type/strength), and the live `u[rangedTypeField]` | the admission gate is the permanent record and reads `ctx.base` since F244.3i; whether the slot is free is the block's own live read, and that half was already positional | all |
 | `identityAt` | 115 | the identity-sampling patch's `when` (`stats.js:2277`) | `identity` plus the running `u.race`/`u.fantastic` | already positional; the sampler is instrumentation | all |
 | `blazingEyesActive` | 444 | `c:blazingEyes[when]` | `unitInRealmAt(u,'chaos')` — positional | `IsChaosUnit` at the block's rank | modern |
@@ -2487,14 +2801,17 @@ Two things the split deliberately does **not** absorb, both flagged for a decisi
    ($0059A390). A Destiny unit keeps a +10% To-Hit tail the engine withholds. Both modern builds;
    CoM 1 short-circuits the term. Same shape as F192. The material term beside it is already right:
    `weapon === 'normal'` carries Artificer's permanent `EncMagic` and Rust's clear, which is what
-   `not B.EncMagic and not B.EncMithril and not B.EncAdamant` asks.
+   `not B.EncMagic and not B.EncMithril and not B.EncAdamant` asks. **Closed by F244.3h**: the
+   Fantastic term is `!runCtx.base.fantastic` now.
 3. **`c:breakthrough:normal`'s Fantastic term is the template flag, not the permanent one.**
    *Category: faithfulness.* `combat_abilities.js:1026` reads `identityPredicates.baseFantastic`,
    which `stats.js:1800` supplies as `identity.baseFantastic`. The block's admission is
    `(not U.combatsummoned) and (not B.Fantastic)` ($005A376D..$005A3DDE), and the comment beside the
    code says so — but `B.Fantastic` includes `cast:destiny`'s write and `identity.baseFantastic`
    does not. A Destiny unit with Breakthrough takes a +1 melee package the engine withholds. Both
-   modern builds. Third instance of the F192 shape here.
+   modern builds. Third instance of the F192 shape here. **Closed by F244.3h**, and with it this
+   step's instance of defect 4: the term is the step's own `when` over `ctx.base` now, so the
+   exclusion is a step present and unfired.
 4. **`getAbilityStatSteps` gates most of its 44 steps by not creating them.** *Category:
    structural.* The eligibility sits in an `if (hasAbil(abilities, …))` around the `abilityStep`
    call rather than in a `when`, so the step is absent from the chain instead of present and

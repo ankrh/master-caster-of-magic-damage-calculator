@@ -786,9 +786,8 @@ function orderStatStepsBySource(steps, chain) {
 // to its permanent record happens in one of the five phases ahead of that step, so the record it
 // copies is exactly what a later region's `BaseUnits[i].…` gate reads. A sequence with no such
 // step leaves `ctx.base` as the caller supplied it: absent for the resolution transforms, the
-// To-Hit ledger and the figure sequence, none of which reads it, and the permanent identity for
-// `targetingIdentity`'s conversion-only run, which supplies it explicitly. A gate reading an
-// absent one throws rather than answering from a record nothing published.
+// To-Hit ledger and the figure sequence, none of which reads it. A gate reading an absent one
+// throws rather than answering from a record nothing published.
 //
 // Two optional fields are for development only:
 //   ctx.trace             an array; each step that changes a declared field appends an entry

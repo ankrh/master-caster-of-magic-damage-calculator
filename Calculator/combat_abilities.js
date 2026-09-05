@@ -1044,8 +1044,6 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // Phase c: UnitCalcPre.CAS!NOTTACTICIANHERO!+10 "SETCOMBATGLOBAL( W,CGBreakthrough,1,1 );" only grants the CGBreakthrough combat global via the
   // Chaos Conduit item power — the stat effect itself is binary.
   if (breakthroughVal !== 'none') {
-    const baseFantastic = identityPredicates.baseFantastic != null
-      ? !!identityPredicates.baseFantastic : !!abilities.baseFantastic;
     const combatSummoned = identityPredicates.combatSummoned != null
       ? !!identityPredicates.combatSummoned : !!abilities.combatSummoned;
     const nonCorporeal = !!abilities.nonCorporeal;
@@ -1057,11 +1055,16 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
     // inside the package. There is no live-Fantastic term at the block, so a unit converted
     // to Fantastic mid-pipeline (Chaos Channels, Undead, Blood Lust, Spirit Link) keeps the
     // normal package (F179).
-    if (!combatSummoned && !baseFantastic) {
-      // PROVENANCE[breakthrough:normal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:3ca5011dcfb4738952b30067 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09
-      abilityStep('breakthrough:normal', 'c', { writes: ['atk'],
-        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); } });
-    }
+    //
+    // `B.Fantastic` is the record `a:baseCopy` publishes, not the unit's training-time flag:
+    // `buffs:destiny` writes it True ($0059A390) and `buffs:spiritLink:fantastic` clears it,
+    // both ahead of the copy. So the term is the step's own `when` over `ctx.base` rather than
+    // a decision about whether to create the step — which is also what makes the exclusion
+    // visible in the chain, as a step present and unfired (F244.3h).
+    // PROVENANCE[breakthrough:normal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:16:3ca5011dcfb4738952b30067 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:8:06d8d5bae6b5fee3340ddf09
+    abilityStep('breakthrough:normal', 'c', { writes: ['atk'],
+      when: (u, ctx) => !combatSummoned && !ctx.base.fantastic,
+      apply: (u, ctx) => { addToSlot(u, ctx, 'melee', 1); } });
     // PROVENANCE[breakthrough:noncorporeal]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:9:fa4543aa4289101fada66dad
     if (nonCorporeal) {
       abilityStep('breakthrough:noncorporeal', 'c', { writes: ['atk', 'def'],
@@ -1390,9 +1393,15 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
 
   // Battle Armor is the in-combat regular non-mechanical branch of the
   // Armorclad reform. UnitCalcPre.CAS!NOTSAPIENS!+4..+11 "IF (SPELLSTATE(W,STArmorClad)<>2) THEN { GOTO" "SETSTAT(U,SDefenseBuff,0,(GetStat(U,SDefenseBuff,0)+3));" applies +3 Defense.
-  if (isWarlord && outlanderReform.battleArmor) {
+  // The block's `BASEFANTASTIC(U)>0` term is the step's own `when` now, read off `ctx.base` at
+  // this region-`b` rank, so the step is composed whenever the research and Mechanical halves
+  // admit it and reports itself skipped for a permanently Fantastic unit rather than being
+  // absent from the chain (F262, the shape F244.3h gave `c:breakthrough:normal`).
+  if (isWarlord && outlanderReform.battleArmorEligible) {
     // PROVENANCE[battleArmor]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:10:c7c2d7da26a07332de4fa4f3
-    abilityStep('battleArmor', 'b', { writes: ['def'], apply: u => { u.def += 3; } });
+    abilityStep('battleArmor', 'b', { writes: ['def'],
+      when: (u, ctx) => outlanderBattleArmorAt(ctx, outlanderReform),
+      apply: u => { u.def += 3; } });
   }
 
   // Magitek Engineering applies in UnitCalcPre.CAS to Power Engine units. One block, four writes

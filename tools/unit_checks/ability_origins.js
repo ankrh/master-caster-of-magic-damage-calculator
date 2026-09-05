@@ -78,9 +78,10 @@ function producerForm(producer) {
 const COMPATIBILITY_ABILITY_KEYS = {
   // The legacy Lava Smelter selector, kept so old presets and share payloads still load.
   lavaSmelter: [['Calculator/stats_identity.js', 'marked.lavaSmelter']],
-  // Identity metadata mirrored into the ability map; the identity record is its home.
-  baseFantastic: [['Calculator/combat_abilities.js', 'abilities.baseFantastic'],
-    ['Calculator/combat_effects.js', 'abilities.baseFantastic']],
+  // Identity metadata mirrored into the ability map; the identity record is its home. The
+  // `combat_abilities.js` site was Breakthrough's fallback and went with F244.3h, which made the
+  // block's `not B.Fantastic` a `when` over `ctx.base`; the two combat_effects.js reads remain.
+  baseFantastic: [['Calculator/combat_effects.js', 'abilities.baseFantastic']],
 };
 
 function assertCompatibilityReads() {

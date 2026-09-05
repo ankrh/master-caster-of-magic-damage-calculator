@@ -848,6 +848,26 @@ definePresets({
     expected: { dmgToA: 0, dmgToB: 7.000 },
   },
 
+  soulFlayRefusedByApotheosisPermanentFantasticWarlord: {
+    desc: 'Soul Flay targets a "regular unit" (`Unit rosters/Warlord mod unit data/HELP.TXT:3824`), and targeting reads the permanent record, which the Apotheosis cast (Warlord renames Destiny to Apotheosis, `enchantments.js`) writes Fantastic at $0059A390 ahead of `a:baseCopy`. Negative claim, the absence being the rule under test: Elite melee 4 + 2 (Elite level bonus) doubled by Apotheosis is 8 at 100% hit vs def 0 -> 8.0, exactly what the same card without Soul Flay gives. Reading the training-time flag instead applied the Recruit-rank penalty that the `B.level := 1` write of the same cast leaves, for 6.000.',
+    version: V_WARLORD,
+    a: { atk:4, level:'elite', hitChance:70, hp:10, abilities: { apotheosis: true, soulFlay: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 8.000 },
+    vacuity: {
+      'a.ability.soulFlay':
+        'Keep, and the absence is the rule under test: the curse has to be on the card for the exclusion to be what is measured. `soulFlayActiveAt` carries `!runCtx.base.fantastic` (stats.js), so `b:soulFlay` refuses and ablating the curse leaves the same 8.000. a.ability.apotheosis is the live half, doubling the Elite melee and taking the level back to Recruit; soulFlayMeleeScalesEliteWarlord is the same curse on a card without it and pins a moved number.',
+    },
+  },
+  soulFlayReachesSpiritLinkedFantasticWarlord: {
+    desc: 'The positive direction of the same targeting read: the `SETSTAT(TU,AFantastic,1,0)` of Spirit Link clears the permanent flag ahead of the copy, so a base-Fantastic unit becomes a legal Soul Flay target. The same cast puts the level back to Recruit, so the multiplier is 1: melee 4 - 1 = 3 at 100% hit vs def 0 -> 3.0, against the 4.000 the same card without Soul Flay gives. Reading the training-time flag instead refused the curse for that same 4.000.',
+    version: V_WARLORD,
+    a: { unitType: 'fantastic_nature', atk:4, level:'elite', hitChance:70, hp:10,
+      abilities: { spiritLink: true, soulFlay: true } },
+    b: { def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, dmgToB: 3.000 },
+  },
+
   // --- Plague (Warlord combat curse: −3 melee / −3 ranged / −3 armor / −6 resistance / −10% To Hit) ---
   plagueMeleeWarlord: {
     desc: 'Plague (Warlord) on the attacker: melee 8 − 3 = 5, 100% base hit − 10% Plague = 90% vs def 0 → 5 × 0.9 = 4.5 (without Plague it would be 8.0)',
