@@ -24,6 +24,13 @@ function deriveUnitStats(input) {
   const baseUnitType = legacyUnitTypeFromIdentity(identity);
   const isHero = !!identity.isHero;
   const isFantasticBase = !!identity.baseFantastic;
+  // The record's `unittype`, resolved once at the input boundary: the roster template id, or the
+  // id the stated special-unit key names in this version (`baseUnittypeId`, `stats_identity.js`).
+  // Every type exception below is an integer compare against it, which is the only shape the
+  // engines have — there is no `specialUnit` field in `Typedec.pas` (F267.3). The two eager
+  // readers here cannot ask the record because they run ahead of it; F267.4 moves the seed to
+  // this boundary and closes that gap.
+  const unittype = baseUnittypeId(version, identity);
   const isCoM1 = version === 'com_6.08';
   // CoM 1 (the DOS build). Kept distinct from `isCoM2` wherever a mechanic is settled for
   // one engine and open for the other — see the Warp Creature block and the gaze ladder.
@@ -79,7 +86,7 @@ function deriveUnitStats(input) {
   // code*), and CoM 1 does the same on `COM1_UT_GOLEM` (`unitcalc.c`, com1:0x8EE40). It must survive
   // direct calculator/Matrix calls, even when the DOM-derived Elements control is not present in
   // the caller's ability map.
-  if ((isCoM2 || isCoM1) && identity.specialUnit === 'golem') {
+  if ((isCoM2 || isCoM1) && unittypeIs(version, unittype, 'golem')) {
     suppliedAbilities.elemArmor = 'resistElements';
   }
   // Abilities are read before stat derivation because Chaos Channels eligibility can depend on gaze attacks.
@@ -163,7 +170,7 @@ function deriveUnitStats(input) {
   // record at the reading step (`unitTypeAt` and friends), the permanent record
   // (`identity.baseRace` / `identity.baseFantastic`, or the record `a:baseCopy` publishes, for a
   // permanent write the pipeline itself makes), and the record the recalculation *leaves*.
-  const identityMeta = { isHero, name: unitName };
+  const identityMeta = { isHero, name: unitName, unittype };
   const identityConversions = identityConversionSteps(identity, abilities, version, identityMeta);
   // There is no identity *projection* any more. `targetingIdentity` used to replay the conversion
   // list on a scratch record before the sequence, so that a read wanting the record the
@@ -409,7 +416,9 @@ function deriveUnitStats(input) {
   // raised as Zombies is a converted normal unit whose persistent mutations survive: CoM 1's
   // Zombies constructor patch writes `toblock` alone (`R6.1b.evidence.md`, com1:0x8EE28-0x8EE31).
   // So weapon eligibility gets a Zombies exception while armor and level stay fantastic-gated.
-  // **CoM 1 alone**, which is what `specialUnit` already scopes. The conversion that leaves the
+  // **CoM 1 alone**, which is what the version-scoped id table already scopes: `zombies` has an
+  // id (174, `COM1_UT_ZOMBIES`) under `com_6.08` and under no other version, so the compare is
+  // false everywhere else without a version term of its own (F267.3). The conversion that leaves the
   // mutations in place is `UNIT(...)->type = UNITTYPE_ZOMBIES` at com1:0x9C460 (`combat.c`), and
   // its whole block is annotated `131:— 160:—`: MoM 1.31 and CP 1.60 have no such conversion.
   // CoM2 and Warlord summon Zombies instead — `SZombies` is a summon and the Warlord corpus makes
@@ -441,7 +450,8 @@ function deriveUnitStats(input) {
   // invariant hold rather than the choice of expression. This is the same value the file's two
   // other `training`-phase Fantastic gates read, `trainingLevelEligible` and
   // `baseNormalTrainingUnit` (F262 review finding 1; F267.1).
-  const weaponEligibleAt = () => !isFantasticBase || identity.specialUnit === 'zombies';
+  const weaponEligibleAt = () => !isFantasticBase
+    || unittypeIs(version, unittype, 'zombies');
   // CoM 1's Catapult constructor writes `_UNITS[si].mutations = 1` for type 0x25 with `wp == 9`
   // (com1:0x8EEA4-0x8EEAF), and the weapon-quality read at com1:0x8F024 re-reads the record, so
   // the unit takes quality 1 immediately (`Reference docs/DOS reconstructed/R6.1b.evidence.md`,
@@ -926,12 +936,13 @@ function deriveUnitStats(input) {
   // The template term takes the other record: `GetStat(U,STypeID,1)` reads the **base** unit, so
   // it is a permanent-record read and no live conversion can defeat it. Template 356 is Warlord's
   // Goblin Night Goblins (`Calculator/units_warlord.js`, Missile 5), and it carries the
-  // `nightGoblins` special-unit key so the one table of template-id exceptions stays the only
-  // place a template id is named (`SPECIAL_UNIT_DEFS`, `stats_identity.js`). `identity` is the
-  // permanent record and `specialUnit` is never written by a conversion, which is what makes this
-  // read permanent by construction rather than by position (F189).
+  // gate is the compare the script makes, `u.unittype` against the id the version-scoped table
+  // names for `nightGoblins` (`UNITTYPE_IDS`, `stats_identity.js`, the only place an id is
+  // named; F267.3). The read is permanent by construction rather than by position: `unittype` is
+  // seeded at `template` rank and no step in any chain writes it, so the running record's value
+  // at this region-`b` block is the permanent one `GetStat(U,STypeID,1)` asks for (F189).
   const warlordEternalNightActive = u => !!(enemyEternalNight && isWarlord
-    && identity.specialUnit !== 'nightGoblins'
+    && !unittypeIs(version, u.unittype, 'nightGoblins')
     && unitRealmAt(u) !== 'death' && !undeadEnchantmentFlag);
   // Both arms read the record at the reading step's own position: the Death arm through the
   // block's own test above, the Life arm through the scalar the block compares.
@@ -2627,6 +2638,51 @@ function deriveUnitStats(input) {
     // The calculated identity is part of the record, seeded from the permanent one. Every
     // conversion is a positioned write to these two fields (F163).
     race: identity.baseRace, fantastic: identity.baseFantastic,
+    // The three type/hero members of `UnitT`, at their engine names and seeded at `template` rank
+    // (F267.2). `Typedec.pas` keeps one flat record and these are ordinary members of it:
+    // `ishero : boolean` (:203, between `bloodsucker` and `equip`), `unittype : smallint` (:246)
+    // and `herotype : smallint` (:247). `BaseUnits[]` and `Units[]` are both arrays of that
+    // record, so all three stand on the permanent record `a:baseCopy` publishes *and* on the
+    // calculated one, which is the whole reason they are seeded here beside `race`/`fantastic`
+    // rather than kept on a side object.
+    //
+    // That all three are on *both* arrays is the declaration itself: `BaseUnits, Units : array[..]
+    // of UnitT` (`Typedec.pas:336`), one type for the two. The two consumers below are not that
+    // proof — they show which array a given read selects, which is the separate and equally
+    // load-bearing fact that neither field is a constant of the unit.
+    //
+    // `unittype` is the roster template id, and it is how the engine answers "is this Zombies":
+    // `BaseUnits[i].unittype = inferred_UnitGolem` (`Units.RecalculateUnits.pas:768`),
+    // `B.unittype = ChosenUnitID` (:1611, the id read from `MODDING.INI`) and
+    // `BaseUnits[UnitCaster].unittype = inferred_DemonLordUnitType`
+    // (`Spells.CombatSummonUnit.pas:136`) are three independent integer compares against the one
+    // field. `herotype` is a **separately stored** field, not a projection of `unittype`: they are
+    // sized against different ceilings — `Maxunittypesarraysize = 400` and `MaxMaxherotypes = 85`
+    // (`SharedConstants.pas:16` and `:21`) — and `herotype` indexes the wizard's per-hero ability
+    // array, `Wizards[...].Hero[herotype, HABattlemage]` (`Combat.ApplyAttack.pas:361`). The one
+    // exposed helper converts the other way (`CasApi.pas:164`, `Herotypetounittype`); that fixes
+    // the exposed conversion's direction rather than proving no initialisation path derives one
+    // id from the other, which is why the claim here is the storage and not the derivation.
+    //
+    // Which array a read selects varies within one expression. `Combat.ApplyAttack.pas:351` gates
+    // on the calculated `Units[au].ishero` and :361 then indexes the permanent
+    // `BaseUnits[au].herotype`, while the Charmed resistance step reads
+    // `Wizards[BaseUnits[u].owner].Hero[Units[u].herotype]` — "`owner` is read from `BaseUnits`,
+    // while `ishero` and `herotype` come from the current record"
+    // (`CoM2 binary - resolution helpers.md:208`).
+    //
+    // A custom unit has no roster template and a non-hero no hero type, so both ids seed `null`
+    // rather than a sentinel integer: every modelled reader is an equality test against a stated
+    // id, and `null` is the honest "this record names none" (`energyCannonToHit` above takes the
+    // same shape). `unittype` is the resolved id rather than `identity.templateId` alone
+    // (`baseUnittypeId`, `stats_identity.js`): a unit stated by its controls has no roster
+    // template, and the `Special unit` selector is how such a unit states one — so the key
+    // resolves to the version's id at the boundary and the record carries the integer, which is
+    // all the engine ever has. Five gates read it (F267.3): Golem's Resist Elements,
+    // `weaponEligibleAt`'s Zombies exception, `a:chosen`, `a:constructCatapult` and the two Night
+    // Goblins terms. `ishero` still has no reader — `identity.isHero` answers the hero question
+    // until F267.5.
+    unittype, herotype: identity.heroTypeId, ishero: isHero,
     // The persistent loadout and veterancy fields, seeded at the roster template's values — a
     // unit ships unequipped and at Recruit, and every departure from that is a positioned write:
     // `training:weaponQuality`, `training:armorQuality` and `training:veterancy` for what the

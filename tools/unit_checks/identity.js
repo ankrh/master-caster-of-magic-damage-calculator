@@ -209,6 +209,122 @@ function runTemplateRankPermanentIdentityChecks(ctx) {
   }
 }
 
+// F267.2: `unittype`, `herotype` and `ishero` are fields of the sequence record, seeded at
+// `template` rank from the identity the input states.
+//
+// `Typedec.pas` keeps one flat `UnitT` and all three are ordinary members of it — `ishero` :203,
+// `unittype` :246, `herotype` :247 — and `BaseUnits[]` and `Units[]` are both arrays of that
+// record. So the calculator's counterpart is a record field on both sides of `a:baseCopy`, not a
+// scalar closed over at the input boundary.
+//
+// Nothing reads them yet: `specialUnit` still answers the type question (F267.3) and
+// `identity.isHero` the hero one (F267.5). That is precisely why this check exists — a seed with
+// no reader is invisible to every fixture and to `derivation_equivalence.js` alike, so the only
+// thing that can hold it in place until its readers arrive is a check that opens the record.
+//
+// It opens it by wrapping `runStatSteps` in the loaded context, which is the one seam that sees
+// the record object itself: the seed as `deriveUnitStats` hands it over, the permanent record
+// `a:baseCopy` publishes on `runCtx.base`, and the record the run leaves. Three positions, one
+// call.
+//
+// The list-hygiene family is a **classification** check, and it is worth being exact about what it
+// does and does not claim. The four ability-key lists (`POSITIONED_GRANT_FIELDS`,
+// `POSITIONED_GRANT_WRITES`, `POSITIONED_GRANT_VALUE_WRITES`, `MAGIC_IMMUNITY_GATED_CURSES`) are
+// the mechanism for keys that live in the *abilities* map, and `SEEDED_NON_STAT_KEYS` is their
+// union. These three are not ability keys: they are seeded verbatim in the record literal beside
+// `race`, `fantastic` and the loadout fields.
+//
+// It would be wrong to say that listing one of them makes the seed *win* — the
+// `...seedNonStatRecordFields(...)` spread stands earlier in that literal than the explicit
+// `unittype:` / `herotype:` / `ishero:` properties, so the later properties would overwrite
+// whatever the seed put there. (The GPT review of F267.2 caught that; the first draft of this
+// comment claimed the overwrite went the other way.) The damage is to the *classification*, not to
+// the value: the key would acquire an `ABILITY_KEY_ORIGINS` row it has no business owning, join a
+// list whose entries every origin check and every F244-family rule reasons over as ability keys,
+// and be seeded twice from two different sources — which is exactly the drift F263 paid for in the
+// opposite direction, where a `template` origin row was mistaken for a record field.
+//
+// F267.3 gives `unittype` its readers and its value its final shape: the record carries the
+// *resolved* id (`baseUnittypeId`, `stats_identity.js`) — the roster template id, or the id the
+// stated `Special unit` key names in the selected version — because a unit stated by its controls
+// has no template and the selector is how it states a type. So the expectation below is that
+// resolution, not `identity.templateId`, and the shapes include the five keys.
+const RECORD_TYPE_FIELDS = Object.freeze([
+  ['unittype', (identity, version, ctx) => ctx.baseUnittypeId(version, identity)],
+  ['herotype', identity => identity.heroTypeId],
+  ['ishero', identity => identity.isHero],
+]);
+
+function runSeededRecordTypeFieldChecks(ctx) {
+  // 1. Source: the three fields are seeded in the record literal, from the identity.
+  const statsSource = calculatorSource('Calculator/stats.js');
+  assert(/\n\s*unittype,\s*herotype:\s*identity\.heroTypeId,\s*ishero:\s*isHero/
+    .test(statsSource),
+  'The record literal seeds unittype/herotype/ishero from the stated identity (F267.2)');
+  assert(/const unittype = baseUnittypeId\(version, identity\);/.test(statsSource),
+    'The seeded unittype is the id baseUnittypeId resolves at the input boundary (F267.3)');
+
+  // 2. The four ability-key lists do not claim them.
+  const seededAbilityKeys = new Set(evalInContext(ctx, 'SEEDED_NON_STAT_KEYS'));
+  for (const [field] of RECORD_TYPE_FIELDS) {
+    assert(!seededAbilityKeys.has(field),
+      `${field} is a record field seeded verbatim in the stats.js record literal, not an ability `
+      + 'key: it must not appear on SEEDED_NON_STAT_KEYS or on any of the four lists that union '
+      + 'into it, which would give it an ABILITY_KEY_ORIGINS row and a second seeding source');
+  }
+
+  // 3. Execution, at the three positions the record passes through.
+  const realRunStatSteps = ctx.runStatSteps;
+  const shapes = [
+    ['custom', { isHero: false, baseRace: 'High Men', baseFantastic: false }],
+    ['customHero', { isHero: true, baseRace: 'Life', baseFantastic: false }],
+    ['tpl37', { isHero: false, baseRace: 'Special', baseFantastic: false, templateId: 37 }],
+    ['tpl81', { isHero: false, baseRace: 'Special', baseFantastic: false, templateId: 81 }],
+    ['heroTpl', { isHero: true, baseRace: 'Life', baseFantastic: false,
+      templateId: 113, heroTypeId: 7 }],
+    ['fantastic', { isHero: false, baseRace: 'Chaos', baseFantastic: true, templateId: 356 }],
+    // The five special-unit keys, each on a unit with no roster template: this is the half of
+    // `unittype` a template id cannot state, and the half every version of the id table has to
+    // answer — an id where the version has that unit, `null` where it does not (F267.3).
+    ...['golem', 'chosen', 'zombies', 'catapult', 'nightGoblins'].map(key => [`special:${key}`,
+      { isHero: false, baseRace: 'High Men', baseFantastic: false, specialUnit: key }]),
+  ];
+  try {
+    for (const version of evalInContext(ctx, 'ENGINE_VERSIONS')) {
+      for (const [shapeName, shape] of shapes) {
+        const label = `${version}/${shapeName}`;
+        const identity = ctx.createUnitIdentity({ version, ...shape });
+        const seen = [];
+        ctx.runStatSteps = (steps, unit, runCtx) => {
+          // The stat record is the one carrying the identity fields; the figure and chance
+          // records are separate two-field runs.
+          const isStatRecord = Object.prototype.hasOwnProperty.call(unit, 'race');
+          const seed = isStatRecord ? { ...unit } : null;
+          const finished = realRunStatSteps(steps, unit, runCtx);
+          if (isStatRecord) seen.push({ seed, base: runCtx.base, finished });
+          return finished;
+        };
+        ctx.deriveUnitStats(baseUnitInput({ version, identity }));
+        assertEqual(seen.length, 1, `${label}: exactly one stat-record run to read`);
+        const { seed, base, finished } = seen[0];
+        assert(!!base, `${label}: a:baseCopy published the permanent record`);
+        for (const [field, expectedOf] of RECORD_TYPE_FIELDS) {
+          const expected = expectedOf(identity, version, ctx);
+          assertEqual(seed[field], expected,
+            `${label}: the record seeds ${field} at template rank from the stated identity`);
+          assertEqual(base[field], expected,
+            `${label}: the permanent record a:baseCopy publishes carries ${field} — `
+            + 'BaseUnits[] is an array of the same UnitT (F267.2)');
+          assertEqual(finished[field], expected,
+            `${label}: no step writes ${field}; the finished record still carries the seed`);
+        }
+      }
+    }
+  } finally {
+    ctx.runStatSteps = realRunStatSteps;
+  }
+}
+
 // F260.5: the card state carries one `identity` field, and every producer of one has to state
 // the same unit the control path states.
 //
@@ -346,9 +462,114 @@ function runCardStateIdentityChecks(ctx) {
   }
 }
 
+// F267.3: the version-scoped unit-type id table, and the two questions it answers.
+//
+// `specialUnit` was a five-valued token; the engines have no such field. What they have is one
+// integer per unit, `unittype` (`Typedec.pas:246`), and every exception is a compare against it
+// — `BaseUnits[i].unittype = inferred_UnitGolem` (`Units.RecalculateUnits.pas:768`),
+// `B.unittype = ChosenUnitID` (:1611), `unitcalc.c`'s three literals, and Warlord's
+// `GetStat(U,STypeID,1)<>356`. `UNITTYPE_IDS` (`stats_identity.js`) is now the one place an id is
+// named, so a typo in it is a silent behaviour change: an id nothing matches makes the exception
+// simply not apply, which is the shape `CLAUDE.md` *Architecture* forbids.
+//
+// Three of the five keys move a preset fixture: `nightGoblins` (`nightVisionGoblinsWarlord`) and,
+// since this subtask, `zombies` (`zombiesToBlockByUnitTypeCoM`) and `golem`
+// (`golemResistElementsByUnitTypeCoM2`). The Golem one works because `specialUnitForRoster` now
+// *reverses* this table: a wrong id costs a roster Golem its token as well as the compiled grant,
+// so the card's own `specialUnitDerivesResistElements` value goes with it and the mean moves
+// 16.700 -> 17.900. My first draft claimed the opposite — that no fixture could reach the Golem id
+// — and the GPT review disproved it with that fixture. `chosen` and `catapult` are pinned by the
+// conversion assertions further down this file, which state a template id of their own.
+//
+// What no fixture reaches is the **compiled grant on its own**: deleting `stats.js`'s Golem branch
+// leaves the card's independently supplied `elemArmor` standing, so every card path still shows
+// Resist Elements. The Matrix takes the direct-derivation path (`ui_matrix.js` builds identities
+// with `createRosterUnitIdentity` and never runs the card rule), where that branch is the only
+// grantor — which is what the last family below asserts. The table itself is transcribed by hand,
+// from the sources named above, because a transcription is what an id typo breaks and a
+// measurement over the corpus reaches only three rows of it.
+const EXPECTED_UNITTYPE_IDS = Object.freeze({
+  'mom_1.31': {},
+  'mom_cp_1.60.00': {},
+  'com_6.08': { golem: 81, zombies: 174, catapult: 37 },
+  'com2_1.05.11': { golem: 81, chosen: 34, catapult: 37 },
+  'com2_warlord_1.5.12.9': { golem: 81, chosen: 34, catapult: 37, nightGoblins: 356 },
+});
+
+// Which template id the `Special unit` selector names, per version. This is the *other* question
+// and it is deliberately not the id table: base CoM2 has unit type 37 and offers no `catapult`
+// option, so `specialUnitForRoster` filters the reverse lookup by `SPECIAL_UNIT_DEFS`' scope.
+const EXPECTED_ROSTER_KEYS = Object.freeze({
+  'mom_1.31': {},
+  'mom_cp_1.60.00': {},
+  'com_6.08': { 81: 'golem', 174: 'zombies', 37: 'catapult', 34: 'none', 356: 'none' },
+  'com2_1.05.11': { 81: 'golem', 34: 'chosen', 37: 'none', 174: 'none', 356: 'none' },
+  'com2_warlord_1.5.12.9': { 81: 'golem', 34: 'chosen', 356: 'nightGoblins', 37: 'none',
+    174: 'none' },
+});
+
+function runUnittypeIdTableChecks(ctx) {
+  const keys = evalInContext(ctx, 'SPECIAL_UNIT_DEFS.map(def => def.key)');
+  for (const version of evalInContext(ctx, 'ENGINE_VERSIONS')) {
+    const expected = EXPECTED_UNITTYPE_IDS[version];
+    assert(!!expected, `${version} has a transcribed unit-type id row`);
+    for (const key of keys) {
+      const stated = Object.prototype.hasOwnProperty.call(expected, key) ? expected[key] : null;
+      assertEqual(ctx.unittypeIdFor(version, key), stated,
+        `${version}: unittype id for '${key}'`);
+      // The compare itself. A version with no such unit must not match a record that names no
+      // template — `null === null` would make every custom unit every special unit at once.
+      assertEqual(ctx.unittypeIs(version, null, key), false,
+        `${version}: a record naming no unittype is not '${key}'`);
+      assertEqual(ctx.unittypeIs(version, stated, key), stated !== null,
+        `${version}: the '${key}' compare matches its own id and nothing else`);
+    }
+    for (const [templateId, key] of Object.entries(EXPECTED_ROSTER_KEYS[version])) {
+      assertEqual(ctx.specialUnitForRoster(version, { templateId: Number(templateId) }), key,
+        `${version}: roster template ${templateId} selects special-unit key '${key}'`);
+    }
+    // A malformed template id is a broken caller, not an absent unit: it would otherwise become
+    // `null` and make every id compare quietly false (F267.2 close, question 1).
+    // `NaN` and the infinities are in the list because `JSON.stringify` renders all three as the
+    // literal `null` — the halt would then name the one value it tells the caller to supply — and
+    // a BigInt because `JSON.stringify` throws on it outright (GPT review of F267.3).
+    for (const [label, bad] of [['a string', '81'], ['a fraction', 81.5], ['an object', {}],
+      ['a boolean', true], ['NaN', NaN], ['Infinity', Infinity], ['a BigInt', BigInt(81)]]) {
+      let halted = null;
+      try { ctx.createUnitIdentity({ version, templateId: bad }); }
+      catch (err) { halted = String((err && err.message) || err); }
+      assert(halted && /is not an integer/.test(halted),
+        `${version}: a templateId that is ${label} halts rather than becoming absent`);
+      assert(halted && !/templateId null,/.test(halted),
+        `${version}: the halt for ${label} names the value, not the absence it is not`);
+    }
+  }
+
+  // The claim no fixture reaches: Golem's Resist Elements is a compiled unit-type rule
+  // (`Units.RecalculateUnits.pas:768`; `unitcalc.c` com1:0x8EE40), granted on the id alone and with
+  // no `UNITS.INI` ability behind it, so a caller with no card — the Matrix, and every
+  // `deriveUnitStats` call in these checks — has only this grant. `golemResistElementsByUnitTypeCoM2`
+  // pins the id; this pins the grant.
+  for (const [version, granted] of [['mom_1.31', false], ['mom_cp_1.60.00', false],
+    ['com_6.08', true], ['com2_1.05.11', true], ['com2_warlord_1.5.12.9', true]]) {
+    for (const shape of [{ specialUnit: 'golem' }, { templateId: 81 }]) {
+      const result = ctx.deriveUnitStats(baseUnitInput({
+        version,
+        identity: ctx.createUnitIdentity({ version, isHero: false, baseRace: 'High Men',
+          baseFantastic: false, ...shape }),
+      }));
+      assertEqual(result.abilities.elemArmor === 'resistElements', granted,
+        `${version}/${JSON.stringify(shape)}: Golem's compiled Resist Elements is granted on the `
+        + 'unittype id, with no card and no ability input');
+    }
+  }
+}
+
 function runIdentityChecks(ctx) {
   runIdentityProjectionChecks(ctx);
   runTemplateRankPermanentIdentityChecks(ctx);
+  runSeededRecordTypeFieldChecks(ctx);
+  runUnittypeIdTableChecks(ctx);
   runCardStateIdentityChecks(ctx);
   const rosterSets = [
     ['mom_1.31', evalInContext(ctx, 'MOM_UNITS_DATA')],

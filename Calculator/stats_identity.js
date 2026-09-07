@@ -27,6 +27,83 @@ const SPECIAL_UNIT_DEFS = [
 // one derives an ordinary unit and reports nothing — exactly the silent inertness the rule
 // forbids. Whether a *defined* key is allowed in the selected version is the separate question of
 // version scope, and still clamps (`specialUnitAllowed`, `ui_units.js`).
+// --- The version-scoped unit-type id table (F267.3) ---
+//
+// The engine has no "special unit" token. It stores one integer per unit, `unittype`
+// (`Typedec.pas:246`), and every exception is an ordinary compare against it:
+// `if BaseUnits[i].unittype = inferred_UnitGolem` (`Units.RecalculateUnits.pas:768`),
+// `if B.unittype = ChosenUnitID` (:1611, the id `MODDING.INI` supplies) and
+// `BaseUnits[UnitCaster].unittype = inferred_DemonLordUnitType`
+// (`Spells.CombatSummonUnit.pas:136`). The DOS side is the same shape with literal ids:
+// `unitcalc.c` hardcodes `COM1_UT_CATAPULT` 0x25, `COM1_UT_GOLEM` 0x51 and `COM1_UT_ZOMBIES`
+// 0xAE, and Warlord's scripts compare `GetStat(U,STypeID,1)` against 356
+// (`UnitCalcPre.CAS!NOBLOODANDIRON!+6 "%AND (GetStat(U,STypeID,1)<>356)"`).
+//
+// So the id is what the calculator compares, and this table is the one place an id is named. Each
+// row is a version *prefix*; a version takes every matching row, more specific rows last, so
+// Warlord inherits base CoM2's ids and adds its own. An id absent for the selected version means
+// that version has no such unit, and `unittypeIs` below is false for every record — which is how
+// the table carries the version scope that used to sit in `specialUnitDef`'s `versions` list.
+//
+// Ids, and where each is read:
+//  - Golem 81 — `inferred_UnitGolem = 81` (`Units.RecalculateUnits.pas:107`), tested at :768 in
+//    the block `Caster.exe` $00599E31..$00599E8C that sets `EncResistElements`; CoM 1 does the same
+//    on `COM1_UT_GOLEM` 0x51 (`unitcalc.c:183`, tested at com1:0x8EE40).
+//  - Chosen 34 — `MODDING.INI:1134` `ChosenUnitID=34`, *compared against* `B.unittype` at
+//    `Units.RecalculateUnits.pas:1611` (`if B.unittype = ChosenUnitID then`; what the block goes on
+//    to write is `U.race` and `U.Fantastic`, never `B.unittype`). CoM 1 has a template 34 but no
+//    Chosen block, so the row is modern-only (see `specialUnitForRoster` below).
+//  - Zombies 174 — `COM1_UT_ZOMBIES` 0xAE (`unitcalc.c:184`), CoM 1's constructor patch at
+//    com1:0x8EE28.
+//  - Catapult 37 — `COM1_UT_CATAPULT` 0x25 (`unitcalc.c:181`) in CoM 1, and `SummonedUnit=37` on
+//    Construct Catapult (`spells.ini` `[12]`) in base CoM2 — Warlord's `[12]` is Water Elemental,
+//    `SummonedUnit=158`. Base CoM2 carries the id because `isConstructCatapultUnit` compares
+//    against it; the
+//    `Special unit` selector does not offer `catapult` there, which is `SPECIAL_UNIT_DEFS`'
+//    separate question.
+//  - Night Goblins 356 — Warlord's Goblin Night Goblins (`Calculator/units_warlord.js`), named by
+//    Eternal Night's Poor Vision exemption and by Night Vision.
+const UNITTYPE_IDS = [
+  { prefix: 'com_6.08', ids: { golem: 81, zombies: 174, catapult: 37 } },
+  { prefix: 'com2_', ids: { golem: 81, chosen: 34, catapult: 37 } },
+  { prefix: 'com2_warlord', ids: { nightGoblins: 356 } },
+];
+
+// The ids the selected version has, as one map. Rows compose in declaration order, so a more
+// specific prefix overrides a broader one rather than sitting beside it.
+function unittypeIdsForVersion(version) {
+  const out = {};
+  for (const row of UNITTYPE_IDS) {
+    if (!String(version || '').startsWith(row.prefix)) continue;
+    Object.assign(out, row.ids);
+  }
+  return out;
+}
+
+// One unit-type id, or `null` where the selected version has no such unit. The key is validated
+// against `SPECIAL_UNIT_DEFS` first, so a key this build does not define halts here exactly as it
+// halts at the identity boundary rather than silently naming no id.
+function unittypeIdFor(version, key, context) {
+  specialUnitDef(key, context || `Unit-type id for ${version || 'an unstated version'}`);
+  const id = unittypeIdsForVersion(version)[key];
+  return id === undefined ? null : id;
+}
+
+// The compare itself: `u.unittype = <id>`, with the two absences kept apart. A record that names
+// no template carries `unittype: null` (`stats.js`, the record literal), and a version that has no
+// such unit yields no id — and `null === null` would make every custom unit every special unit at
+// once, so the missing id is tested before the compare.
+function unittypeIs(version, unittype, key, context) {
+  const id = unittypeIdFor(version, key, context);
+  return id !== null && unittype === id;
+}
+
+// Which of the defined keys the selected version offers. This is the `Special unit` selector's
+// question, not the id table's: base CoM2 has unit type 37 and no `catapult` option.
+function specialUnitScopedToVersion(version, def) {
+  return !!def && def.versions.some(prefix => String(version || '').startsWith(prefix));
+}
+
 function specialUnitDef(key, context) {
   if (!key || key === 'none') return null;
   const def = SPECIAL_UNIT_DEFS.find(item => item.key === key);
@@ -39,19 +116,63 @@ function specialUnitDef(key, context) {
   return def;
 }
 
+// An id a caller states, or the honest absence. Absent is legitimate — a custom unit has no
+// roster template and a non-hero no hero type — but a *present* value that is not an integer is a
+// broken caller, and it stops being harmless the moment `unittype` becomes the field every
+// type exception compares against (F267.3): a malformed template id would become an absent one,
+// and an absent one matches no id, so the exception would silently not apply. That is the shape
+// `CLAUDE.md` *Architecture* forbids, so it halts naming the value.
+//
+// The value is rendered by `describeStatedValue`, not by `JSON.stringify`: that renders `NaN` and
+// both infinities as the literal `null`, so the halt would name the one value it then tells the
+// caller to supply, and it throws outright on a BigInt (GPT review of F267.3).
+function describeStatedValue(value) {
+  if (typeof value === 'number') return String(value);          // NaN, Infinity, -Infinity, 1.5
+  if (typeof value === 'bigint') return `${value}n`;            // JSON.stringify throws on these
+  if (typeof value === 'symbol' || typeof value === 'function') return String(value);
+  try {
+    const text = JSON.stringify(value);
+    return text === undefined ? String(value) : text;
+  } catch (err) {
+    return Object.prototype.toString.call(value);
+  }
+}
+
+function statedUnitId(value, field, context) {
+  if (value === undefined || value === null || value === '') return null;
+  if (!Number.isInteger(value)) {
+    throw new TypeError(
+      `${context || 'Unit identity'} states ${field} ${describeStatedValue(value)}, which is not `
+      + 'an integer. A unit that names no such id states null or nothing at all.');
+  }
+  return value;
+}
+
 function createUnitIdentity(values = {}) {
-  const integerOrNull = value => Number.isInteger(value) ? value : null;
   const version = typeof values.version === 'string' && values.version ? values.version : null;
+  const context = `Unit identity for ${version || 'an unstated version'}`;
+  const integerOrNull = (value, field) => statedUnitId(value, field, context);
   return {
     version,
-    templateId: integerOrNull(values.templateId),
-    heroTypeId: integerOrNull(values.heroTypeId),
+    templateId: integerOrNull(values.templateId, 'templateId'),
+    heroTypeId: integerOrNull(values.heroTypeId, 'heroTypeId'),
     isHero: !!values.isHero,
     baseRace: typeof values.baseRace === 'string' ? values.baseRace : '',
     baseFantastic: !!values.baseFantastic,
-    specialUnit: specialUnitDef(values.specialUnit,
-      `Unit identity for ${version || 'an unstated version'}`) ? values.specialUnit : 'none',
+    specialUnit: specialUnitDef(values.specialUnit, context) ? values.specialUnit : 'none',
   };
+}
+
+// The unit type this identity states, as the integer the engine keeps: the roster template id
+// where there is one, and otherwise the id the stated special-unit key names in the selected
+// version. That is the whole of what `specialUnit` still does inside the derivation — it is a way
+// of stating a `unittype` for a unit with no roster template, and it resolves here, once, at the
+// boundary (F267.3). `null` where neither names an id.
+function baseUnittypeId(version, identity) {
+  if (!identity) return null;
+  if (identity.templateId !== null && identity.templateId !== undefined) return identity.templateId;
+  return unittypeIdFor(version, identity.specialUnit,
+    `Unit identity for ${version || 'an unstated version'}`);
 }
 
 // The roster template → special-unit map, and the only reader of that question: the page takes
@@ -79,19 +200,19 @@ function createUnitIdentity(values = {}) {
 // This is the first key whose engine site is a *negative term inside another effect's gate*
 // rather than a block of its own. The table's stated test is unchanged — the engine, not the
 // roster, makes the exception — but it is the reason the label names the unit and not an effect.
+//
+// Since F267.3 this is the *reverse* of `UNITTYPE_IDS` rather than a second copy of it: a
+// template earns a key when the version's id table names that id and the version's selector
+// offers that key. The second half is what keeps base CoM2's template 37 out — the id table
+// carries `catapult: 37` there because `isConstructCatapultUnit` compares against it, while
+// `SPECIAL_UNIT_DEFS` scopes the `catapult` *option* to CoM 1 alone.
 function specialUnitForRoster(version, unit) {
   const templateId = unit && unit.templateId;
-  if (version && version.startsWith('com2_')) {
-    if (templateId === 81) return 'golem';
-    if (templateId === 34) return 'chosen';
-  }
-  if (version && version.startsWith('com2_warlord')) {
-    if (templateId === 356) return 'nightGoblins';
-  }
-  if (version === 'com_6.08') {
-    if (templateId === 81) return 'golem';
-    if (templateId === 174) return 'zombies';
-    if (templateId === 37) return 'catapult';
+  if (!Number.isInteger(templateId)) return 'none';
+  const ids = unittypeIdsForVersion(version);
+  for (const def of SPECIAL_UNIT_DEFS) {
+    if (!specialUnitScopedToVersion(version, def)) continue;
+    if (ids[def.key] === templateId) return def.key;
   }
   return 'none';
 }
@@ -178,15 +299,23 @@ function legacyUnitTypeFromLiveIdentity(identity) {
 // `a:constructCatapult` conversion gates on and which `deriveUnitStats` reads separately for
 // CoM 1's `template:constructCatapult:weapon` patch. One predicate, so the conversion and the
 // patch cannot disagree.
+//
+// The type half is one compare against `unittype` in both engines (F267.3). It used to be a
+// disjunction — base CoM2 tested the template id, CoM 1 tested the template id *or* the
+// `catapult` token — because a custom CoM 1 Catapult had no template id to test. Resolving the
+// token into the record's `unittype` at the boundary collapses the two arms into the compare the
+// engines make. The version guard stays: it is the *block*'s scope, not the id's — Warlord
+// inherits base CoM2's id 37 and has no such block.
 function isConstructCatapultUnit(identity, abilities, version, meta = {}) {
-  const sourceTemplateId = identity.templateId;
   const isCoM1 = version === 'com_6.08';
   const isBaseCoM2 = !!(version && version.startsWith('com2_')
     && !version.startsWith('com2_warlord'));
+  const unittype = meta.unittype === undefined
+    ? baseUnittypeId(version, identity) : meta.unittype;
   return !!(!!(abilities && abilities.combatSummoned)
     && !meta.isHero
-    && ((isBaseCoM2 && sourceTemplateId === 37)
-      || (isCoM1 && (sourceTemplateId === 37 || identity.specialUnit === 'catapult'))));
+    && (isBaseCoM2 || isCoM1)
+    && unittypeIs(version, unittype, 'catapult'));
 }
 
 // Spirit Link's cast (Warlord) writes the **permanent** record with selector 1 — `ABase`
@@ -355,7 +484,9 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
       apply: u => { u.fantastic = true; } }),
     // PROVENANCE[chosen]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:7:c9d9c1b29c14707318605a05 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:1:f9fdc8e8e8cb9c94edf0f936
     statStep({ id: 'chosen', phase: 'a', writes: ['race', 'fantastic'],
-      when: () => isModern && identity.specialUnit === 'chosen',
+      // `B.unittype = ChosenUnitID` (`Units.RecalculateUnits.pas:1611`) is the write this block
+      // tests, so the gate is the record's own id compare (F267.3).
+      when: u => isModern && unittypeIs(version, u.unittype, 'chosen'),
       apply: u => { u.race = 'Life'; u.fantastic = true; } }),
     // One step for CoM 1 and base CoM2 alike: `isConstructCatapultUnit` is one predicate, both
     // engines write the same two fields on the calculated record, and the shared

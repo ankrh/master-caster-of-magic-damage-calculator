@@ -20,8 +20,7 @@ function renderDistPanel(container, title, dist, hp, numFigs, opts) {
   let maxD = dist.length - 1;
   while (maxD > 0 && dist[maxD] < 1e-10) maxD--;
 
-  let expected = 0;
-  for (let d = 0; d < dist.length; d++) expected += d * dist[d];
+  const expected = expectedDamage(dist);
 
   // The second moment, carried on the same element as the first and rounded the same way, so the
   // page publishes a spread wherever it publishes a mean. It is not drawn: `data-sd` adds no text
@@ -427,16 +426,16 @@ function renderLifeStealSummary(result, version) {
 
   const aLS = (result.aLifeStealExpected != null)
     ? result.aLifeStealExpected
-    : distExpectedValue(result.aLifeStealDist);
+    : expectedDamage(result.aLifeStealDist);
   const bLS = (result.bLifeStealExpected != null)
     ? result.bLifeStealExpected
-    : distExpectedValue(result.bLifeStealDist);
+    : expectedDamage(result.bLifeStealDist);
   const modernCombatHealing = version === 'com2_1.05.11'
     || version === 'com2_warlord_1.5.12.9';
   const aRaw = result.aLifeStealRawExpected != null
-    ? result.aLifeStealRawExpected : distExpectedValue(result.aLifeStealRawDist || result.aLifeStealDist);
+    ? result.aLifeStealRawExpected : expectedDamage(result.aLifeStealRawDist || result.aLifeStealDist);
   const bRaw = result.bLifeStealRawExpected != null
-    ? result.bLifeStealRawExpected : distExpectedValue(result.bLifeStealRawDist || result.bLifeStealDist);
+    ? result.bLifeStealRawExpected : expectedDamage(result.bLifeStealRawDist || result.bLifeStealDist);
 
   if (aLS < 0.001 && bLS < 0.001 && aRaw < 0.001 && bRaw < 0.001) {
     el.style.display = 'none';

@@ -140,7 +140,7 @@ function baseStatSteps(ctx) {
     // PROVENANCE[zombies:toBlock]: VERIFIED versions=com_6.08; sources=Reference docs/DOS reconstructed/unitcalc.c@span:13:4228875943f7a7458e2af96e
     statStep({ id: 'zombies:toBlock', sourceId: 'zombies', sourceLabel: 'Zombies',
       phase: 'template', writes: ['toBlk'],
-      when: () => isCoM1 && identity.specialUnit === 'zombies',
+      when: u => isCoM1 && unittypeIs(version, u.unittype, 'zombies'),
       // The DOS constructor stores a signed D10 threshold step. The calculator's accumulator
       // is percentage points, so one engine step is ten percentage points.
       apply: u => { u.toBlk -= 10; } }),
@@ -1976,7 +1976,7 @@ function magicCalcScriptStatSteps(ctx) {
     hasDarkness, hurricaneActive, identity, isWarlord, outlanderReform,
     rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
-    shadowStrikeActive, vampirismActive,
+    shadowStrikeActive, vampirismActive, version,
     venomActive, warlordCombatFlameBlade, warlordFlameBladeOwnsSlot,
     weaknessBinaryHits, weaknessPenalty,
   } = ctx;
@@ -2051,12 +2051,13 @@ function magicCalcScriptStatSteps(ctx) {
     // one template excused from a penalty, here it is the one template given a bonus. Both take
     // the `nightGoblins` key rather than a bare template id, so the one table of template-id
     // exceptions stays the only place a template id is named (`SPECIAL_UNIT_DEFS`,
-    // `stats_identity.js`). The block sits between combat Flame Blade (`UnitCalc.CAS!NOTZEAL!+8 "IF (GETCOMBATENCHANTMENTFLAG(U,EncFlameBlade,0)>0) THEN {"`) and Rust
+    // `stats_identity.js`, `UNITTYPE_IDS`) — as one `u.unittype` compare, which is the compare
+    // the script makes (F267.3). The block sits between combat Flame Blade (`UnitCalc.CAS!NOTZEAL!+8 "IF (GETCOMBATENCHANTMENTFLAG(U,EncFlameBlade,0)>0) THEN {"`) and Rust
     // (`UnitCalc.CAS!NOTCITY!+11 "IF (GETENCHANTMENTFLAG(U,EncRust,0)=0) THEN { GOTO"`), which is its rank in region `d`.
     // PROVENANCE[nightGoblinsNightVision]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:10:1619334dcc3e4d7d00947967
     statStep({ id: 'nightGoblinsNightVision', sourceLabel: 'Night Vision', phase: 'd',
       writes: ['toHit', 'toBlk'],
-      when: () => isWarlord && identity.specialUnit === 'nightGoblins' && hasDarkness,
+      when: u => isWarlord && unittypeIs(version, u.unittype, 'nightGoblins') && hasDarkness,
       apply: u => { u.toHit += 10; u.toBlk += 10; } }),
     ...abilByPhase.d.filter(step => step.id === 'rust'),
     // Hurricane writes all three secondary channel modifiers, at HURRICANESTR 2: −10 per

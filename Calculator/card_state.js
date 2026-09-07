@@ -635,7 +635,9 @@ function parseAbilitiesFromUnit(unit) {
 // `chosen` card to MoM — so that one still clamps, and that question is the page's own.
 function specialUnitAllowed(version, key, context) {
   const def = specialUnitDef(key, context);
-  return def ? def.versions.some(prefix => version.startsWith(prefix)) : true;
+  // The scope test itself is `specialUnitScopedToVersion` (`stats_identity.js`), beside the table
+  // it reads, because `specialUnitForRoster` asks the same question of the same rows (F267.3).
+  return def ? specialUnitScopedToVersion(version, def) : true;
 }
 
 // The shared slot's token for a projectile a record states. This is the rule the DOM writer

@@ -690,8 +690,21 @@ function calcIrrecoverableRiderOutcomes(atkFigs, keys, probs, destructionFail, t
   return out;
 }
 
+// The mean of a distribution, in the units the distribution is indexed in — the first moment of
+// the arrays every combat phase publishes. This is the one home for it in the page's scope
+// (F269.3): the combat layer, the page's panels and the matrix's main thread all call this rather
+// than restating the loop. The one restatement that remains is inside `MATRIX_WORKER_HANDLER`
+// (`ui_matrix.js`). The worker does import this file, so that copy is not technically forced; it
+// stands because F269.3 drew its boundary at page scope and left the blob's own text alone.
+function expectedDamage(dist) {
+  if (!dist) return 0;
+  let ev = 0;
+  for (let d = 0; d < dist.length; d++) ev += d * dist[d];
+  return ev;
+}
+
 // The spread of a distribution about its own mean, in the units the distribution is indexed in.
-// `expectedDamage` (`combat_fear_and_touch.js`) is the first moment of the same array; this is the
+// `expectedDamage` above is the first moment of the same array; this is the
 // second, and it is what the preset corpus asserts beside the mean (F268.3) so that a change of
 // *shape* which leaves the mean where it was still fails. Both preset runners — the page's
 // `runTests` through `renderDistPanel`, and `tools/preset_checks.js` through the realm — call this
@@ -702,6 +715,10 @@ function calcIrrecoverableRiderOutcomes(atkFigs, keys, probs, destructionFail, t
 // nearly equal numbers, and a narrow distribution about a large mean loses most of its significant
 // digits to that cancellation. The corpus has such fixtures (a certain 30-damage kill has mean 30
 // and variance 0), so the stable form is not a precaution here, it is required.
+//
+// Its first pass is not a third copy of `expectedDamage` and does not call it: the pass validates
+// every cell as it accumulates, and it reads a hole as 0 where `expectedDamage` would read `NaN`.
+// Deduplicating it would move the validation off the array the mean is actually taken over.
 function distributionStdDev(dist) {
   if (!Array.isArray(dist)) {
     throw new Error('distributionStdDev: the distribution is ' + JSON.stringify(dist)

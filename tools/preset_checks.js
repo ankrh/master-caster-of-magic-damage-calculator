@@ -291,7 +291,7 @@ function runSelfChecks(context) {
     { filename: 'preset_checks self-check bindings' });
 
   // 1. The mean is rounded the way the page renders it. `dist` has mean 1/3.
-  const rounded = renderedMean([2 / 3, 1 / 3]);
+  const rounded = renderedMean(realm, [2 / 3, 1 / 3]);
   if (rounded !== 0.333) {
     throw new Error(`preset_checks self-check: renderedMean returned ${rounded} for a `
       + 'distribution with mean 1/3, where the page would display 0.333. The browser compares the '

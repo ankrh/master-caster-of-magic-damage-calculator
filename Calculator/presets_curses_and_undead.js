@@ -1581,4 +1581,20 @@ definePresets({
     rangedCheck: true, rangedDist: 1,
     expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
   },
+  zombiesToBlockByUnitTypeCoM: {
+    desc: 'CoM 1 Zombies (roster template 174, `COM1_UT_ZOMBIES` 0xAE): the constructor patch at com1:0x8EE28 starts To Block one D10 step low, which the calculator carries as `template:zombies:toBlock` (-10 percentage points). The gate is the record’s own `u.unittype = 174` compare against the version-scoped id table (F267.3), so this is the corpus’s witness that 174 is what CoM 1 calls Zombies: a wrong id leaves the six figures blocking at the unpenalised rate and drops the melee mean to 4.282.',
+    version: V_COM,
+    a: { figs:1, atk:6, toHitMod:70, hp:20 },
+    bUnitName: 'Zombies',
+    expected: { dmgToA: 9.600, sdDmgToA: 2.400, dmgToB: 4.819, sdDmgToB: 0.933 },
+  },
+  golemResistElementsByUnitTypeCoM2: {
+    desc: 'CoM2 Golem (roster template 81, `inferred_UnitGolem`): Resist Elements is a hard-coded unit-type rule, not a `UNITS.INI` ability — `if BaseUnits[i].unittype = inferred_UnitGolem` (`Units.RecalculateUnits.pas:768`, block $00599E31). Magic ranged strength 20 against the Golem’s defence 7 plus that grant gives 16.700; a wrong id in the version-scoped table (F267.3) loses both the grant and the roster token that stands in for it, and the mean rises to 17.900.',
+    version: V_COM2,
+    a: { figs:1, atk:0, hp:20, hitRanged:70,
+      modernAttacks: { ranged: { strength:20, type:'magic' } } },
+    bUnitName: 'Golem',
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 16.700, sdDmgToB: 1.520 },
+  },
 });

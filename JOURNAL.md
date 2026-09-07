@@ -4,6 +4,72 @@
 
 # Journal
 
+## 2026-09-07 — F267.2: `unittype`, `herotype` and `ishero` become record fields
+
+Three lines in the `statRecord` literal (`Calculator/stats.js`), beside `race`/`fantastic` and the
+F244.2 loadout fields:
+
+```
+unittype: identity.templateId, herotype: identity.heroTypeId, ishero: isHero,
+```
+
+Nothing reads them. That is the subtask, and it is what made the acceptance interesting rather than
+trivial: a seed with no reader is invisible to the fixture corpus and to
+`tools/derivation_equivalence.js` alike, so **no measurement can hold it in place** — only a check
+that opens the record can.
+
+**How the check opens it.** `deriveUnitStats` keeps `statRecord` as a local; the result object never
+carries it and `modifierTraces` only projects fields something writes. The one seam that sees the
+object is `runStatSteps`, which is a top-level `function` and therefore a property of the loaded vm
+context — so `ctx.runStatSteps = wrapper` intercepts it and reads the record at three positions in
+one call: the seed as it is handed over, `runCtx.base` after the call (what `a:baseCopy` publishes,
+i.e. the permanent record), and the record the run leaves. Restore it in a `finally`. This is worth
+remembering for any later subtask that needs to assert something about the record itself rather than
+about a published value — F267.4 and F267.5 both will.
+
+**Verified traps, both by mutation:**
+
+- The citation audit does **not** validate `.pas:N` citations in `Calculator/*.js` comments. I
+  rewrote `Units.RecalculateUnits.pas:768` to `:99768` and `npm test` stayed green. Those citations
+  are prose; check them by hand. (The CAS `!ANCHOR!` grammar and the `PROVENANCE[...]` spans *are*
+  audited — this is about bare `file.pas:N` in a comment.)
+- Two of the item body's own citations were slightly off and are corrected in the code comment:
+  `Spells.CombatSummonUnit.pas:136` reads `= inferred_DemonLordUnitType`, not `= $00AD`; and
+  `Combat.ApplyAttack.pas:361` indexes `BaseUnits[au].herotype` — the *permanent* record — while the
+  `ishero` gate ten lines up at :351 reads `Units[au].ishero`, the calculated one. That pair, in one
+  expression, is the cleanest evidence that all three fields live on both arrays; the Charmed step
+  (`CoM2 binary - resolution helpers.md:208`) is the second, reading
+  `Wizards[BaseUnits[u].owner].Hero[Units[u].herotype]`.
+
+**F263's trap, stated in reverse.** F263 found that a `template` origin row is not a record field.
+The mirror is that these three are record fields but **not ability keys**: they are seeded verbatim
+like `race` and `weaponMaterial`, not through `seedNonStatRecordFields`. Putting one on
+`POSITIONED_GRANT_FIELDS` (and so on `SEEDED_NON_STAT_KEYS`) gives it an `ABILITY_KEY_ORIGINS` row
+it has no business owning and a second seeding source, and every origin check and F244-family rule
+then reasons over it as an ability key. A bare list-addition is caught upstream by
+`abilityOriginRows`' own halt; the list *plus* an origin row is not, and that combination is what
+family 2 of the new check exists for — verified by making exactly that mutation.
+
+**The first draft of that comment got the direction of the damage wrong, and the GPT review caught
+it.** I had written that the seed would overwrite the field with `false`. It would not: the
+`...seedNonStatRecordFields(...)` spread stands *earlier* in the record literal than the explicit
+`unittype:` / `herotype:` / `ishero:` properties, so the later properties win. The harm is to the
+classification, not to the value. Worth remembering generally — in that literal, spread order
+decides, and a later explicit property silently beats a seeded one.
+
+**Measured.** `derivation_equivalence`: 0 of 52,440 against an out-of-repo copy of `9b9adbf`. A
+card-path probe over all 1,165 fixtures (`presetToCardState` → `cardStateToDerivationInput` →
+`deriveUnitStats` → `resolveCombat`, melee and ranged): 0 of 1,165. `npm test`: 1,165 fixtures
+unchanged, Node assertions 31,576 → 31,910: 330 from the execution family, 4 from the source and list-hygiene
+families.
+
+Note for whoever writes such a probe next: `presetDerivationInputs({}).cases[name].a` is a
+*flattened* JSON string, not a derivation input — feeding it to `deriveUnitStats` halts on the armor
+quality. Use `.states[name]` and call `cardStateToDerivationInput` in the context. And
+`resolveCombat`'s options are `{ version, isRanged }`; a `{ mode: 'melee' }` guess makes every case
+throw inside `combatEffectInVersion`, which the probe then dutifully hashes as a difference of zero.
+
+
 ## 2026-09-07 — F267.1: CoM 1's two combat-summon conversions leave the `template` phase
 
 `template:constructCatapult` and `template:summonBranch` are gone. CoM 1's Construct Catapult
@@ -644,6 +710,8 @@ F260.9 - not established which, and worth knowing before F268.6 makes this the d
 files. A third copy inside `MATRIX_WORKER_HANDLER` (`ui_matrix.js:305`) is legitimate - a worker
 blob has no access to the page's scope. `distributionStdDev` deliberately did not become a fourth
 of anything, but it also did not merge the existing two; that is someone's call, not this row's.
+(Merged 2026-09-07 by F269.3: `expectedDamage` is `engine.js`'s, and only the worker blob's copy
+survives.)
 
 ## 2026-09-06 — F268.1: the Node home for migrated browser regressions
 
@@ -7464,3 +7532,148 @@ The three rows with no Node family named against them — `chaos-conjunction-f39
 `wall-of-fire-f36-f40` and `custom-level-f42` — rest on the corpus alone, which is the position
 F268's reviews twice showed to be weaker than it looks. If any of the three is worth re-probing,
 those are the three.
+
+## 2026-09-07 — F267.3: `specialUnit` becomes `u.unittype = <id>`
+
+`UNITTYPE_IDS` (`Calculator/stats_identity.js`) is now the one place a unit-type integer is named.
+Version-prefix rows compose (`com2_warlord` inherits `com2_`), `unittypeIdFor` returns `null` where
+the version has no such unit, and `unittypeIs` tests that `null` **before** the compare — otherwise
+`u.unittype === null` would make every custom unit every special unit at once, which is the trap
+this shape has and the token shape did not.
+
+`baseUnittypeId(version, identity)` = the roster template id, else the id the stated key names.
+That resolution is the whole of what `specialUnit` still does for the derivation: it is a way for a
+unit with **no** roster template to state a `unittype`, and the record carries the integer.
+
+### Two scopes, deliberately not one table
+
+`UNITTYPE_IDS` answers "what integer is this unit type in this version". `SPECIAL_UNIT_DEFS.versions`
+answers "which of these does the `Special unit` selector offer". They differ in exactly one place —
+base CoM2 has unit type 37 (`isConstructCatapultUnit` compares against it) and offers no `catapult`
+option — and `specialUnitForRoster` is the reverse lookup *filtered by the second*, which is what
+keeps a CoM2 roster Catapult from acquiring a key it never had. Collapsing them would either put a
+`catapult` option in CoM2's selector or put a bare `37` back in the predicate.
+
+### The corpus is nearly blind to the id table, and one of the five keys cannot be fixtured
+
+Mutating each id in turn and re-running a card-path sweep over the whole corpus:
+
+| key | fixtures moved, before / after this subtask |
+|---|---|
+| `nightGoblins` | 1 / 1 (`nightVisionGoblinsWarlord`) |
+| `zombies` | 0 / 1 (`zombiesToBlockByUnitTypeCoM`) |
+| `golem` | 0 / 1 (`golemResistElementsByUnitTypeCoM2`) |
+| `chosen`, `catapult` | 0 / 0, pinned instead by the conversion assertions in `runIdentityChecks` |
+
+**A wrong id costs a roster unit its token, not just its grant** — because `specialUnitForRoster`
+now reverses the table. That is why the Golem fixture works, and my first draft got it backwards: I
+argued that `specialUnitDerivesResistElements` (`card_state.js`) writes `elemArmor` from the
+*token* ahead of the derivation and therefore masks the id on every card path. It masks the
+**compiled grant**, not the id. The GPT review disproved the claim with a fixture — CoM2 roster
+Golem under magic ranged 20, mean 16.700, and 17.900 with the id mutated.
+
+The distinction survives: deleting `stats.js`'s Golem branch outright is still invisible to every
+card path, because the card's own `elemArmor` stays. Only the direct-derivation path — the
+Matrix's (`ui_matrix.js` builds identities with `createRosterUnitIdentity` and never runs the card
+rule) — has that branch as its sole grantor, and that is the one thing `runUnittypeIdTableChecks`
+asserts through `deriveUnitStats`. Worth knowing before **F269.2** makes the matrix take the card's
+path: after it, the two grants coincide everywhere and nothing observes the compiled one.
+
+The table itself is still transcribed by hand there, because a transcription is what an id typo
+breaks and the corpus reaches only three of its rows. All five id mutations and a disabled grant
+were each verified to fail `npm test`.
+
+### The one behaviour change, and why the product cannot reach it
+
+`derivation_equivalence` moved 259 of 52,440. Every one is a synthetic identity stating a special
+*template id* with no key (`template:81`, `template:34`, `template:174`) or a base-CoM2
+`special:catapult`. The token used to answer "is this a Golem" and now the id does, so those cases
+take the exception they should always have taken. The product cannot produce the disagreement:
+`specialUnitForRoster` derives the key from the template id for every roster identity,
+`setIdentityControlsDisabled` (`ui_units.js`) disables the `Special unit` select while a roster
+unit is selected, and a custom unit's `templateId` is `null`. Measured: 0 of 1,165 card-path
+fixtures.
+
+### Traps met
+
+- **`unitTypeIs` is not a legal name.** `runIdentityProjectionChecks` forbids the substring
+  `unitType` anywhere in `identityConversionSteps`, because that is the compact legacy token. The
+  helpers are spelled `unittype*`, lowercase, matching the engine field — which is also what
+  F267.2 chose for the record field and for the same reason.
+- **`version` was not in `magicCalcScriptStatSteps`'s ctx destructure.** Two step scopes in
+  `stats_sequence.js` destructure different subsets; the Night Vision gate needed `version` added.
+- **`preset_checks` reports a fixture that throws as a shortfall in category-field counts, not as
+  the throw.** A `ReferenceError` inside a step's `when` surfaced as
+  "5 category field(s) are stated by fewer fixtures than the shipped corpus states them". The
+  fastest way to the real message is a direct card-path walk, not the runner.
+- A new fixture must be added to `Calculator/test_tree.js` as well as to a `presets_*.js` file;
+  `preset_checks` halts on a preset in no TEST_TREE group.
+- **`Units.RecalculateUnits.pas:768` and `:1611` are `if` tests, not assignments.** The F267 item
+  body's phrasing invites reading `B.unittype = ChosenUnitID` as a write; it is
+  `if B.unittype = ChosenUnitID then`, and what the block writes is `U.race` / `U.Fantastic`. Third
+  GPT review finding.
+- **Keep the restore snapshot fresh.** Mutation testing by `cp file tmp/file.keep` and restoring
+  loses every edit made after the snapshot. Two citation improvements were silently reverted that
+  way here and had to be re-applied; re-snapshot after every edit, or diff before trusting a
+  restore.
+
+### The inherited fail-loud gap is closed
+
+`createUnitIdentity`'s `integerOrNull` silently turned a malformed `templateId`/`heroTypeId` into
+`null`. That was harmless while nothing read the field and is not once `unittype` is what every
+type exception compares against: a malformed id becomes an absent one and the exception silently
+does not apply. `statedUnitId` halts naming the value; absent still means `null`. No caller in
+`Calculator/`, `tools/` or `tests/` supplies a non-integer, so nothing had to change to accommodate
+it.
+
+The message renders the value with `describeStatedValue`, not `JSON.stringify`: that renders `NaN`
+and both infinities as the literal `null`, so the halt would have named the exact value it then
+tells the caller to supply, and it throws outright on a BigInt. Second GPT review finding, and a
+trap for any other fail-loud message in this codebase that formats an arbitrary value.
+
+## 2026-09-07 — F269.3: the mean gets one home, and how the worker path was checked by hand
+
+`expectedDamage` moved from `combat_fear_and_touch.js` to `engine.js`, immediately above
+`distributionStdDev`. `ui_matrix.js`'s page-scope `distExpectedValue` is gone; `ui.js`'s four call
+sites and `renderDistPanel`'s own inline mean loop call the shared function. The copy inside
+`MATRIX_WORKER_HANDLER` stands.
+
+**Why `engine.js` and not `ui_matrix.js`.** Scope decides it, not line count. `expectedDamage` has
+callers in `combat.js` and `combat_fear_and_touch.js`, both core; a page-scope file cannot be the
+home for something core code calls (`CLAUDE.md`, *Architecture*). Both the source file and the
+destination carry `data-worker`, so the relocation is worker-visible to worker-visible — the
+F268.6 class was core-worker to core-*non*-worker (`engine.js` → `data.js`), which is a different
+move.
+
+**F269.1 does not exist yet, so the worker path was verified by hand.** A throwaway script outside
+the repo built a `vm` context holding *only* the nine `data-worker` sources plus the
+`MATRIX_WORKER_HANDLER` text, then drove `self.onmessage` over every preset that states its own
+version — 863 matchups — and compared each returned ratio against the main-thread computation
+through the shared helper. All 863 matched exactly, 63 of them at a ratio other than 1. That probe
+is close to what F269.1 will institutionalise; F269.1 should not take its shape from this note
+without re-deriving it.
+
+**`distributionStdDev` keeps its own first pass and that is deliberate.** It validates each cell as
+it accumulates and reads an array hole as 0, where `expectedDamage` would produce `NaN`. Folding it
+in would move the validation off the array the mean is actually taken over. A comment in
+`engine.js` now says so, because the next reader will see two mean loops in one file and reach for
+the merge.
+
+**Ordering.** F269.3's row said *Needs F269.2*, and F269.2 (and its own prerequisite F261) are not
+done. The user asked for it anyway. The dependency existed only so the dedup would not be done
+twice, so the change was made in the shape most robust to F269.2's later rewrite of
+`buildMatrixUnitStats`: `ui_matrix.js` retains no main-thread mean helper at all, and nothing in
+the deleted helper's place needs to survive that rewrite.
+
+**The review found a fourth restatement, in the tools.** `renderedMean`
+(`tools/preset_evaluation.js`) had the same loop, and its neighbour's comment justified it with
+"the page's mean is inline in the rendering" — true until this pass. It now takes `realm` and calls
+`realm.expectedDamage`, matching `renderedStdDev` beside it; what stays local to both is the
+three-decimal rounding, which is the thing the corpus actually compares. `renderedMean`'s one other
+caller is `preset_checks.js`'s rounding self-check, which already had a `realm` in scope.
+
+Six further loops live in `tools/` sweeps and `tools/unit_checks/` (`hidden_control_leak_sweep`,
+`narrow_control_scope_sweep`, `hidden_control_gating`, `phase_order_f29`, `resolution_steps`,
+`phases`). They are `reduce`-shaped, which skips array holes where `expectedDamage` yields `NaN`,
+and some throw on null rather than returning 0. They are mathematically the same for dense arrays
+but not semantically, so they were left alone rather than swapped blind.

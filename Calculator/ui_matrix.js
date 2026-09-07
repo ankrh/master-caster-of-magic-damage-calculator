@@ -46,13 +46,6 @@ function selectedUnitLabel(prefix) {
   return name || (prefix === 'a' ? 'Custom attacker' : 'Custom defender');
 }
 
-function distExpectedValue(dist) {
-  if (!dist) return 0;
-  let ev = 0;
-  for (let d = 0; d < dist.length; d++) ev += d * dist[d];
-  return ev;
-}
-
 function formatMatrixRatioValue(value, matrixMode) {
   if (matrixMode === 'ranged') {
     const percent = value * 100;
@@ -313,6 +306,11 @@ let activeMatrixMode = 'melee';
 let matrixWorkerBlobUrl = null;
 let closeMatrixModal = null;
 
+// The handler is source text for a worker blob rather than page scope, so its `distExpectedValue`
+// is the one restatement of `expectedDamage` (`engine.js`) that F269.3 leaves standing. The blob
+// importScripts the same nine `data-worker` sources, so it could call `expectedDamage` instead —
+// the copy stands because the subtask's boundary was page scope, not because the worker lacks the
+// function. The main thread keeps no copy of its own: it calls `expectedDamage`.
 const MATRIX_WORKER_HANDLER = `
 function distExpectedValue(dist) {
   if (!dist) return 0;

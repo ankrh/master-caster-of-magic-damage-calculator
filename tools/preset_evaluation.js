@@ -44,20 +44,19 @@ const REALM_BINDINGS = [
 // so what the tolerance is applied to is each moment rounded to three decimals, not the exact
 // value. Rounding here as well is not cosmetic: at 0.002 tolerance a fixture sitting 0.0015 off its
 // expectation can pass on one side of the rounding and fail on the other.
-function renderedMean(dist) {
+function renderedMean(realm, dist) {
   if (!Array.isArray(dist)) {
     throw new Error('renderedMean: the distribution is ' + JSON.stringify(dist)
       + ', which is not the array `resolveCombat` publishes.');
   }
-  let expected = 0;
-  for (let d = 0; d < dist.length; d++) expected += d * dist[d];
-  return parseFloat(expected.toFixed(3));
+  return parseFloat(realm.expectedDamage(dist).toFixed(3));
 }
 
 // The spread, through the shipped `distributionStdDev` the page's panel uses. Restating the
-// arithmetic here — as `renderedMean` restates the mean, because the page's mean is inline in the
-// rendering — would be a second implementation of a claim the corpus is about to assert 2,306
-// times, so this one is borrowed from the realm instead.
+// arithmetic here would be a second implementation of a claim the corpus is about to assert 2,306
+// times, so this one is borrowed from the realm — as `renderedMean` above borrows the mean from
+// the realm's `expectedDamage`, which is what the page's panel now calls too (F269.3). What is
+// local to these two functions is the rounding, and only the rounding.
 function renderedStdDev(realm, dist) {
   return parseFloat(realm.distributionStdDev(dist).toFixed(3));
 }
@@ -156,8 +155,8 @@ function evaluatePreset(realm, name, preset, options) {
   });
   return {
     state,
-    dmgToA: renderedMean(result.totalDmgToA),
-    dmgToB: renderedMean(result.totalDmgToB),
+    dmgToA: renderedMean(realm, result.totalDmgToA),
+    dmgToB: renderedMean(realm, result.totalDmgToB),
     sdToA: renderedStdDev(realm, result.totalDmgToA),
     sdToB: renderedStdDev(realm, result.totalDmgToB),
     categories: renderedCategoryMoments(realm, result, name),

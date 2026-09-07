@@ -705,13 +705,6 @@ function calcMeleeTouchOutcome(fearDist, maxFigs, isDoom, atk, toHit,
     ridersPresent, sourceRidersPresent };
 }
 
-function expectedDamage(dist) {
-  if (!dist) return 0;
-  let ev = 0;
-  for (let d = 0; d < dist.length; d++) ev += d * dist[d];
-  return ev;
-}
-
 // Build feared-count display distributions for the phase breakdown.
 // Returns { atkFearedDist, defFearedDist } or null if no fear is active.
 // defSurvivorDist / atkSurvivorDist: optional marginal distributions over how many figures

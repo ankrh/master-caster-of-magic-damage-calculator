@@ -1045,6 +1045,8 @@ const TEST_TREE = [
           'levelBonusAfterUpgradedExplosiveWarlord',
           'holyArmorThresholdBeforeNodeAuraCoM2',
           'eternalNightAfterSupremeLightCoM1',
+          'zombiesToBlockByUnitTypeCoM',
+          'golemResistElementsByUnitTypeCoM2',
           'ccFireBreathSeparatesThrownWarlord',
           'weaponToHitReadsOwnRangedChannelWarlord',
           'weaponToHitSkipsMagicRangedChannelWarlord',
