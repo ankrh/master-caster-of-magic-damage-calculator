@@ -110,7 +110,19 @@ subtask appears here before any subtask that depends on it.
 | 98 | **F269** | The post-combat panel stops showing `Bonus HP / figure` / `Extra Hits / figure`; the quantity stays internal. |
 | 99 | **F270** | The tooltip system is overhauled. Low priority, deliberately late: nothing depends on it and the F268 pass left tooltip wording unasserted in the meantime. |
 | 100 | **F271** | `deriveUnitStats` takes the innate and marked halves alone; the merged-`abilities` arm and its ~300 callers go. |
+| 101 | **F273** | `lucky` and `magicImmunity` stop riding the `template` seed's transform arm; each pre-sequence grant takes a positioned `training` step. |
+| 102 | **F274** | CoM 1's two combat-summon conversions move to the boundary inside region `c` that the reviewed reconstruction puts them at, retiring the named deviation. |
+| 103 | **F272.1** | The 45 non-record marked keys are censused per shape and the record-field question is settled for each, with the deviation alternative costed. |
+| 104 | **F272.2** | The 36 same-named condition flags become record fields with positioned writes. Needs F272.1. |
+| 105 | **F272.3** | `elemArmor` becomes a value field. Needs F272.1 and F251.2. |
+| 106 | **F272.4** | Modern `fear` and `immolation` become shape-1 ability fields; DOS `fear` keeps its four separate contributions. Needs F272.1. |
+| 107 | **F272.5** | `teleporting` and `undead` become shape-3 condition fields. Needs F272.1. |
+| 108 | **F272.6** | `hierophany`, `mislead` and `soulFlay` become record fields. Needs F272.1. |
+| 109 | **F272.7** | `rust` becomes a record field, and the melee −3's `hasAbil(abilities, 'rust')` gate stops holding that write on the merged map. Needs F272.1. |
+| 110 | **F275** | Immolation's cold immunity is modelled: a cast grants it in CoM2/Warlord, an innate one does not, and the DOS builds grant none. Needs F272.4. |
 **Provenance of the queue.** Items are named rather than numbered here, so a reorder does not rot this paragraph. **F260** and **F261** were filed 2026-09-05 out of the preset-suite cost measurement and moved above the backlog the same day so the rows below run against the cheaper suite; F261 is ordered after the refactor on the user’s ruling. **F267** was filed 2026-09-05 out of the identity-object read; its first subtask, F267.1, absorbed the CoM 1 template-phase follow-up the F262 close proposed and was executed 2026-09-07. **F264** and **F265** were filed 2026-09-05 out of the F244.3h and F246 close blocks. **F253** and **F259** were filed 2026-09-03 and 2026-09-04 out of the F244.3c close and the digest-blindness findings. **F254**, **F255**, **F256** and **F257** were filed 2026-09-04 out of the F244.3f and F244.3g reviews. Rust’s strip, the figure split and **F249** were approved 2026-09-03 from the No Heal merge. **F250**, the evidence debt the F244.3b writes declared, was filed 2026-09-03 on the user’s approval. Then the Create Undead damage-bucket item and the composition normalisation decision F225.1 surfaced, and below those the standalone and structural backlog, F251 and the F224 race and realm findings among it. F239–F248 were approved 2026-09-02 from the F210/F204 close. Closed: F244 (F244.1, F244.2, F244.3a–F244.3i), F245, F246, F247, F248, F252 (F252.1–F252.6, executed 2026-09-07; the marked half is a positioned write for every `immunities`/`buffs`/`debuffs` key the record carries, and the keys it does not carry are left unfinished rather than exempt — the scope question is open in `tmp/REPORT.F252.5.md` and `tmp/REPORT.F252.6.md`), F258, F262, F263 (executed 2026-09-07; the Sapiens label is a record field with its own `buffs:spiritLink:sapiens` write and the `NOTSAPIENS` gate is two `ctx.base` reads), F260 (F260.1–F260.10, executed 2026-09-05/06; its tier promotions are an open `PROPOSALS.md` entry), F268 (F268.1–F268.7, executed 2026-09-06/07 on the user’s ruling that Playwright is retired for non-UI testing; `npm test` is now the Node default and `npm run test:all` is what a page change runs, with three further `PROPOSALS.md` entries open).
+
+**F271**, **F272**, **F273**, **F274** and **F275** were filed 2026-09-07 as low priority from the rows 3–13 run: F271 on the user’s ruling that compatibility-only code is not kept, and the other four out of the F252.2, F252.3/F252.4, F252.5/F252.6 and F267.1 close blocks.
 
 F211–F216 were filed 2026-08-30 from the T2.11–T2.23 run, which found them while reading fixtures
 against the code. Each is verified against source and none makes a test red.
@@ -691,6 +703,94 @@ the current keys and drop the dependency notes. One subtask; moves no number.
 `traceBasePreparation` in `Calculator/stats.js` (near line 492) has no call site, so
 `basePreparationTrace` is always empty and its entries never reach a tooltip. Delete the helper, the
 array and the spread that seeds `statTrace` from it. One subtask; moves no number.
+
+### F272 — The 45 marked keys the record does not carry
+
+*Category: faithfulness.* Approved 2026-09-07 as low priority, out of the F252.5 and F252.6 close
+blocks. All five versions.
+
+F252 made the marked half a positioned write for every `immunities`/`buffs`/`debuffs` key the
+record carries. **45 do not carry one** — 41 of F252.5's `buffs` keys and F252.6's four — and are
+`cast:` producers only: no chain step in any version writes them and none is seeded. They therefore
+still OR at the *input boundary*, not at the grant position F252.2 ruled on, and four of F252.2's
+nine dual-source keys (`fear`, `immolation`, `teleporting`, `undead`) are among them, so the shapes
+that ruling names are documented but not implemented. Both subtasks retracted any claim of
+exemption; this item is the unfinished work, not a defect report.
+
+It moves no number, so no equivalence run measures it — the checks are the only witness.
+
+The alternative is a ruling rather than a migration: that a key the record does not carry keeps its
+boundary OR. That is defensible and cheap, but it is a deviation from F252's own rule and would
+belong in `CLAUDE.md`'s *Deliberate deviations* rather than being left implicit. F272.1 costs both
+and settles it; the rows after it are void if the ruling goes the other way.
+
+- **F272.1** census the 45 per shape, settle the record-field question for each, and cost the
+  deviation alternative. Every later row depends on it.
+- **F272.2** the 36 same-named condition flags. Needs F272.1.
+- **F272.3** `elemArmor`, whose record form is a value field rather than a flag. Needs F272.1, and
+  F251.2, which replaces the exclusive select with two independent booleans.
+- **F272.4** modern `fear` and `immolation` as shape-1 ability fields — set onto the template's
+  bit, idempotent — while DOS `fear` keeps the four separate disjuncts `BU_CauseFear` merges
+  nothing between. Needs F272.1.
+- **F272.5** `teleporting` and `undead` as shape-3 condition fields, which gate a normalisation and
+  derive no ability bit. Their innate controls are already a declared meaning rather than a
+  derivation (`CLAUDE.md`, *Deliberate deviations*). Needs F272.1.
+- **F272.6** `hierophany`, `mislead` and `soulFlay`. Needs F272.1.
+- **F272.7** `rust`, alone because it is the only one of the 45 whose key *also* gates a step
+  already in the chain — the melee −3's `hasAbil(abilities, 'rust')`, which is what keeps that
+  write reading the merged map. Needs F272.1.
+
+Each row moves its keys' readers off the merged map and audits that key's eligibility, aliases and
+other grant producers.
+
+### F273 — Two seeded keys ride the template seed's transform arm
+
+*Category: faithfulness.* Approved 2026-09-07 as low priority. Recommended by the F252.3 and F252.4
+close blocks, which each named it separately; this is the merged item.
+
+`lucky` (`applySanctaBasilicaGrant`, `applyPillarOfFaithGrant`) and `magicImmunity` (Sancta
+Basilica's Warlord High Men Paladin grant) reach the record through the `template` seed's
+`transformWrote` arm at `template` rank, while their origin rows file the grant as `training` with
+`transform:` producers. F244.3g's throw misses both because it fires only for keys with **no**
+template row — that is the hole F252.3 exposed and F252.4 widened by one.
+
+Each pre-sequence grant owes a positioned `training` step. Removing the carry without positioning
+the writers first would drop the grants and move numbers, so the two halves go together. One
+subtask, two keys, one repair.
+
+### F274 — CoM 1's summon conversions sit at the wrong rank inside region `c`
+
+*Category: faithfulness.* Approved 2026-09-07 as low priority, out of the F267.1 close block, where
+it was the GPT reviewer's P1.
+
+F267.1 established that `Load_Battle_Unit` runs the whole CoM 1 calculation before the summon path
+writes `bu->race` and `UA_FANTASTIC`, so those two are calculated-record writes rather than
+`template` ones. The reviewer reconstructed further: the stores sit **between the two stages region
+`c` draws from** — `Load_Battle_Unit` (com1:0x8F277, returns first) and
+`BU_Apply_Battlefield_Effects` (the second `BU_Apply_Specials` at com1:0x90743, taking
+`battleEnchantments & ~persistentEnchantments` with mutations zero), so Darkness, Supreme Light and
+node effects *do* see the conversion. The faithful rank is that boundary inside region `c`.
+
+F267.1 kept head-of-`a` so it stayed a reclassification moving no number, and named the difference
+as a deviation in code and in a `PROPOSALS.md` entry. This item takes the correction and retires
+that entry. Moving the rank may move numbers; enumerate what moves.
+
+`template:zombies:toBlock` (com1:0x8EE31 writes `bu->toblock`) is the same defect class for a stat
+rather than for identity, and was left out of F267.1's scope deliberately. Settle whether it joins
+this row while the region is open.
+
+### F275 — Immolation's cold immunity is not modelled
+
+*Category: faithfulness.* Approved 2026-09-07 as low priority, out of the F252.2 close block.
+
+In CoM2 and Warlord a **cast** Immolation sets `U.coldimmunity` ($005A00E7); an **innate**
+Immolation does not, and the DOS builds grant none. The calculator models neither, so a unit under
+cast Immolation is missing a Cold Immunity the modern engines give it.
+
+The innate/marked split F252.1 built is what makes the distinction expressible: the grant belongs
+to the marked half's positioned write alone. `immolation` is one of the 45 keys F272 covers, so if
+F272 gives it a record field, do this row after F272.4 and write the immunity beside it. One
+subtask.
 
 ### F271 — The merged-`abilities` compatibility arm is deleted
 
