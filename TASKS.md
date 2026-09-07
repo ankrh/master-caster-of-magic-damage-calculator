@@ -11,11 +11,11 @@ subtask appears here before any subtask that depends on it.
 | # | Subtask | Next outcome |
 |---|---|---|
 | 1 | **F269.1** | A Node check loads the nine `data-worker` sources alone and calls the matrix handler, so a core-to-core relocation fails mechanically instead of in prose. No number moves. |
-| 2 | **F269.2** | `buildMatrixUnitStats` becomes the card's own path, closing the DOS shared special byte divergence. Numbers move in DOS matrix runs. Needs F269.1, F261. |
-| 3 | **F267.4** | The seed record is constructed where `abilities` is, not at `stats.js:2531`, and the eager base-identity scalars read it. This is the input-boundary fix. (F267.1 and F267.2, its prerequisites, closed 2026-09-07.)
-| 4 | **F267.5** | The live `identity.race`/`identity.fantastic` pair is deleted; `identityAt`, the hover trace, `ui_matrix.js` and `combat_effects.js` read the record. Needs F267.4.
-| 5 | **F267.6** | `initializeUnitIdentity` retires: the constructors stay as the input-shape declaration and produce a seed fragment. `version` leaves the unit. (F267.3, its prerequisite, closed 2026-09-07.) Needs F267.5.
-| 6 | **F261** | The matrix's version filter becomes `abilityVersionGated`, closing the six-control Warlord gap and retiring the `blur` special case. Needs F260.3. |
+| 2 | **F261** | The matrix's version filter becomes `abilityVersionGated`, closing the six-control Warlord gap and retiring the `blur` special case. Needs F260.3. |
+| 3 | **F269.2** | `buildMatrixUnitStats` becomes the card's own path, closing the DOS shared special byte divergence. Numbers move in DOS matrix runs. Needs F269.1, F261. |
+| 4 | **F267.4** | The seed record is constructed where `abilities` is, not at `stats.js:2531`, and the eager base-identity scalars read it. This is the input-boundary fix. (F267.1 and F267.2, its prerequisites, closed 2026-09-07.)
+| 5 | **F267.5** | The live `identity.race`/`identity.fantastic` pair is deleted; `identityAt`, the hover trace, `ui_matrix.js` and `combat_effects.js` read the record. Needs F267.4.
+| 6 | **F267.6** | `initializeUnitIdentity` retires: the constructors stay as the input-shape declaration and produce a seed fragment. `version` leaves the unit. (F267.3, its prerequisite, closed 2026-09-07.) Needs F267.5.
 | 7 | **F264** | Warlord's `SpellTypeGroup=16` target-selection dispatch is reconstructed, so the record a targeting gate reads stops being a ruling.
 | 8 | **F253.1** | `seedNonStatRecordFields` halts when a caller supplies a seeded key with no origin row in the active version, instead of erasing it. |
 | 9 | **F253.2** | The remaining erasure: a key whose origin row exists but whose step gate reads a different input key. Needs F252.1. |
