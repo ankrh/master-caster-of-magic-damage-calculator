@@ -4,6 +4,501 @@
 
 # Journal
 
+## 2026-09-07 — F267.1: CoM 1's two combat-summon conversions leave the `template` phase
+
+`template:constructCatapult` and `template:summonBranch` are gone. CoM 1's Construct Catapult
+conversion is folded into the existing `a:constructCatapult` step (one `when`,
+`(isBaseCoM2 || isCoM1) && isConstructCatapult`, one shared `PROVENANCE[constructCatapult]` that
+already named all three versions), and `a:summonBranch` stands beside it, both ranked immediately
+behind `a:baseCopy` in `CHAIN_COM_6_08`. The persistent half of the same construction,
+`template:constructCatapult:weapon`, keeps its rank.
+
+**The evidence is a routine boundary.** `BU_UnitLoadToBattle` calls `Load_Battle_Unit` at
+com1:0x75C8A; that routine imports the persistent record, runs the whole calculation and returns at
+com1:0x8F30A. Only afterwards does the CoM 1 arm reach `bu->race = RACE_LIFE` (com1:0x75D56),
+`bu->race = RACE_NATURE` (com1:0x75D65) and `bu->Abilities |= UA_FANTASTIC` (com1:0x75D6C) — all on
+the battle unit, none on `_UNITS[]`. The Catapult's `_UNITS[si].mutations = UM_MAGIC_WEAPONS` at
+com1:0x8EEAF is the one genuinely persistent write, and it sits *inside* Load_Battle_Unit ahead of
+the quality read at com1:0x8F024 that re-reads the record. That split is the whole subtask.
+
+**Nothing moved, and the reason is worth carrying forward: no CoM 1 gate reads the permanent
+`race`/`fantastic` at all.** `derivation_equivalence` 0 of 52,440; a purpose-built probe 0 of 7,360
+(a saturated CoM 1 census — every ability and enchantment control on at once, across nine identity
+rows including templateId 37/54/113 and `specialUnit: 'catapult'` — plus a card-path sweep over all
+1,165 fixtures with `combatSummoned` forced on both sides). The sharp measurement is the mutation:
+ranking both steps *ahead* of `a:baseCopy`, i.e. back onto the permanent record, also moves **0**.
+So the permanent/calculated distinction is unobservable in CoM 1 today; `ctx.base.fantastic`'s
+readers are the modern ones (`c:level:fantastic`, Heavenly Light's material tail, Breakthrough, the
+astronomical events) and the Warlord ones (Fiery Fury, Soul Flay, the Outlander reform). It is
+F267's later subtasks that will make it observable, which is exactly why F267.1 had to run first.
+
+**The rank inside region `a` is a named deviation, and the GPT review is what settled the
+evidence.** My first draft called it "a ruling, positional alternative = end of region `c`". Both
+halves were wrong, and the reviewer read the binary rather than the prose: the stores sit between
+**two** stages that region `c` draws from. `Load_Battle_Unit` (com1:0x75C8A..0x8F30A) applies the
+constructor effects — Survival Instinct at com1:0x8F277..0x8F29E among them — and returns *before*
+the stores, so its `race >= RACE_FIRST_FANTASTIC` gate meets summoned Paladins while they are still
+High Men. `BU_Apply_Battlefield_Effects` runs *after* them, and its second `BU_Apply_Specials`
+call at **com1:0x90743** is passed `battleEnchantments & ~persistentEnchantments` with the mutations
+byte **zero** — it does not repeat the constructor's effects — so Darkness, Supreme Light and the
+node effects *do* see the converted realm. The faithful rank is therefore that routine boundary
+*inside* region `c`, and neither head-of-`a` nor end-of-`c` is it. Head-of-`a` was kept because it
+reproduces the behaviour the `template` misfiling had and so keeps F267.1 a reclassification; it is
+recorded as a deviation in an open `PROPOSALS.md` entry, and splitting region `c` at the boundary
+is put to the user as its own faithfulness task. Measured: end-of-`c` moves 101 census cases, and
+the boundary rank moves a subset of those. **A zero establishes preservation, not faithfulness** —
+the reviewer's phrase, and the right one.
+
+**Ranking an `a` step after the `c` entries in the chain list halts.** `assertStatChain` refuses
+`execution chain entry a:constructCatapult is declared after a later phase`. That is why the
+positional experiment had to change the steps' declared phase as well, and it is a useful
+fail-loud site to know about.
+
+**Structural coverage, and the assertion a phase label cannot make.**
+`runTemplateRankPermanentIdentityChecks` (`tools/unit_checks/identity.js`, in `runIdentityChecks`):
+a source scan for `phase: 'template'` inside `identityConversionSteps`; per version and identity
+shape, no `template`-phase entry in the `race` or `fantastic` modifier trace and a seed value equal
+to the permanent one; and the **copy boundary** — every write of either field stands on the side of
+`a:baseCopy` its phase requires, permanent phases ahead, calculated regions behind. The third came
+out of the review: the reviewer moved both conversions ahead of `a:baseCopy` in memory and the
+first draft's check *passed*, with the converted values entering `ctx.base` and every phase label
+still reading correctly. A first draft also re-asserted the conversions' realm, Fantastic flag and
+Magic Weapons; `runIdentityChecks` already pins all three for CoM 1's Catapult, Centaurs and
+Paladins, and disabling both conversions fails *those*, so the duplicate family was deleted rather
+than kept. Each surviving family was mutation-verified and the source scan and trace scan bite
+independently. No preset fixture: nothing moved, so there is no new numeric claim.
+
+**Assertion count fell 31,202 → 31,195 before the new check, and every one is accounted for.**
+Dumping the assertion *messages* in both trees and diffing the multiset is the cheap way to prove a
+count drop is bookkeeping: one `unitType`-token scan and one conversion-writes assertion (two
+conversions became one), plus the per-step-key rows for two deleted scope entries against one added.
+Worth reusing whenever a merge drops the total.
+
+**Two traps hit, one of them expensive.** `git checkout -- Calculator/steps.js`, used to undo a
+mutation experiment, silently reverted F252.3's and F263's *uncommitted* edits to that file as well
+— the working tree is the only copy of them. Restored from the out-of-repo baseline tree, which
+happened to hold the pre-F267.1 working state. Use a file copy, never `git checkout`, to undo an
+experiment while a run's earlier subtasks are uncommitted. The second is the familiar one: text
+dumps written under `tmp/` fail the citation audit (`citation-bearing sources this audit does not
+classify`), now for the third recorded time.
+
+
+## 2026-09-07 — F263: the Sapiens label is a record field
+
+`SMultiLabel = 14` is now `sapiens` on the sequence record. `POSITIONED_GRANT_FIELDS` takes it as a
+read side, `POSITIONED_GRANT_WRITES` as a write side, so it joins `SEEDED_NON_STAT_KEYS` and its
+Warlord `template` row (already there, from F252.3 — verified, not assumed) seeds the ability
+control's mark. Spirit Link's `SETSTAT(TU,SMultiLabel,1,14)` is `buffs:spiritLink:sapiens`.
+`outlanderSapiensAt` reads both terms of `BASEFANTASTIC(U)>0 %AND (GETSTAT(U,SMultiLabel,1)<>14)`
+off `ctx.base`; `spiritLinkSentience` and `sapiensLabelled` are gone.
+
+**The step is ranked ahead of the Fantastic clear, and that is the whole reason it can read the
+record.** `OLSpell.CAS` writes the three fields inside `IF BASEFANTASTIC(TU)` in the order
+`SMultiLabel`, `AFantastic := 0`, `ALevel := 1`. Put the label first and its `when` is
+`u.fantastic` at its own position, because the clear has not run. `buffs:spiritLink:level` stands
+behind the clear and still needs the latch, which is why `spiritLinkClearsPermanentFantastic`
+**survives** — the F262-era comment claiming the `spiritLinkSentience` argument was its last reader
+was simply wrong, and the level step had always read it too.
+
+**No number moved, and I could not have known that from the digest.** `derivation_equivalence`
+reports 1,962 of 52,440 differing and the only differing field in any of them is the published
+`abilities.sapiens`; the card-path probe over 37,280 cases (1,165 fixtures x 2 sides x 16 variants,
+against a baseline outside the repo root) says the same. Two classes, both intended:
+
+- **12,016 cases `true -> false`, non-Warlord.** A card stating `sapiens` where no `ABILITY_DEFS`
+  control offers it used to have the bit published straight off the input map. The record is the
+  carrier now and has no template row there, so nothing publishes it. `flying` — also a
+  Warlord-only ability control on `POSITIONED_GRANT_WRITES` — already had exactly this shape, and
+  `runSeedExecutionChecks` already asserted it. Unreachable from the page: version gating strips
+  the control.
+- **164 cases `false -> true`, Warlord.** Spirit Link on a base-Fantastic unit: the cast's write is
+  on the record and reads back into the published set.
+
+Nothing outside the reform gate consumes `abilities.sapiens`, so neither class reaches combat.
+
+**Three fixtures, and they pass in the baseline too.** `bombsGrenadesSapiensLabelKeepsGrantThrough
+ApotheosisWarlord` (56.0), `bombsGrenadesSpiritLinkLabelSurvivesApotheosisWarlord` (56.0) and
+`bombsGrenadesSpiritLinkLabelNeedsBaseFantasticWarlord` (8.0). I ran `preset_checks.js` in the
+pre-F263 tree with them copied in — 1,165 green — so they are new coverage of a claim the corpus
+never measured (the `SMultiLabel = 14` arm, which
+`bombsGrenadesSkipsApotheosisPermanentFantasticWarlord` names and explicitly does not test), not a
+measurement of the migration. Worth remembering as the general shape: a faithfulness change that
+moves no number is not thereby untestable — what it moves is *which read produces the number*, and
+the fixtures that pin the number belong with it anyway.
+
+**`runSapiensLabelChecks`** (`tools/unit_checks/ability_origins.js`) is the structural half. The
+F252.6 lesson holds here without effort, because the label's two writers are *different keys* — the
+`sapiens` ability control and the `spiritLink` enchantment — so no half-merge can let one stand in
+for the other, and the innate arm is a real card statement rather than a branch conditional on a
+control existing. Mutation-verified: dropping `&& !!u.fantastic` from the step fails the
+base-normal arm; ranking the step behind the clear fails the pre-existing F245 value witness in
+`derivation_stages.js` (0.5 -> 0.3) and the new `applied` arm alike.
+
+**The review found no P1 or P2 and no numeric regression**, and independently re-derived the two
+things worth re-deriving: `MASTER.CAS:985-986` (`ABase=1`, `ACurr=0`) with `Scripts.TXT:266-270`
+for the selector, and the manifest mutation (label after the clear -> the F245 witness moves 0.5 to
+0.3). Its two P3s were both about comments overclaiming, and both are worth keeping in mind rather
+than only fixing: the check block observes the published flag and the step status, which cannot
+separate a `ctx.base` read from a running-record read while nothing writes `sapiens` after
+`a:baseCopy` — the selector is what settles that, by inspection.
+
+**The `SPEC.md` staleness is still there and is now measured.** The reviewer's first P3 was a
+`SPEC.md` citation in a comment I had just written. See *Repo-wide staleness noticed and not fixed*
+(2026-09-04) for the standing finding; the count today is **81** sites across `Calculator/` and
+`tools/unit_checks/`. It is on the F263 close block as a question.
+
+**The `tmp/` trap again.** A baseline tree, or any scratch script carrying a CAS citation, placed
+under the repo root fails `npm test` at the citation audit, which walks the filesystem. F252.6
+recorded it for `tmp/baseline/`; this pass hit it with a two-line reverse-patch script in `tmp/`.
+Comparison trees and citation-bearing scratch go outside the repository.
+
+## 2026-09-07 — F252.6: the marked curses, and what the F252 item did and did not finish
+
+The last subtask of F252. `curseCastSteps` now takes `cardMarkedAbilities` instead of
+`markedAbilities`, so all three cast groups in `baseStatSteps` — `immunities` (F252.4), the
+beneficial `buffs` casts (F252.5), the nine curses (this) — read the `ENCHANTMENT_DEFS` half and
+none reads the merged map.
+
+**The census, re-derived rather than inherited.** `ABILITY_KEY_ORIGINS` has 13 keys with a
+`debuffs` row. All 13 have an enchantment control, **none has an ability control**, and none is one
+of F252.2's nine dual-source keys — so F252.2's three OR shapes have no member in this slice at
+all. They partition 9 / 4: the nine `MAGIC_IMMUNITY_GATED_CURSES` flags are sequence record fields
+with a positioned `debuffs:<key>:cast` step; `hierophany`, `mislead`, `soulFlay` and `rust` are not
+record fields. The GPT reviewer re-derived the same 13 and the same partition independently.
+
+**The re-source moved no number, and that is a coincidence.** With no curse flag carrying an
+`ABILITY_DEFS` control, `splitAbilityCalcValuesBySource` puts each of the nine only in the marked
+half, so the merged map carried the same bit on every input a *card* can build. That is why a value
+probe cannot see this change — the card-path probe over 37,184 cases returned 0 differing rows, and
+`derivation_equivalence` is blind to it by construction.
+
+**What made the mutation bite.** My first draft copied F252.5's `runMarkedBuffPhaseChecks` shape,
+which skips the innate arm when a key has no ability control. Under that shape, reverting
+`curseCastSteps`' argument to the merged map passed the whole suite — there was no assertion the
+two reads could disagree on. The fix is that `deriveUnitStats`' halves are its documented input
+boundary, so the check states the innate half **directly**, with no control behind it, and asserts
+what only the marked read makes true: a curse flag has no `template` row in any version, so an
+innate statement reaches nothing and the cast step stands down. Reverting the argument now fails on
+`mom_1.31: 'blackSleep' stated in the innate half alone reaches nothing`. `assertEqual(!!innate,
+false, ...)` beside it is what makes a curse flag gaining an ability control fail loudly rather
+than silently changing what that arm means. **Worth carrying to any similar block: a four-way
+end-to-end check whose innate arm is conditional on a control existing proves nothing about
+sourcing for the keys that have no such control.**
+
+**The `rust` fork, and how it went.** `debuffs:rust:material` is the phase's tenth step; its cast
+term reaches `abilities.rust` — the merged map — through `rustActiveAt`. I first left it alone and
+wrote down why: `rustActiveAt` is documented as one decision read at four writes, and re-sourcing
+one read would give it a second source. I put the fork to the reviewer as an explicit question. The
+reviewer ruled against me: sharing an *eligibility* test does not oblige sharing a *cast's input
+source*, and the "four-way" framing overstated the code — the melee −3 in `combat_abilities.js` is
+a separate `hasAbil(abilities, 'rust')` with no Fantastic term at all, reached through
+`getAbilityStatSteps`, which is handed the merged map and nothing else. I agree, and re-sourced
+`rustActiveAt` wholesale. Its two region-`d` consumers take the same source as a consequence, which
+moves nothing (`rust` is enchantment-only) and is not a migration of them.
+
+**One overstatement corrected.** I had written that the merged-read defect is "guarded twice", by
+`seedNonStatRecordFields`' `abilityMarkedWriteIsPositioned` halt and by the new check.
+`abilityMarkedWriteIsPositioned` reads the origin table's *producers*: it sees a missing positioned
+write, not a positioned write reading the wrong map. Only the execution check catches this.
+
+**What the F252 item as a whole achieved, since the body is deleted with this pass.** The ability
+input carries its source from `card_state.js` to `deriveUnitStats` (F252.1); the dual-source ruling
+is written down with its three engine shapes (F252.2, `ability_gating.js`); the record seed reads
+the innate half with a fail-loud guard and no exception left (F252.3, F252.4); and every marked
+write of a key **the sequence record carries** is now a positioned step reading the marked half —
+2 `immunities`, 8 `buffs`, 9 `debuffs`, plus Rust's cast term.
+
+**What it did not achieve.** Every `immunities`/`buffs`/`debuffs`-origin key that is *not* a record
+field still combines its two sources at the input boundary in `mergeAbilitySourceHalves`, not at
+the grant position F252.2 ruled on: 41 `buffs` keys (F252.5, including `fear`, `immolation`,
+`teleporting` and `undead`) and 4 `debuffs` keys (this pass). Finishing them is a record-field
+migration per key with readers moved off the merged map, not a step addition. It moves no number by
+construction, so nothing measures it except the checks. Both `runMarkedBuffPhaseChecks` and
+`runMarkedDebuffPhaseChecks` state this in their own comments so the partition cannot be mistaken
+for a discharge. The scope question is open to the user in `tmp/REPORT.F252.5.md` and
+`tmp/REPORT.F252.6.md`; no `TASKS.md` row was added.
+
+Two smaller debts survive F252 and are named in the code rather than here: the `training`-rank
+`transform:` producers for `lucky` and `magicImmunity` that owe positioned steps (F252.3, F252.4),
+and Rust's own record-field question, which is what keeps the melee −3's gate on the merged map.
+
+**Operational note.** A baseline tree copied to `tmp/baseline/` fails `npm test` at the citation
+audit — the audit walks the filesystem and classifies every citation-bearing source, so a second
+copy of `Calculator/` is 22 unclassified files. Fail-loud working as designed. Keep comparison
+trees outside the repo root.
+
+## 2026-09-07 — F252.5: the marked buffs, and where the phase actually has members
+
+All eight `buffs:<key>:cast` steps read `cardMarkedAbilities` now, not the merged card map, and the
+`cardAbilities` context field is deleted — it had one consumer. F252.3 had already done
+`invisibility`; the other seven (True Sight, Resist Magic, Discipline, Rebuild, Haste, Spell Lock,
+Bless) follow, and no number moves because none of the seven has an `ABILITY_DEFS` control, so
+`splitAbilityCalcValuesBySource` puts each only in the marked half and `mergeAbilitySourceHalves`
+merges innate-first — `merged[key] === marked[key]` identically. That is a coincidence of which
+controls exist today, not a property, which is why `runMarkedBuffPhaseChecks` asserts it: adding an
+ability control for any of the seven later would have made the old spelling silently wrong.
+
+**The partition is the finding — but it is coverage, not an exemption.** 51
+`buffs`-origin rows; `mechanical` and `supernatural` have no enchantment control (they are written
+by `buffs:rebuild` and `buffs:destiny:supernatural`), so 49 marked `buffs` keys, matching F252.1's
+census. Of those 49, **8** are `SEEDED_NON_STAT_KEYS` and carry a `step:buffs:<key>:cast` producer;
+the other **41** are not record fields at all. Their rows carry `cast:` producers, which by the
+origin table's own grammar name an engine write no calculator step makes — no seed, no record
+write, and no rank for a positioned write to take. The merged ability map is their only carrier.
+
+Four of the nine dual-source keys live in that 41: `fear`, `immolation`, `teleporting`, `undead`.
+Their OR therefore still happens in `mergeAbilitySourceHalves`, at the input boundary rather than at
+a grant position on the record.
+
+My first draft called that settled — "the calculator's record holds nothing for them, so there is no
+ordering for a rank to express". The GPT reviewer pushed back and is right: that is a description of
+where the implementation stands, not a derivation that the keys owe nothing. F252's own rule says
+the marked half is a positioned write, and the honest reading is that the 41 are **unfinished**.
+Finishing them is a record-field migration (36 condition flags, `elemArmor` as a value field,
+modern `fear`/`immolation` as F252.2 shape-1 ability fields with DOS `fear` keeping four separate
+contributions, `teleporting`/`undead` as shape-3 condition fields), with readers moved off the
+merged map — adding steps whose consumers still read the merged map would not complete it. It is
+also not measurable by any equivalence run, because it moves no number by construction. The scope
+question went to the user in the F252.5 close block; nothing was filed as a TASKS row.
+`runMarkedBuffPhaseChecks` asserts the partition in both directions, so the migration cannot be done
+half-way in silence.
+
+**Warlord's Hierophany strip is untouched by any of this.** `applyHierophanyAbilityStrip` runs on
+the *calculated combat* ability map, downstream of the whole sequence, so the grant-position scoping
+F252.2 warned about is not reachable from the seed/step split. Checked rather than assumed.
+
+The F244.3d rationale for `cardAbilities` — that the effective map carried the Marionette book
+package's grants of `resistMagic` and `rebuild`, which are not casts — is dead: F244.3g positioned
+all of those as steps, `ABILITY_ORIGIN_TRANSFORMS` is down to `golemShaping`,
+`applySanctaBasilicaGrant` and `applyPillarOfFaithGrant`, and none of them writes a key these steps
+name. The marked half is pre-transform in any case.
+
+Test note: `runMarkedBuffPhaseChecks` replaced the Invisibility-only block inside
+`runSeedExecutionChecks` rather than joining it — same claims, over the whole key list read off the
+origin table. Mutation-checked twice: passing the merged effective map instead of the marked half
+fails it on `mom_1.31: 'buffs:invisibility:cast' is skipped`, and moving `fear` to a positioned cast
+producer without giving it a record field fails the partition assertion.
+
+A closing loop asserting "no ability control names this key" was tautological — it skipped on the
+same search it then asserted — and is deleted (review, finding 2). Nothing is lost: adding an
+ability control for one of the seven halts in F252.3's own check 4 first (an ability control obliges
+a `template` row), and if that were ever relaxed the innate-only arm here is the second net.
+
+Measurement note, third time of stating it: `tools/derivation_equivalence.js` is **blind to this
+class of change by construction** — it builds merged `abilities` inputs, and
+`splitAbilityCalcValuesBySource` puts a dual-source key in both halves, so an innate-only card is
+unreachable from it. The card-path probe through `presetToCardState` ->
+`cardStateToDerivationInput` -> `deriveUnitStats` is the one that speaks.
+
+
+## 2026-09-07 — F252.4: the `immunities` seed suppression retires
+
+The `immunities` origin had two jobs. One was ordinary — name the phase a marked immunity's write
+takes. The other was a **seed suppression**: `abilityOriginIsMarkedImmunity` told
+`seedNonStatRecordFields` to leave `magicImmunity` and `missileImmunity` at `false` however
+template-capable they were, because `immunities:*:marked` read the *merged* card map and would
+otherwise have restated a bit the seed had already hoisted. That second job is what F244.3b's
+"Option C" was, and it is what made the two keys the only `ABILITY_DEFS` calc keys F252.3 could not
+seed from the innate half.
+
+Both jobs came apart cleanly. `markedImmunitySteps` takes `cardMarkedAbilities` (the channel F252.3
+built for `buffs:invisibility:cast`), the seed's branch is deleted, and `MARKED_IMMUNITY_ORIGIN` and
+`abilityOriginIsMarkedImmunity` are gone. **The seed now has no exception at all**: `template` row
+present means seeded, absent means not, for all 48 keys.
+
+Three things that had to be checked rather than assumed:
+
+- **The rank moves for an innate-only unit** — the bit lands at `template` instead of `immunities`.
+  Nothing reads either key off the record in between: the only `training`-phase toucher is
+  `training:lavaSmelter:missileImmunity`, which sets and does not read, and `d:fortification`'s
+  already-shielded arm is three phases later. `curseRefusedByImmunity` reads `magicImmunity` at
+  `debuffs` rank, after both.
+- **`applySanctaBasilicaGrant` grants a High Men Paladin `magicImmunity`.** It is a pre-sequence
+  transform, so before this change the grant reached the record through the step (which read the
+  post-transform map); now it rides the seed's `transformWrote` arm at `template` rank. Same value,
+  and the curse-refusal matrix still passes on it. **This makes `magicImmunity` a second member of
+  the `lucky` F244-family debt** F252.3 flagged: an origin row filed `training` with a `transform:`
+  producer whose write is carried by the `template` seed. Same repair, same subtask if it is filed.
+- **`derivation_equivalence` is blind to this change by construction**, for the third subtask
+  running: it builds merged `abilities` inputs and `splitAbilityCalcValuesBySource` puts a
+  dual-source key in *both* halves, so an innate-only card is unreachable from it. The card-path
+  probe is what speaks.
+
+**The two steps' provenance gap was overstated, and the review caught it.** The old text said no
+supported source reconstructs "a cast **or a building**" writing either immunity onto the permanent
+record. A building demonstrably does, in Warlord, at creation time:
+`CreateUnit.CAS~"SETSTAT(U,AMagicImmunity,1,1)"` for Sancta Basilica's Paladins and
+`CreateUnit.CAS~"SETSTAT(U,AMissileImmunity,ABase,1)"` for the Lava Smelter mithril/crysx pair —
+both already positioned elsewhere, at `training` rank. The real gap is the **marked controls'** own
+writers (the Magic Immunity and Guardian Wind casts, and Hillfort), and with them the `immunities`
+rank, which is the calculator's ordering ruling rather than a read. Both gap texts now say that.
+Note for the next author: the UNVERIFIED comment grammar is `gap=([^;]+)`, so a semicolon inside the
+gap text fails the provenance audit with "malformed UNVERIFIED comment"; and a new
+`CreateUnit.CAS:<line>` citation fails the CAS audit's deprecated-line ceiling — use a text anchor.
+
+`MARKED_IMMUNITY_FLAGS` in `stats_identity.js` was dead — declared, never read — and went with the
+change. The two `statStep` calls stay written out rather than looped, because each carries its own
+`PROVENANCE[...]` anchor and the audit reads those literally.
+
+## 2026-09-07 — F252.3: the seed reads the innate half
+
+`seedNonStatRecordFields` used to seed template-origin keys from `effectiveAbilities`, the merged
+map after the pre-sequence transforms. It now takes four arguments and seeds from
+`innateAbilities`, with the effective/supplied pair kept only so the transform-write guard can
+still see a transform's write.
+
+**The second half of the row was empty, and that is worth recording so nobody hunts for it again.**
+"Any innate key with no `template` origin becomes a positioned `template` step" has zero members:
+all 48 `ABILITY_DEFS` calc keys already carry a `template` row covering *exactly* the versions the
+ability control offers them, and no key carries a template row without an ability control. Measured
+both directions over `abilityUiDefs()` x `ENGINE_VERSIONS`. `ability_origins.js` check 4 now asserts
+it both ways, and its template-row scope narrowed from the union of both control sources to the
+**ability** control's scope alone — the two coincide today, so the narrowing costs nothing and
+refuses the wrong widening later (an enchantment control reaching a new version is a cast, and a
+cast takes a positioned write, not a wider template row).
+
+**What the change actually moved was one key.** Cross the seeded-key list with the nine dual-source
+keys and you get three: `magicImmunity`, `missileImmunity` and `invisibility`. The first two are
+`immunities`-origin and were already seeded `false`, so only `invisibility` had its *cast* riding
+the template seed. It got `buffs:invisibility:cast` in all five versions. That step reads the
+**marked half** rather than the merged card map, which the other six `permanentCastFlagSteps` writes
+still read: for those six the two maps are the same set (no `template` row, so no ability control
+states them), but for a dual-source key the merged map cannot support the claim a `buffs:<key>:cast`
+step makes. Caught by an assertion, not by inspection — the first draft used the merged map and an
+innate-only Invisibility showed the cast step as `applied` in the execution trace.
+
+**The guard.** A template-seeded key whose marked half changes what the seed would carry must have a
+positioned marked write, or the seed halts. `abilityMarkedWriteIsPositioned` reads that off the
+origin table (a row in `immunities`/`buffs`/`debuffs` whose producers are all `step:`), so there is
+no hand list. The flag arm compares truthiness and the value arm compares the value, because an
+enchantment control the card merely *offers* and leaves unticked projects as `false`, not absent —
+comparing raw values there would have fired the guard on every ordinary card.
+
+**Two things deliberately left.**
+
+- The `immunities` token stands. `magicImmunity` and `missileImmunity` are still not seeded from the
+  innate half; their innate control reaches the record through `immunities:*:marked`, which reads
+  the merged map. Retiring the token *is* F252.4 — the token's entire meaning is the seed
+  suppression, and F252.4's row already says each key's rows go back to `template` plus `buffs` with
+  the step splitting to match. Doing half of it here would leave a token whose comment lies.
+- `lucky` still rides the template seed from `applySanctaBasilicaGrant` / `applyPillarOfFaithGrant`.
+  Its own origin row files it `training` with `transform:` producers, so under F244's rule it owes a
+  positioned `training` step it does not have; the F244.3g throw misses it because that throw only
+  fires for keys with **no** template row. F252.3 keeps the carry (removing it drops the grant and
+  moves numbers) and the seed comment now names it. It is an F244-family debt, not an
+  innate/marked one.
+
+**Measurements.** `derivation_equivalence` 0 of 52,440 — but that tool builds merged `abilities`
+inputs, so it is blind to this change by construction: `splitAbilityCalcValuesBySource` puts every
+dual-source key in *both* halves, and a 0 there says only that the compatibility arm still folds.
+The card-path probe is the one that speaks: 1,162 fixtures x 2 sides x 22 variants forcing the
+innate/marked distinction = 51,128 cases, 0 differing, 0 throws, against a baseline tree with only
+this change reverted.
+
+## 2026-09-07 — F252.2: the dual-source ruling, and where the maximum belongs
+
+The nine keys split 7 bool + 2 num, and the two halves want different answers.
+
+**Booleans.** The outcome is an OR at the grant position in every case, so the input fold was right
+about the value and wrong about the moment. But the OR arrives three different ways, and my first
+draft flattened them — the GPT review caught it:
+
+1. *Same field.* `if (ench & UE_GUARDIAN_WIND) bu->Attribs_1 |= USA_IMMUNITY_MISSILES`
+   (`unitcalc.c` com1:0x8F51A), likewise `UE_MAGIC_IMMUNITY` (0x8F53B), `UE_IMMOLATION` (0x8F5E7),
+   `UE_INVISIBILITY` (0x8F32B); modern `U.missileImmunity := True` ($0059FD93), `U.magicimmunity`
+   ($0059FDED), `U.immolation` ($005A00E7), `U.fear` ($0059EA8B). The cast lives in its own
+   enchantment word and sets the template's ability field. Idempotent.
+2. *Distinct fields, OR'd by the reader.* DOS Cause Fear: `BU_CauseFear` tests innate
+   `Attribs_2 & USA2_CAUSE_FEAR`, the battle enchantment, the item enchantment and the permanent
+   unit enchantment as four disjuncts (131:0x9BB63/0x9BB82/0x9BBA1/0x9BBCE) and merges nothing. One
+   calc key for these is a calculator convenience, not the record shape.
+3. *A condition flag gating a normalisation.* $0059FBD0 tests `EncUndead` and rewrites race,
+   Fantastic, three immunities, upkeep and healing — it derives no Undead ability bit; DOS gates the
+   same on `UM_UNDEAD` (com1:0x8F4B4). So the innate Undead control means "the flag is already on
+   the record", which F252.3 has to state rather than infer from a Death-race Fantastic identity.
+
+And "never clears" is false outside the grant position: Warlord's Hierophany strip clears Missile
+Immunity, Magic Immunity and Teleporting at `regionD`, which the origin table already files.
+
+**A gap the ruling exposed.** The modern Immolation block sets `U.coldimmunity` alongside
+`U.immolation` ($005A00E7), and it is gated on `EncImmolation` — the *cast* — not on the ability
+field. So in CoM2/Warlord a marked Immolation grants Cold Immunity and an innate one does not. The
+DOS side has no such grant at all (`unitcalc.c` com1:0x8F5E7 sets `USA2_IMMOLATION` and nothing
+else). The calculator models neither: grepping `coldImmunity` finds Undead, Black Channels,
+Insulation and the Marionette book grant, and no Immolation site. It is a modern-only faithfulness
+gap and it is exactly the kind of thing the merged map hid, since before F252.2 there was no place
+to ask which Immolation a unit had.
+
+**Numbers.** Neither family folds two numbers on a unit. DOS keeps `battlefield_holy_bonus_max` /
+`battlefield_resist_prayer_max` per controller over every battlefield unit carrying the provider bit
+(`combat.c` 131:0x9AA1C, 131:0x9AA70) and the recompute adds the winner once (`unitcalc.c`
+131:0x900C5). Modern `BuildAuraTable` gates on the calculated field but reads
+`BaseUnits[i].HolyBonus`, and `AddtoAuraTable` retains only the higher value per owner/tile/type;
+the region-`e` pass applies the survivor. Note the provider is on its own tile, so its own value is
+one of the candidates — which is exactly why "provided" is not a bonus the unit gives itself but a
+candidate in the maximum it receives.
+
+**The measurement that settled the generalisation.** 218 defs, 202 calc keys; `holyBonus` and
+`resistanceToAll` are the only calc keys any two defs name with a numeric type. The seven multi-def
+keys inside one source (`missileImmunity`, `flameBlade`, `landLinking`, `discipline`, `destiny`,
+`mislead`, `blazingEyes`) are all bool or select. So the numeric contending arm had exactly two users
+and now has none. It halts instead.
+
+The review also caught two implementation slips worth remembering as a pattern: I had put the
+maximum in the *closure* rather than in the step body ("at position" has to mean inside `apply`),
+and I had reached for `parseInt(x) || 0` / `Math.max(0, x)` as "normalisation" — which is exactly the
+silent repair fail-loud forbids (1.5 became 1, `"3oops"` became 3, `-1` became 0). Both fixed: the
+candidates are validated as integers or absent, and `maxCandidate()` runs inside each `apply`.
+
+`holyBonus`/`resistanceToAll` were never seeded record fields (`SEEDED_NON_STAT_KEYS` does not list
+them) and nothing outside the two `getAbilityStatSteps` blocks reads them, which is why moving the
+maximum from the boundary to the step moved no number: 0 of 52,440 on `derivation_equivalence` and
+0 of 750 on a card-path probe over the halves.
+
+Their origin rows were already right and I nearly filed a second one by reflex: `template`/control is
+the ability def and `nonRecord`/"a stackmate provides the bonus" is the enchantment def. A received
+aura value is not on this unit's record, so there is no `buffs` write to give it. F252.1's close
+question 2 asked for a row; the answer is that the row exists and only needed labelling.
+
+## 2026-09-07 — F252.1: the two ability halves, and the DOS byte's received field
+
+The boundary. `deriveUnitStats` now takes `innateAbilities` (`ABILITY_DEFS` — built with) and
+`markedAbilities` (`ENCHANTMENT_DEFS` — the card marks) and puts them back together with
+`mergeAbilitySourceHalves` (`ability_gating.js`). The card produces genuine halves; a control-free
+probe still hands the merged `abilities` map and `splitAbilityCalcValuesBySource` derives the halves
+from the def lists.
+
+Why split-then-merge is value-preserving, checked arm by arm. `abilityUiDefs()` lists every ability
+def before every enchantment def, so the old single fold *is* innate-then-marked. Per
+`mergeAbilityCalcValue` arm: `bool` ORs (associative); the numeric default is `Math.max`
+(associative); `select` keeps the last non-default, which the marked half already holds if any;
+`numcheck` keeps the last non-null, same argument; `signed` takes the last write, which is the
+marked half's when it has one. `ABILITY_DEFS` (48) uses only `bool`, `num` and `numcheck` and no
+`signed`, and the nine dual-source calc keys agree on type across the two lists, so putting a dual
+key in *both* halves of a derived split is `merge(def, v, v) === v` in every case.
+
+The DOS byte. `dosSpecialAbilityValues` used to take a `received` value per consumer and fold it in.
+Provided-against-received *is* the innate/marked split, so the byte now states the provided side
+alone. That deleted `cardStateDosReceivedValue`, the `withReceived` parameter (the matrix already
+passed `false`) and the `received` consumer field — three fewer places holding one rule.
+
+What the acceptance numbers do and do not cover. `derivation_equivalence` builds merged-`abilities`
+inputs, so its 0-of-52,440 measures the split-then-merge arm and nothing of the card path. The card
+path needed its own probe: 1,162 fixtures × both sides × 13 forced DOS-byte/received variants =
+30,212 digests, 0 differing. Anyone repeating this kind of refactor should assume the digest is
+blind to `card_state.js` and build the second probe.
+
+The matrix still diverges. Both matrix paths combine the roster's innate map and the applied
+enchantments by plain override, where the card contends them. Reachable: Warlord Seraph has innate
+Holy Bonus 4, so a matrix "Received holy bonus" of 1 computes 1 there and 4 on the card. F252.1 left
+it alone deliberately — F269.2 makes `buildMatrixUnitStats` the card's own path.
+
+Census of the marked half by target phase (163 calc keys an enchantment def writes): `immunities` 2,
+`buffs` 49, `debuffs` 13, no permanent-record write 99. The F252.4/F252.5/F252.6 partition is
+therefore 2 / 49 / 13. `holyBonus` and `resistanceToAll` have no `buffs` row at all — their marked
+def is the *received* value, filed `template`+`nonRecord` — so F252.2's ruling, not F252.5, is where
+they land.
+
 ## 2026-09-07 — One fixture for modern Haste + Cause Fear, and what it measured
 
 `hasteIndependentFearSampleCoM2` (`Calculator/presets_ranged_and_haste.js`), the fixture F268.5
@@ -700,7 +1195,9 @@ post-run assertion that kept it honest. Three kinds of reader were separated:
   `deriveOutlanderReformRecord` no longer takes the snapshot. `b:battleArmor` is now composed and
   reported skipped rather than never built, the shape F244.3h gave `c:breakthrough:normal`.
 - **`sapiensLabelled` stays a pre-sequence read on purpose.** The Sapiens label is not a record
-  field; F263 makes it one and deletes `spiritLinkClearsPermanentFantastic` with it.
+  field yet. *(Superseded 2026-09-07 by F263, which makes it one. The prediction that
+  `spiritLinkClearsPermanentFantastic` goes with it was wrong — `buffs:spiritLink:level` reads it
+  too.)*
 
 **The ordering check.** The deleted assertion also caught a manifest ranking `buffs:destiny` ahead
 of `buffs:spiritLink:fantastic`. On the user's 2026-09-05 ruling it is **not** replaced by a rank
@@ -725,7 +1222,9 @@ assertion restored*; it never fired, which is the zero-movement proof for the re
 review is why.** The first draft read the running record at the `training` rank, which moved a
 further 1,200 **CoM 1** cases — combat summons and Construct Catapults losing their stated
 material, because `template:summonBranch` and `template:constructCatapult` write `fantastic` on
-the *calculated* record inside the `template` phase. The engine does the opposite: in
+the *calculated* record inside the `template` phase. *(That misfiling is what F267.1 fixed on
+2026-09-07: both are region-`a` steps now, and the `training` gates could read the running record
+after all — they were left on `identity.baseFantastic`, which is the same value.)* The engine does the opposite: in
 `BU_UnitLoadToBattle`, `Load_Battle_Unit` (`combat.c`, com1:0x75C8A) makes the quality read at
 com1:0x8F024 and returns **before** the combat-summon path reaches
 `bu->Abilities |= UA_FANTASTIC` at com1:0x75D6C, and the Catapult constructor writes
@@ -1605,8 +2104,9 @@ The real reason is that the tail's writes have no **target** in the calculator's
 
 ### Repo-wide staleness noticed and not fixed
 
-Dozens of comments across `Calculator/` cite `SPEC.md`, which does not exist — the contract is
-`CLAUDE.md`. It is one rename over ~50 sites and would have swamped this diff.
+Comments across `Calculator/` and `tools/unit_checks/` cite `SPEC.md`, which does not exist — the
+contract is `CLAUDE.md`. It is one rename over **81** sites (counted 2026-09-07) and would have
+swamped that diff, and every diff since.
 
 ## 2026-09-04 — F241: the touch-tooltip flake is F151's DOM dance, not a missed re-render
 

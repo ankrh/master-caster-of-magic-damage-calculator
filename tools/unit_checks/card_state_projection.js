@@ -112,10 +112,17 @@ function runCardStateProjectionChecks(ctx) {
   assertEqual(channels.fireBreath, null, 'a zero Fire Breath states no channel');
   assertEqual(channels.lightningBreath.strength, 2,
     "the projected Lightning Breath channel carries the state's strength");
-  assertEqual(armedInput.abilities.deathGaze, -2,
+  // The innate half: what the unit was built with. The modern special block and the ability
+  // controls are both innate statements, and since F252.1 the projection states them apart from
+  // the enchantment half rather than folded into one map.
+  assertEqual(armedInput.abilities, undefined,
+    'the projection states the two ability halves, not one merged map');
+  assertEqual(armedInput.innateAbilities.deathGaze, -2,
     'a ticked modern special value reaches the derivation input at its stated value');
-  assertEqual(armedInput.abilities.firstStrike, true,
+  assertEqual(armedInput.innateAbilities.firstStrike, true,
     'an ability control reaches the derivation input under its calc key');
+  assertEqual(armedInput.markedAbilities.firstStrike, undefined,
+    'an ability control does not reach the marked half');
   assertEqual(armedInput.atk, 9, 'the projection carries a card scalar through unchanged');
   // `magic` deliberately: the shared-slot type is taken from the Ranged selector only where that
   // selector names a projectile the DOS-shaped slot has no token for. A `missile` Ranged record
@@ -130,7 +137,7 @@ function runCardStateProjectionChecks(ctx) {
   // Not `undefined`: under a DOS version the nine-value block contributes nothing, and what
   // `deathGaze` holds instead comes from the shared special byte, which projects an unticked
   // consumer as `null`. The point of the assertion is that the modern block's -2 did not survive.
-  assertEqual(dosInput.abilities.deathGaze, null,
+  assertEqual(dosInput.innateAbilities.deathGaze, null,
     'the modern special block contributes nothing under a DOS version');
   assertEqual(dosInput.toHitMod, 0, 'a DOS projection carries the DOS To-Hit pair');
   assertEqual(dosInput.hitChance, undefined, 'a DOS projection states no modern hit chance');

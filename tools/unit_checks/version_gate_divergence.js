@@ -223,7 +223,10 @@ function runVersionGateDivergenceChecks(ctx) {
       // an ungated sibling legitimately keeps it active.
       const siblings = abilityUiDefs().filter(other => (other.calcKey || other.key) === calcKey);
       if (!siblings.every(other => gates.card(other, version))) continue;
-      const value = input.abilities[calcKey];
+      // Since F252.1 the projection states the two halves apart, so a def is looked up in the
+      // half its own source writes.
+      const half = def.source === 'ability' ? input.innateAbilities : input.markedAbilities;
+      const value = half[calcKey];
       assert(value === false || value === undefined || value === null
         || value === (def.type === 'select' ? def.options[0][0] : false),
         `a gated ${def.type} reaches the derivation input inactive (${version}|${calcKey}), `

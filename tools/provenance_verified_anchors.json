@@ -1,4 +1,5 @@
 {
+  "spiritLink:fantastic": "ed5f3a83e6643f78694426ecffb9693458ebdcbf2d5b12ae81b7dd3ecab326c7",
   "constructCatapult": "230107836d418ee52c54eac058bf1e26b43cac05a9f0ff8d16da69141cf1f876",
   "summonBranch": "05b0894fa8e67a2a97ad1e9a82e0cc21cc19def02fc3635662f41ef8328cd700",
   "combatSummoned": "4d25205350b36b1118ef1bf73fd04d05403be6bc35b770ef3d8917e92b8275ef",
@@ -17,8 +18,6 @@
   "noHealConversion": "a1bfc4e8468875821e4da5080e95d1ff31f90aea4ba884df530ce94b0b88fb1e",
   "raiseDead": "1fb61bb24d7b34b997326bd7df1672c27f2a12e9bee3df55a823dedff6970334",
   "spiritLink": "ce5c9420cf8ec0781f650f2d3c2e3048cc741460b707dc94b33a4ce9ed6fef4c",
-  "spiritLink:fantastic": "ed5f3a83e6643f78694426ecffb9693458ebdcbf2d5b12ae81b7dd3ecab326c7",
-  "spiritLink:level": "ed5f3a83e6643f78694426ecffb9693458ebdcbf2d5b12ae81b7dd3ecab326c7",
   "lavaSmelter:weaponImmunity": "6af1189944314963ded5158707fa4aff5c8795ba909ba9750cd1e82eba76343e",
   "lavaSmelter:missileImmunity": "71681d213d0a07def08db3bfce65ec751c600e3105465521403fb224a73c3690",
   "lavaSmelter:resistElementsAlias": "9bcee4bb42fdc4368b4d547a4a0e136fbc4c628efda6594329456f290b4da162",
@@ -37,6 +36,8 @@
   "armorQuality": "4cecdb7d66117ca4da16e6b9896548f0caac5374d089b36ab0e2a919fcb80e0c",
   "veterancy": "a3dc3bda4012321e757bbb762b87478cb866bb8b4899c40b53b8d71b4c84b6d2",
   "destiny:level": "7ca0f389d25a8c1aae80fe2a6a10754dea3de0ffc58f077b9e6d2c3acefcf768",
+  "spiritLink:sapiens": "ed5f3a83e6643f78694426ecffb9693458ebdcbf2d5b12ae81b7dd3ecab326c7",
+  "spiritLink:level": "ed5f3a83e6643f78694426ecffb9693458ebdcbf2d5b12ae81b7dd3ecab326c7",
   "rust:material": "ae4619583a79b7062a1cf3c2f9e37d7d84706367a1904382bba4d3736947ea7e",
   "altarOfTheMoon": "ab08a1f3a33087992e0eaa4c3d28d2ac3e813a4df7e9871b2e5869a27826132c",
   "militaryWorkshop": "794be051123974ee6f7c687c3006472e14c826e235df50f0650117e02722860c",

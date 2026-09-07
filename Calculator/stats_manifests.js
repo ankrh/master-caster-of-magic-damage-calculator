@@ -141,6 +141,10 @@ const CHAIN_MOM_1_31 = versionChain('mom_1.31', [
   // Bless joined them in F244.3g, when the owned Marionette's Life-ascension `EncBless` write made
   // `bless` a record field; its control is offered in every engine, so the step is too.
   'buffs:trueSight:cast', 'buffs:resistMagic:cast', 'buffs:haste:cast', 'buffs:bless:cast',
+  // Invisibility is the odd one among the cast writes: it is a dual-source calc key with a
+  // `template` row, and this is where the *marked* control's write lands now that the seed
+  // reads the innate half alone (F252.3).
+  'buffs:invisibility:cast',
   'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
   'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
   'debuffs:warpResist:cast', 'debuffs:mindStorm:cast',
@@ -177,6 +181,10 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
   // Bless joined them in F244.3g, when the owned Marionette's Life-ascension `EncBless` write made
   // `bless` a record field; its control is offered in every engine, so the step is too.
   'buffs:trueSight:cast', 'buffs:resistMagic:cast', 'buffs:haste:cast', 'buffs:bless:cast',
+  // Invisibility is the odd one among the cast writes: it is a dual-source calc key with a
+  // `template` row, and this is where the *marked* control's write lands now that the seed
+  // reads the innate half alone (F252.3).
+  'buffs:invisibility:cast',
   'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
   'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
   'debuffs:warpResist:cast', 'debuffs:mindStorm:cast',
@@ -200,9 +208,16 @@ const CHAIN_MOM_CP_1_60 = versionChain('mom_cp_1.60.00', [
 const CHAIN_COM_6_08 = versionChain('com_6.08', [
   // Template initialization and the construction patches that ride with it, then the
   // permanent-record cast writes (F203). `template:zombies` is gone: the Fantastic bit is the unit-type table's own
-  // `UA_FANTASTIC` at file com1:0x2AED2, which the roster already states.
+  // `UA_FANTASTIC` at file com1:0x2AED2, which the roster already states. Two construction patches
+  // are left here, and they are not the same kind of write: the Catapult's
+  // `_UNITS[si].mutations = UM_MAGIC_WEAPONS` (com1:0x8EEAF) really is persistent, while the
+  // Zombies patch writes `bu->toblock` (com1:0x8EE31) on the battle unit and keeps this rank on
+  // its own R6.1b evidence rather than because the destination is the permanent record. What did
+  // move out of the phase in F267.1 is the pair of *identity* conversions: the Construct Catapult
+  // one and the combat-summon branch write the battle unit after `Load_Battle_Unit` returns, and
+  // are ranked in region `a` below.
   'template:stat:base', 'template:baseThresholds', 'template:zombies:toBlock',
-  'template:constructCatapult', 'template:constructCatapult:weapon', 'template:summonBranch',
+  'template:constructCatapult:weapon',
   'training:weaponQuality', 'training:armorQuality', 'training:veterancy',
   // The immunities the card marks, ahead of every phase that tests them. Order within the
   // phase is this list's own ruling: the two writes touch disjoint fields.
@@ -211,12 +226,42 @@ const CHAIN_COM_6_08 = versionChain('com_6.08', [
   // immunity refuses is never made, rather than made and stripped (F244.3b). Order within a phase
   // is this list's own ruling — the writes touch disjoint fields, and no source ranks them.
   'buffs:trueSight:cast', 'buffs:resistMagic:cast', 'buffs:haste:cast', 'buffs:bless:cast',
+  // Invisibility is the odd one among the cast writes: it is a dual-source calc key with a
+  // `template` row, and this is where the *marked* control's write lands now that the seed
+  // reads the innate half alone (F252.3).
+  'buffs:invisibility:cast',
   // Spell Lock is the three CoM-era engines'; `spellLock` became a record field in F244.3f.
   'buffs:spellLock:cast',
   'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
   'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
   'debuffs:warpResist:cast', 'debuffs:mindStorm:cast',
   'a:baseCopy',
+  // The two combat-summon identity conversions, at the head of the calculated region as the
+  // modern chains rank theirs. `bu->race` (com1:0x75D56/0x75D65) and `bu->Abilities |=
+  // UA_FANTASTIC` (com1:0x75D6C) are written on the battle unit in `BU_UnitLoadToBattle` and
+  // never reach `_UNITS[]`, so they stand behind `a:baseCopy` and cannot move the permanent
+  // record the copy publishes. Their two `when`s are disjoint, so their order here is inert.
+  //
+  // **This rank is a named deviation, not the engine's position, and it is deliberately
+  // temporary.** CoM 1 reaches those three stores between two execution stages, and region `c`
+  // draws from both:
+  //   - `Load_Battle_Unit` (com1:0x75C8A..0x8F30A) applies the constructor effects, including
+  //     Survival Instinct at com1:0x8F277..0x8F29E, and returns **before** the stores. Its
+  //     `race >= RACE_FIRST_FANTASTIC` gate therefore cannot see the conversion: summoned High Men
+  //     Paladins meet that gate while still High Men.
+  //   - `BU_Apply_Battlefield_Effects` runs **after** the stores. Its second `BU_Apply_Specials`
+  //     call, com1:0x90743, is passed `battleEnchantments & ~persistentEnchantments` with the
+  //     mutations byte zero — it does not repeat the constructor's effects — so Darkness, Supreme
+  //     Light and the node effects do see the converted realm.
+  // The faithful rank is therefore *inside* region `c`, on that boundary: behind the
+  // `Load_Battle_Unit` steps and ahead of the `BU_Apply_Battlefield_Effects` ones. Head-of-`a`
+  // is neither that nor the end-of-`c` alternative; it is the rank that reproduces the behaviour
+  // the `template` misfiling had, so that F267.1 stays a reclassification and moves no number
+  // (measured: 0 of 52,440 and 0 of 7,360; end-of-`c` would move 101 census cases, and the
+  // boundary rank a subset of those). Splitting region `c` at the routine boundary is a
+  // faithfulness change with its own numbers and its own fixtures, and is not F267.1's
+  // (F267.1, and its GPT review, which supplied com1:0x90743).
+  'a:constructCatapult', 'a:summonBranch',
   'a:holyBonus', 'a:resistanceToAll',
   'c:level', 'c:lucky', 'c:weapon',
   // CoM 1 calls `BU_Apply_Specials` at 0x8F0E8, before Chaos Surge, and True Sight is its third
@@ -260,6 +305,10 @@ const CHAIN_COM2_1_05_11 = versionChain('com2_1.05.11', [
   // ruling: the writes touch disjoint fields and no source ranks them (F244.3b).
   'buffs:trueSight:cast', 'buffs:resistMagic:cast', 'buffs:discipline:cast',
   'buffs:haste:cast', 'buffs:spellLock:cast', 'buffs:bless:cast',
+  // Invisibility is the odd one among the cast writes: it is a dual-source calc key with a
+  // `template` row, and this is where the *marked* control's write lands now that the seed
+  // reads the innate half alone (F252.3).
+  'buffs:invisibility:cast',
   'buffs:destiny', 'buffs:destiny:supernatural', 'buffs:destiny:level',
   'debuffs:weakness:cast', 'debuffs:blackSleep:cast', 'debuffs:shatter:cast',
   'debuffs:vertigo:cast', 'debuffs:warpAttack:cast', 'debuffs:warpDefense:cast',
@@ -360,12 +409,18 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   // `training:temporalDrive` has made `haste` a record field (F244.3e).
   'buffs:rebuild:cast', 'buffs:trueSight:cast', 'buffs:resistMagic:cast',
   'buffs:discipline:cast', 'buffs:haste:cast', 'buffs:spellLock:cast', 'buffs:bless:cast',
-  // Spirit Link's three permanent writes, in the `SSpiritLink` block's own order: the +2
-  // Resistance, then the `IF BASEFANTASTIC(TU)` pair. The engine evaluates that gate once, so
-  // the third step takes it latched rather than re-reading the record the second one just
-  // cleared; `stats_sequence.js` says so at `buffs:spiritLink:level` (F245).
+  // Invisibility is the odd one among the cast writes: it is a dual-source calc key with a
+  // `template` row, and this is where the *marked* control's write lands now that the seed
+  // reads the innate half alone (F252.3).
+  'buffs:invisibility:cast',
+  // Spirit Link's four permanent writes, in the `SSpiritLink` block's own order: the +2
+  // Resistance, then the `IF BASEFANTASTIC(TU)` trio — the Sapiens label, the Fantastic clear,
+  // the level reset. The engine evaluates that gate once. The label stands ahead of the clear and
+  // so re-reads the record itself (F263); the level reset stands behind it and takes the gate
+  // latched rather than re-reading the record the clear just falsified; `stats_sequence.js` says
+  // so at `buffs:spiritLink:level` (F245).
   'buffs:rebuild', 'buffs:spiritLink',
-  'buffs:spiritLink:fantastic', 'buffs:spiritLink:level',
+  'buffs:spiritLink:sapiens', 'buffs:spiritLink:fantastic', 'buffs:spiritLink:level',
   'buffs:destiny', 'buffs:destiny:supernatural', 'buffs:destiny:level',
   // Then the detrimental ones. Rust's material clear, the nine curse writes and Destiny's writes
   // touch disjoint fields, so the phase ranks decide this order rather than any source. A curse

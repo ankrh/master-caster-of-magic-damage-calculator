@@ -292,8 +292,13 @@ function runDerivationStageChecks(ctx) {
   // which is a `ctx.base` reader: the loadout gate used to show it too and does not any more, its
   // `training` rank standing ahead of both writes (F262).
   // `SMultiLabel := 14` is not re-asserted away with the flag, so the reform's `NOTSAPIENS` gate
-  // still admits the unit. Read through the three Sapiens-gated reform states rather than off
-  // the record: without Spirit Link the same Destiny card needs the `sapiens` control.
+  // still admits the unit. Since F263 the label is a record field too — `buffs:spiritLink:sapiens`
+  // writes it and `outlanderSapiensAt` reads it off `ctx.base` beside the flag — so this is a
+  // **value** witness of a gate whose two terms are both record reads. `runSapiensLabelChecks`
+  // (`ability_origins.js`) is its structural counterpart, over the label's two writers and the
+  // block's own `IF BASEFANTASTIC(TU)`; this one is kept because it is the only assertion that
+  // takes the answer as a stat rather than as a step status, and it reaches the Sapiens tail
+  // through Radio/Ballistics/Xenopsychology rather than through Bombs & Grenades.
   const reformCard = over => baseUnitInput({
     version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature', atk: 4, def: 4, res: 6,
     rtb: 6, rtbType: 'missile',

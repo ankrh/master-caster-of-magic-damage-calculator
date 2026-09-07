@@ -85,5 +85,8 @@
   "enabledMcpjsonServers": [
     "playwright"
   ],
-  "enableAllProjectMcpServers": true
+  "enableAllProjectMcpServers": true,
+  "worktree": {
+    "bgIsolation": "none"
+  }
 }

@@ -81,19 +81,16 @@ const ORIGIN_PHASE = Object.freeze({
   nonRecord: null, derived: null,
 });
 
-// **`immunities` is scaffolding, and it is the one origin that does not name an engine writer.**
-// The CLAUDE.md phase table says the immunities the card marks are written to the permanent record
-// before anything tests them, and the user's ruling of 2026-09-02 puts that write in this phase.
-// The calculator cannot say *which* writer put a marked immunity there, because the card's innate
-// control and its enchantment control are merged into one calc key before the derivation sees them
-// (`mergeAbilityCalcValue`, `combat_abilities.js`), so a row here means "the card marks it, and the
-// calculator writes it at the phase the contract names" rather than "a cast wrote it".
-//
-// It retires when the derivation input can tell the two apart: at that point each key's row goes
-// back to `template` for the innate control and `buffs` for the enchantment one, and the step
-// splits with it. Until then a key with a row here is **not seeded** — the phase write is its only
-// source, which is what makes the write positioned rather than hoisted (F244.3b, Option C).
-const MARKED_IMMUNITY_ORIGIN = 'immunities';
+// `immunities` is an ordinary marked origin. It was scaffolding until F252.4: the rows here used
+// to double as a **seed suppression** — `abilityOriginIsMarkedImmunity` told
+// `seedNonStatRecordFields` to leave the key at `false` however template-capable it was, because
+// the phase write read the *merged* calc key and would otherwise have restated a bit the seed had
+// already hoisted. That token is retired. The two rows now mean exactly what a `buffs` or
+// `debuffs` row means: the card **marks** the enchantment, and the marked half alone is what the
+// step reads, at the phase the CLAUDE.md table names for a marked immunity (the user's ruling of
+// 2026-09-02). The innate control seeds at `template` like every other ability control, and the
+// two meet as the idempotent OR at the grant position F252.2 ruled on (shape 1: same field, set
+// onto the template's bit).
 
 // The pre-sequence transforms that still write the ability map (`stats.js`, `stats_identity.js`).
 // Named here so a producer cannot invent one. The F244.1 census listed seven; `markIntrinsicLucky`
@@ -569,6 +566,12 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'buffs', versions: SCOPE_ALL,
       producers: ['cast:Holy Armor writes its flag on the unit'] },
   ],
+  // The provided/received pair. These two rows are not one key written twice: the `template` row
+  // is the *ability* control — the unit's own record field, `BaseUnits[i].HolyBonus` — and the
+  // `nonRecord` row is the *enchantment* control, which states what a stackmate provides and is
+  // never on this unit's record at all. So the marked half owes no `buffs` row and F252.5 gave it
+  // none: the value reaches its step through `receivedAbilityValues`
+  // (`ability_gating.js`) and the maximum is taken at the step's own position (F252.2).
   holyBonus: [
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
@@ -613,10 +616,15 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       producers: ['cast:EncInsulation on the unit'] },
   ],
   invisibility: [
+    // The two rows are the two halves of one dual-source key (F252.2, shape 1: the cast sets the
+    // same field the template's bit occupies). Since F252.3 the `template` row is the **innate**
+    // control alone — the seed reads the innate half — and the marked control's write is the
+    // positioned `buffs:invisibility:cast` step below, which is what keeps the OR at the grant
+    // position rather than at the input boundary.
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'buffs', versions: SCOPE_ALL,
-      producers: ['cast:Invisibility writes its flag on the unit'] },
+      producers: ['step:buffs:invisibility:cast'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
       producers: ['step:b:marionette:ascension:invisibility'] },
   ],
@@ -726,6 +734,12 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       producers: ['input:the training city held a Ludus Agoge'] },
   ],
   magicImmunity: [
+    // Dual-source, and the two halves are two rows (F252.2, shape 1; F252.4). The `template` row
+    // is the **innate** control, which the seed reads; the `immunities` row is the enchantment
+    // control, whose write is the positioned step below reading the marked half alone. The
+    // `training` row is Sancta Basilica's Paladin grant, which is still a pre-sequence transform
+    // and reaches the record through the seed's transform carry rather than a step of its own —
+    // the same F244-family debt `lucky` carries.
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'immunities', versions: SCOPE_ALL,
@@ -824,6 +838,9 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       producers: ['cast:Mislead / Liability writes its flag on the unit'] },
   ],
   missileImmunity: [
+    // Dual-source with **three** marked contributors — the Missile Immunity enchantment is
+    // Guardian Wind, and Warlord adds Hillfort — all folded within the marked half before the
+    // `immunities` step reads it. The `template` row is the innate control alone (F252.4).
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'immunities', versions: SCOPE_ALL,
@@ -987,6 +1004,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'regionB', versions: SCOPE_WARLORD,
       producers: ['step:b:marionette:books:resistMagic'] },
   ],
+  // The other half of the provided/received pair; see `holyBonus` above for why the marked
+  // control is the `nonRecord` row and owes no `buffs` row (F252.2).
   resistanceToAll: [
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
@@ -1038,6 +1057,12 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   sapiens: [
     { origin: 'template', versions: SCOPE_WARLORD,
       producers: ['control'] },
+    // Spirit Link's `SETSTAT(TU,SMultiLabel,1,14)`, the cast's permanent write of the Sapiens
+    // label under the same `IF BASEFANTASTIC(TU)` as its Fantastic clear (F263). The label is a
+    // record field since then, so the `NOTSAPIENS` gate reads it off `ctx.base` rather than off a
+    // pre-sequence term.
+    { origin: 'buffs', versions: SCOPE_WARLORD,
+      producers: ['step:buffs:spiritLink:sapiens'] },
   ],
   shadowStrike: [
     { origin: 'buffs', versions: SCOPE_WARLORD,
@@ -1117,6 +1142,9 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       producers: ['input:the owner holds the Tactician retort'] },
   ],
   teleporting: [
+    // The innate row is the same declaration `undead`'s is — a condition flag the record is
+    // *declared* to carry, not an ability bit anything derives (`INNATE_CONDITION_FLAG_KEYS`,
+    // `ability_gating.js`; F252.3).
     { origin: 'template', versions: SCOPE_MODERN,
       producers: ['control'] },
     { origin: 'buffs', versions: SCOPE_MODERN,
@@ -1144,6 +1172,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       producers: ['step:b:eyeOfHeaven'] },
   ],
   undead: [
+    // The innate row is a **declaration**, not a derivation: `undead` is a condition flag gating a
+    // normalisation and no engine derives an Undead ability bit from it, so ticking the innate
+    // control declares that the permanent record already carries `EncUndead` / the `UM_UNDEAD`
+    // mutation. `INNATE_CONDITION_FLAG_KEYS` (`ability_gating.js`) is where that is stated in
+    // full (F252.3). Neither row is a record field yet, so neither takes a positioned write here.
     { origin: 'template', versions: SCOPE_ALL,
       producers: ['control'] },
     { origin: 'buffs', versions: SCOPE_ALL,
@@ -1257,10 +1290,19 @@ function abilityOriginIsTemplate(key, version) {
     .some(row => row.origin === 'template' && row.versions.includes(version));
 }
 
-// True where the key is a marked immunity this version writes in the `immunities` phase. Such a key
-// is never seeded, however template-capable it also is: the phase write is its only source, which
-// is what the ruling of 2026-09-02 asks for and what keeps the write positioned (F244.3b).
-function abilityOriginIsMarkedImmunity(key, version) {
-  return abilityOriginRows(key)
-    .some(row => row.origin === MARKED_IMMUNITY_ORIGIN && row.versions.includes(version));
+// The origins a **marked** control's write takes: the card marks the enchantment or condition and
+// the write lands in one of the three marked phases (`CLAUDE.md`, the phase table).
+const MARKED_WRITE_ORIGINS = Object.freeze(['immunities', 'buffs', 'debuffs']);
+
+// True where a marked write of this key is a **positioned step** in this version rather than a
+// bare mention. `seedNonStatRecordFields` asks it (F252.3): the seed carries the innate half, so a
+// key the marked half also contributes to must have somewhere else to land, or the mark would be
+// dropped in silence. A row whose producers are all `step:` is that somewhere; a `cast:` producer
+// is a mention of an engine write no step makes, which is exactly the case the seed may not
+// swallow.
+function abilityMarkedWriteIsPositioned(key, version) {
+  return abilityOriginRows(key).some(row => MARKED_WRITE_ORIGINS.includes(row.origin)
+    && row.versions.includes(version)
+    && row.producers.length > 0
+    && row.producers.every(producer => producer.startsWith('step:')));
 }

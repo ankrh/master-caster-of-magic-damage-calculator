@@ -10,22 +10,29 @@ function hasAbil(ab, key) { return !!(ab && ab[key]); }
 function abilVal(ab, key, def) { return (ab && ab[key] != null) ? ab[key] : def; }
 function abilDefined(ab, key) { return ab != null && ab[key] != null; }
 
-// The write side of the same object. Several controls can name one `calcKey` — a unit's own
-// Holy Bonus and the one it receives, Guardian Wind and Hillfort both granting Missile
-// Immunity — and how two sources of one effect combine is an engine rule, not marshalling.
+// The write side of the same object, folding **within one source**: several controls of one
+// list can name one `calcKey` — Guardian Wind and Hillfort both granting Missile Immunity — and
+// how two grants of one effect combine is an engine rule, not marshalling.
 //
-// Two numeric providers contend by **maximum**, and the winner applies once. The DOS builds
-// scan the battlefield keeping a per-player maximum of each provider's shared value byte for
-// Holy Bonus and Resistance to All, then the recompute adds that one number; CoM2/Warlord's
-// aura table merges a new source into an existing record when tile, owner and type match and
-// retains only the higher value, which is the helptext's highest-source-only language.
+// A boolean is a record flag, and both engine families combine the two grants with the bitwise
+// set the flag derivation literally is: `if (ench & UE_GUARDIAN_WIND) bu->Attribs_1 |=
+// USA_IMMUNITY_MISSILES` (`unitcalc.c`, com1:0x8F51A) and `if U.EnchantmentFlags[EncGuardianWind]
+// then U.missileImmunity := True` (`Units.RecalculateUnits.pas` $0059FD93). Neither ever clears
+// the bit, so a grant onto a unit that already carries it is idempotent and the two OR rather
+// than stack. The remaining arms are what a single source needs from a fold: a `select` keeps
+// whichever source left its default behind, a `numcheck` keeps whichever supplied a value
+// (`null` and `0` stay distinct states), and a `signed` number takes the later write, its sign
+// being a direction rather than a magnitude to maximize.
 //
-// A boolean is a record flag, so a second grant sets a bit the unit may already carry — the
-// same shape as Holy Arms granting Holy Weapon to a unit that may already have it — and the
-// two OR rather than stack. The remaining arms are what a single source needs from a fold: a
-// `select` keeps whichever source left its default behind, a `numcheck` keeps whichever
-// supplied a value (`null` and `0` stay distinct states), and a `signed` number takes the
-// later write, its sign being a direction rather than a magnitude to maximize.
+// **A numeric key does not fold here (F252.2).** Neither engine ever combines two numbers on one
+// unit at input: the DOS builds keep a per-player *maximum* of each provider's shared value byte
+// and the recompute adds that one winner (`combat.c` 131:0x9AA1C, `unitcalc.c` 131:0x900C5), and
+// CoM2/Warlord's `AddtoAuraTable` retains only the higher value per owner/type before the aura
+// pass adds it once ($005976CC). The maximum is therefore taken at the position the sum is made,
+// not at the boundary the values arrive on, and the only calc keys any two defs name numerically
+// are the provided/received pair `holyBonus` and `resistanceToAll`, which
+// `PROVIDED_RECEIVED_CALC_KEYS` (`ability_gating.js`) keeps apart for exactly that reason. A
+// second numeric value here would be a fold the engine does not make, so it halts.
 // PROVENANCE[abilityCalcKeyMerge]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:19:2479e7f72df0edd5cef33c89 | Reference docs/Caster binary/Units.RecalculateUnits.pas@span:14:3580d32230eb923ea4a5b467 | Reference docs/DOS reconstructed/unitcalc.c@span:5:a4af7b8e027f6d6b80cf20d1
 function mergeAbilityCalcValue(def, currentValue, nextValue) {
   if (def.type === 'bool') return !!currentValue || !!nextValue;
@@ -35,7 +42,14 @@ function mergeAbilityCalcValue(def, currentValue, nextValue) {
   }
   if (def.type === 'numcheck') return nextValue != null ? nextValue : (currentValue === undefined ? null : currentValue);
   if (def.signed) return nextValue || 0;
-  return Math.max(currentValue === undefined ? 0 : currentValue, nextValue || 0);
+  if (currentValue !== undefined) {
+    throw new Error(`mergeAbilityCalcValue: calc key '${def.calcKey || def.key}' was given a `
+      + `second numeric value (${JSON.stringify(currentValue)} then ${JSON.stringify(nextValue)}). `
+      + 'Two numbers for one key are two engine sources, and neither engine family folds them at '
+      + 'input: it keeps the maximum and adds the winner once at the position of the sum. Take '
+      + 'the maximum at that step instead (F252.2).');
+  }
+  return Math.max(0, nextValue || 0);
 }
 
 // Compatibility 10%-100% To-Hit clamp for isolated calculations such as Energy Cannon.
@@ -704,14 +718,42 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   // `armorclad`, `powerEngine`, `magitekScience`, `militaryDrilling` and `temporalEngineering` —
   // and the research states read outside that function.
   const outlanderReform = identityPredicates.outlanderReform || {};
+  // What a stackmate provides. The provided/received pair is two quantities sharing one calc key,
+  // so the boundary keeps them apart and the *candidates* are collected here while the comparison
+  // between them is made inside the step, at the position each engine makes it
+  // (`ability_gating.js`, `PROVIDED_RECEIVED_CALC_KEYS`; F252.2).
+  const receivedAbilities = identityPredicates.receivedAbilities || {};
+  // A candidate is absent or an integer. An absent one is no provider at all and drops out; a
+  // value outside the domain stops the run naming the key, the side that supplied it and what was
+  // expected, rather than being truncated or floored into range (`CLAUDE.md`, *Architecture*:
+  // fail loud). Both engines carry these as signed record bytes, so a negative is in the domain —
+  // it simply never reaches a step, because every consumer gates on a positive maximum.
+  const auraCandidate = (value, key, side) => {
+    if (value === undefined || value === null) return null;
+    if (typeof value !== 'number' || !Number.isInteger(value)) {
+      throw new Error(`getAbilityStatSteps: '${key}' ${side} is ${JSON.stringify(value)}, which is `
+        + 'not an integer. Holy Bonus and Resistance to All are whole signed record values in '
+        + 'every engine; state an integer or state nothing.');
+    }
+    return value;
+  };
+  const providedAndReceived = key => [
+    auraCandidate(abilVal(abilities, key, undefined), key, 'as the unit provides it'),
+    auraCandidate(abilVal(receivedAbilities, key, undefined), key, 'as a stackmate provides it'),
+  ].filter(value => value !== null);
+  // The comparison itself, called from inside a step's `apply`. With no candidate there is no
+  // provider and the sum takes nothing.
+  const maxCandidate = candidates => (candidates.length ? Math.max(...candidates) : 0);
 
   // Holy Bonus: +X to melee attack, defense, resistance.
   // CoM v6.05+ and CoM2: also +X to ranged attack.
   //
   // CoM2/Warlord run it as **aura type 1 in region `e`**, after `d` and after the Warps — not
   // in `a`, where the pre-map judgment put it (CoM2 analysis, *The aura pass*).
-  // The aura table merges sources by maximum rather than summing them, which the calculator's
-  // single numeric input already expresses. Both attack writes are gated on the **permanent**
+  // The aura table merges sources by maximum rather than summing them, and since F252.2 the two
+  // sources reach here as two values — the unit's own Holy Bonus and the one it receives — with
+  // the maximum taken at this position rather than folded at the input boundary. Both attack
+  // writes are gated on the **permanent**
   // record — `if B.attack > 0` and `if B.ranged > 0` (Units.RecalculateUnits.pas:2530,2535) —
   // and neither tests a type: the ranged half asks only whether the permanent record's Ranged
   // field carries strength, which is the `persistentRanged` gate. It reaches that one field, so
@@ -720,15 +762,20 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   //
   // MoM and CoM 1 keep phase a: intrinsic unit ability, no CAS implementation, and no aura
   // pass in either DOS recompute.
-  const hb = abilVal(abilities, 'holyBonus', 0);
+  const holyBonusCandidates = providedAndReceived('holyBonus');
+  const hb = maxCandidate(holyBonusCandidates);
   if (hb > 0) {
     const isCoM2 = version && version.startsWith('com2_');
     // PROVENANCE[holyBonus]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:17:be00bc2f90338549d6e09741 | Reference docs/DOS reconstructed/unitcalc.c@span:24:355495d2e88ef940a57b8515
     if (isCoM2) {
       abilityStep('holyBonus', 'e', { writes: ['atk', 'def', 'res', ...attackWrites],
         apply: (u, ctx) => {
-          addToSlot(u, ctx, 'melee', hb); u.def += hb; u.res += hb;
-          addToSlot(u, ctx, 'persistentRanged', hb);
+          // The maximum between provided and received is taken *here*, at the aura pass, which
+          // is where `AddtoAuraTable` ($005973A4) has already discarded the loser and the
+          // receiving loop ($005A6827) adds the survivor once (F252.2).
+          const value = maxCandidate(holyBonusCandidates);
+          addToSlot(u, ctx, 'melee', value); u.def += value; u.res += value;
+          addToSlot(u, ctx, 'persistentRanged', value);
         } });
     } else if (isCoMPlus) {
       // CoM 1's ranged half is `if (bu->ranged > 0) bu->ranged += cl` (com1:0x900E8), a live
@@ -736,12 +783,18 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
       // strength. MoM and CP have no ranged half at all (131:0x900C5 writes melee alone).
       abilityStep('holyBonus', 'a', { writes: ['atk', 'def', 'res', ...rtbWrites],
         apply: (u, ctx) => {
-          addToSlot(u, ctx, 'melee', hb); u.def += hb; u.res += hb;
-          addToSlot(u, ctx, 'rangedStrength', hb);
+          // The per-controller battlefield maximum (131:0x9AA1C) is what the recompute adds, so
+          // the comparison belongs at this step and not at the input boundary (F252.2).
+          const value = maxCandidate(holyBonusCandidates);
+          addToSlot(u, ctx, 'melee', value); u.def += value; u.res += value;
+          addToSlot(u, ctx, 'rangedStrength', value);
         } });
     } else {
       abilityStep('holyBonus', 'a', { writes: ['atk', 'def', 'res'],
-        apply: (u, ctx) => { addToSlot(u, ctx, 'melee', hb); u.def += hb; u.res += hb; } });
+        apply: (u, ctx) => {
+          const value = maxCandidate(holyBonusCandidates);
+          addToSlot(u, ctx, 'melee', value); u.def += value; u.res += value;
+        } });
     }
   }
 
@@ -784,16 +837,24 @@ function getAbilityStatSteps(abilities, version, identityPredicates = {}) {
   }
 
   // Aura type 3 is shared by Resistance to All and Prayermaster. BuildAuraTable keeps the
-  // maximum per owner/type, so the two sources compete rather than stack.
-  const rta = abilVal(abilities, 'resistanceToAll', 0);
-  const prayermasterAura = isModern ? Math.max(rta, auraValue('prayermasterAura')) : 0;
+  // maximum per owner/type, so the sources compete rather than stack — and that is now three
+  // candidates in one maximum, not two: the unit's own Resistance to All, the one it receives
+  // from a stackmate, and Prayermaster (F252.2).
+  const rtaCandidates = providedAndReceived('resistanceToAll');
+  const rta = maxCandidate(rtaCandidates);
+  // Aura type 3's candidate list: what the unit provides, what a stackmate provides, and
+  // Prayermaster. One maximum over the three, taken at the step below.
+  const auraType3Candidates = isModern
+    ? [...rtaCandidates, auraValue('prayermasterAura')] : [];
+  const prayermasterAura = maxCandidate(auraType3Candidates);
   if (prayermasterAura > 0) {
     // PROVENANCE[resistanceToAll]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Units.RecalculateUnits.pas@span:34:77eb7e2f668ac3b092fa3b7d | Reference docs/DOS reconstructed/unitcalc.c@span:24:355495d2e88ef940a57b8515
     abilityStep('resistanceToAll', 'e', {
       sourceId: 'prayermasterAura', sourceLabel: 'Prayermaster / Resistance to All',
-      writes: ['res'], apply: u => { u.res += prayermasterAura; } });
+      writes: ['res'], apply: u => { u.res += maxCandidate(auraType3Candidates); } });
   } else if (rta > 0) {
-    abilityStep('resistanceToAll', 'a', { writes: ['res'], apply: u => { u.res += rta; } });
+    abilityStep('resistanceToAll', 'a', {
+      writes: ['res'], apply: u => { u.res += maxCandidate(rtaCandidates); } });
   }
 
   const divineBarrierAura = isModern ? auraValue('divineBarrierAura') : 0;

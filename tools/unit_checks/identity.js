@@ -22,6 +22,13 @@ const TOKEN_REALM_RACES = Object.freeze({
 });
 const TOKEN_RACES = Object.freeze(Object.values(TOKEN_REALM_RACES));
 
+// The phases that write the **permanent** record, i.e. the ones `a:baseCopy` stands behind.
+// `STEP_PHASES` (`Calculator/steps.js`) is the ordered list; this is the prefix of it before the
+// recalculation regions, and it is the split `a:baseCopy` exists to mark.
+const PERMANENT_RECORD_PHASES = new Set([
+  'template', 'training', 'immunities', 'buffs', 'debuffs',
+]);
+
 function unitTypeTokenAgreesWithIdentity(token, identity) {
   if (token === 'hero') return !!identity.isHero && !identity.fantastic;
   if (token.startsWith('fantastic_')) {
@@ -109,6 +116,94 @@ function runIdentityProjectionChecks(ctx) {
           `${version}/${control}: the projected unit type agrees with the live identity `
           + `(${result.unitType} vs race ${JSON.stringify(result.identity.race)}, `
           + `fantastic ${result.identity.fantastic})`);
+      }
+    }
+  }
+}
+
+// F267.1: `u.fantastic` at `template` rank is the **permanent** flag, in all five versions.
+//
+// This is the invariant F267 is built on — it is what lets `identity.baseFantastic` be replaced by
+// the record — and until F267.1 it was false in exactly one build. CoM 1's Construct Catapult and
+// combat-summon conversions sat in the `template` phase while writing the *calculated* record:
+// `BU_UnitLoadToBattle` writes `bu->race` (com1:0x75D56/0x75D65) and
+// `bu->Abilities |= UA_FANTASTIC` (com1:0x75D6C) on the battle unit, after `Load_Battle_Unit`
+// (com1:0x75C8A) has imported the persistent record. Neither reaches `_UNITS[]`.
+//
+// Three assertions, and the third is the one a phase label alone cannot make:
+//
+//  1. **Source.** `identityConversionSteps` declares no `template`-phase step. A conversion is by
+//     definition a write of the calculated `race`/`fantastic` pair, so a `template` one is the
+//     defect this closed.
+//  2. **Execution, per version.** No entry of the `race` or `fantastic` modifier trace carries
+//     phase `template`, and the trace's seed value is the permanent one the identity states. The
+//     trace records applied steps only, so this observes the writes that actually happened.
+//  3. **The copy boundary, which is what the phase label stands for.** Every write of `race` or
+//     `fantastic` sits on the side of `a:baseCopy` its phase requires: a permanent-record phase
+//     (`template`, `training`, `immunities`, `buffs`, `debuffs`) ahead of the copy, every
+//     calculated region behind it. Without this the whole check passes with both conversions
+//     ranked *before* `a:baseCopy` — their values would then enter `ctx.base` and the split would
+//     be defeated while every phase label still read correctly. The reviewer demonstrated exactly
+//     that, in memory, against the first draft (F267.1 review, finding 2).
+//
+// The conversions' *survival* and their outputs are not asserted here: `runIdentityChecks` below
+// already derives a CoM 1 Construct Catapult, Centaurs and Paladins and pins each one's realm,
+// Fantastic flag and — for the Catapult — the Magic Weapons its persistent construction patch
+// gives it. Deleting either conversion fails those, so restating them here would be duplication
+// (F267.1 review, finding 3).
+function runTemplateRankPermanentIdentityChecks(ctx) {
+  const identitySource = calculatorSource('Calculator/stats_identity.js');
+  const conversionsStart = identitySource.indexOf('function identityConversionSteps(');
+  const conversions = identitySource.slice(conversionsStart,
+    identitySource.indexOf('\n}\n', conversionsStart));
+  assert(!/phase:\s*'template'/.test(conversions),
+    'No identity conversion is declared in the template phase: a conversion writes the '
+    + 'calculated record, and the template phase is the permanent one (F267.1)');
+
+  const shapes = [
+    ['plain', { isHero: false, baseRace: 'High Men', baseFantastic: false }],
+    ['baseFantastic', { isHero: false, baseRace: 'Chaos', baseFantastic: true }],
+    ['tpl37', { isHero: false, baseRace: 'Special', baseFantastic: false, templateId: 37 }],
+    ['tpl54', { isHero: false, baseRace: 'Nature', baseFantastic: false, templateId: 54 }],
+    ['tpl113', { isHero: false, baseRace: 'High Men', baseFantastic: false, templateId: 113 }],
+    ['catapult', { isHero: false, baseRace: 'Special', baseFantastic: false,
+      specialUnit: 'catapult' }],
+  ];
+  for (const version of evalInContext(ctx, 'ENGINE_VERSIONS')) {
+    for (const [shapeName, shape] of shapes) {
+      for (const combatSummoned of [false, true]) {
+        const result = ctx.deriveUnitStats(baseUnitInput({
+          version,
+          identity: ctx.createUnitIdentity({ version, ...shape }),
+          abilities: { combatSummoned },
+        }));
+        const label = `${version}/${shapeName}/combatSummoned=${combatSummoned}`;
+        for (const field of ['race', 'fantastic']) {
+          const trace = result.modifierTraces[field];
+          assertEqual(trace.entries.filter(entry => entry.phase === 'template').length, 0,
+            `${label}: no template-phase write of the calculated ${field} (F267.1)`);
+        }
+        assertEqual(result.modifierTraces.fantastic.base, !!shape.baseFantastic,
+          `${label}: the record's Fantastic flag at template rank is the permanent one`);
+        assertEqual(result.modifierTraces.race.base, shape.baseRace,
+          `${label}: the record's race at template rank is the permanent one`);
+
+        // 3. The copy boundary. `a:baseCopy` is the sequence's one boundary step and publishes
+        // `ctx.base`; a phase label means nothing unless the step actually stands on the side of
+        // the copy that label claims.
+        for (const field of ['race', 'fantastic']) {
+          const entries = result.modifierTraces[field].entries;
+          const copy = entries.find(entry => entry.boundary && entry.id === 'baseCopy');
+          assert(!!copy, `${label}: the ${field} trace crosses a:baseCopy`);
+          for (const entry of entries) {
+            if (entry === copy) continue;
+            const permanent = PERMANENT_RECORD_PHASES.has(entry.phase);
+            assert(permanent ? entry.order < copy.order : entry.order > copy.order,
+              `${label}: ${entry.phase}:${entry.id} writes ${field} on the wrong side of `
+              + `a:baseCopy — a ${entry.phase}-phase write must stand `
+              + `${permanent ? 'ahead of' : 'behind'} the copy (F267.1)`);
+          }
+        }
       }
     }
   }
@@ -253,6 +348,7 @@ function runCardStateIdentityChecks(ctx) {
 
 function runIdentityChecks(ctx) {
   runIdentityProjectionChecks(ctx);
+  runTemplateRankPermanentIdentityChecks(ctx);
   runCardStateIdentityChecks(ctx);
   const rosterSets = [
     ['mom_1.31', evalInContext(ctx, 'MOM_UNITS_DATA')],

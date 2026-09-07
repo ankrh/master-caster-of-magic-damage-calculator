@@ -117,10 +117,11 @@ const STEP_VERSION_SCOPES = Object.freeze({
   // --- template: the record the unit template ships, plus the construction patches ---
   'template:baseHitChance': SCOPE_MODERN,
   'template:baseThresholds': SCOPE_ALL,
-  'template:constructCatapult': SCOPE_COM1,
+  // Only the persistent half of CoM 1's Construct Catapult construction is a `template` step: the
+  // identity conversion moved to `a:constructCatapult` in F267.1, because it writes the battle
+  // unit rather than `_UNITS[]`.
   'template:constructCatapult:weapon': SCOPE_COM1,
   'template:stat:base': SCOPE_ALL,
-  'template:summonBranch': SCOPE_COM1,
   'template:zombies:toBlock': SCOPE_COM1,
   // --- training: permanent writes made when the city built the unit ---
   // The three persistent loadout/veterancy fields every engine reads back. Only Warlord's writer
@@ -172,18 +173,22 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'buffs:destiny:supernatural': SCOPE_MODERN,
   'buffs:destiny:level': SCOPE_MODERN,
   'buffs:rebuild': SCOPE_WARLORD,
-  // The cast's own write, ahead of the stat package it admits. These five are the
-  // `buffs`-origin record keys with no `template` row, so the seed cannot carry them
-  // (`permanentCastFlagSteps`, `stats_identity.js`). `discipline` carries a value rather than
-  // a flag and is scoped to the two builds whose control offers it.
+  // The cast's own write, ahead of the stat package it admits (`permanentCastFlagSteps`,
+  // `stats_identity.js`). Seven are `buffs`-origin record keys with no `template` row, so the seed
+  // cannot carry them; `discipline` carries a value rather than a flag and is scoped to the two
+  // builds whose control offers it. `invisibility` is the eighth and the odd one — it *has* a
+  // `template` row, because it is one of the nine dual-source calc keys, and F252.3 gave the
+  // marked half this rank when the seed stopped reading the merged map.
   'buffs:discipline:cast': SCOPE_MODERN,
   'buffs:haste:cast': SCOPE_ALL,
   'buffs:rebuild:cast': SCOPE_WARLORD,
   'buffs:spellLock:cast': SCOPE_COM_PLUS,
   'buffs:bless:cast': SCOPE_ALL,
+  'buffs:invisibility:cast': SCOPE_ALL,
   'buffs:resistMagic:cast': SCOPE_ALL,
   'buffs:trueSight:cast': SCOPE_ALL,
   'buffs:spiritLink': SCOPE_WARLORD,
+  'buffs:spiritLink:sapiens': SCOPE_WARLORD,
   'buffs:spiritLink:fantastic': SCOPE_WARLORD,
   'buffs:spiritLink:level': SCOPE_WARLORD,
   // --- debuffs: the same for curses and detrimental conditions ---
@@ -214,7 +219,10 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'a:callToArmsPaladins': SCOPE_MODERN,
   'a:chosen': SCOPE_MODERN,
   'a:combatSummoned': SCOPE_MODERN,
-  'a:constructCatapult': SCOPE_MODERN,
+  // CoM 1 shares this step since F267.1; base CoM2 and CoM 1 are its two firing versions, and
+  // the scope is wider than the firing set the same way `a:callToArmsPaladins`' is.
+  'a:constructCatapult': SCOPE_COM_PLUS,
+  'a:summonBranch': SCOPE_COM1,
   'a:chaosChannels:fireBreath:race': SCOPE_MODERN,
   'a:resistanceToAll': SCOPE_DOS,
   // --- b: precalc, in UnitCalcPre.CAS ---

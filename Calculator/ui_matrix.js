@@ -124,13 +124,21 @@ function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
   const level  = matrixSideSetting(prefix, 'level');
   const weapon = matrixSideSetting(prefix, 'weapon');
   const armor  = matrixSideSetting(prefix, 'armor');
+  // The matrix's own combination, unchanged: the applied enchantment replaces the roster
+  // record's value outright where the card's two halves contend under `mergeAbilityCalcValue`.
+  // The divergence is F269.2's to close, when this becomes the card's own path; F252.1 only
+  // states which half each key belongs to, which the def lists answer. The halves the split
+  // produces therefore reconstruct *membership* after the override has already discarded the
+  // losing value; they are not two independently stated source facts the way the card's are.
   const abilities = { ...parseAbilitiesFromUnit(unit), ...appliedEnchantments };
+  const { innateAbilities, markedAbilities } = splitAbilityCalcValuesBySource(abilities);
   const enemyPrefix = prefix === 'a' ? 'b' : 'a';
   const rangedMatrixAttacker = isRangedMatrixAttacker(matrixMode, prefix);
   return deriveUnitStats({
     prefix,
     version,
-    abilities,
+    innateAbilities,
+    markedAbilities,
     identity: createRosterUnitIdentity(version, unit),
     name: unit.name,
     level,
@@ -199,19 +207,23 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
     abilities[calcKey] = mergeAbilityCalcValue(abil, abilities[calcKey], val);
   }
   // The DOS block replaces the ability-row values for its consumers, same as on the main path.
-  Object.assign(abilities, dosSpecialValues(prefix, false));
-  // Merge matrix-state enchantments on top.
+  Object.assign(abilities, dosSpecialValues(prefix));
+  // Merge matrix-state enchantments on top. As in `buildMatrixUnitStats`, this replaces rather
+  // than contends; F269.2 closes that. `splitAbilityCalcValuesBySource` then says which half of
+  // the boundary each key states (F252.1).
   const stateEnch = matrixAppliedEnchantments(prefix);
   for (const k of Object.keys(stateEnch)) {
     abilities[k] = stateEnch[k];
   }
+  const { innateAbilities, markedAbilities } = splitAbilityCalcValuesBySource(abilities);
 
   const version = el('gameVersion').value;
   const identity = unitIdentityForDerivation(prefix, version);
   return deriveUnitStats({
     prefix,
     version,
-    abilities,
+    innateAbilities,
+    markedAbilities,
     identity,
     name: (unitIdentity[prefix] || {}).name,
     level: matrixSideSetting(prefix, 'level'),

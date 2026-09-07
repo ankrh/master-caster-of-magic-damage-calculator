@@ -219,6 +219,9 @@ const TEST_TREE = [
           'bombsGrenadesAfterCombatConversionWarlord',
           'bombsGrenadesReadsPermanentMeleeAfterRebuildWarlord',
           'bombsGrenadesSkipsApotheosisPermanentFantasticWarlord',
+          'bombsGrenadesSapiensLabelKeepsGrantThroughApotheosisWarlord',
+          'bombsGrenadesSpiritLinkLabelSurvivesApotheosisWarlord',
+          'bombsGrenadesSpiritLinkLabelNeedsBaseFantasticWarlord',
         ],
       },
       {

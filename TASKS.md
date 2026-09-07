@@ -13,114 +13,107 @@ subtask appears here before any subtask that depends on it.
 | 1 | **F269.1** | A Node check loads the nine `data-worker` sources alone and calls the matrix handler, so a core-to-core relocation fails mechanically instead of in prose. No number moves. |
 | 2 | **F269.2** | `buildMatrixUnitStats` becomes the card's own path, closing the DOS shared special byte divergence. Numbers move in DOS matrix runs. Needs F269.1, F261. |
 | 3 | **F269.3** | The three homes for a distribution mean get one home where scope allows. Needs F269.2. |
-| 4 | **F252.1** | The ability input boundary carries the source: innate and marked halves reach `deriveUnitStats` separately and it reconstructs today's merged map internally. Pure refactor; the digest must be 0. |
-| 5 | **F252.2** | The nine dual-source keys get a ruling; `holyBonus` and `resistanceToAll` are already ruled provided-vs-received, max'ed at position. Needs F252.1. |
-| 6 | **F252.3** | The innate half becomes `template` writes. Needs F252.1. |
-| 7 | **F252.4** | The marked immunities become `immunities` writes from the marked half, superseding F244.3b's merged-mark variant. Needs F252.3. |
-| 8 | **F252.5** | The marked buffs become `buffs` writes from the marked half. Needs F252.3. |
-| 9 | **F252.6** | The marked curses become `debuffs` writes from the marked half, rebinding the nine F244.3b built off the merged map. Needs F252.3. |
-| 10 | **F263** | The Sapiens label becomes a permanent record field with its own `buffs:spiritLink:sapiens` write, so the `NOTSAPIENS` gate is two record reads. Needs F252.3.
-| 11 | **F267.1** | CoM 1's `template:constructCatapult` and `template:summonBranch` are reclassified as calculated-record writes, so `u.fantastic` at `template` rank is the permanent flag in every version. Supersedes the F262 close-block follow-up.
-| 12 | **F267.2** | `unittype`, `herotype` and `ishero` become record fields seeded at `template` rank, matching `Typedec.pas:203/246/247`. Nothing reads them yet; the digest must be 0.
-| 13 | **F267.3** | `specialUnit` dissolves into `u.unittype = <id>` comparisons against a version-scoped id table, the shape the engine uses. Needs F267.2.
-| 14 | **F267.4** | The seed record is constructed where `abilities` is, not at `stats.js:2531`, and the eager base-identity scalars read it. This is the input-boundary fix. Needs F267.1, F267.2.
-| 15 | **F267.5** | The live `identity.race`/`identity.fantastic` pair is deleted; `identityAt`, the hover trace, `ui_matrix.js` and `combat_effects.js` read the record. Needs F267.4.
-| 16 | **F267.6** | `initializeUnitIdentity` retires: the constructors stay as the input-shape declaration and produce a seed fragment. `version` leaves the unit. Needs F267.3, F267.5.
-| 17 | **F261** | The matrix's version filter becomes `abilityVersionGated`, closing the six-control Warlord gap and retiring the `blur` special case. Needs F260.3. |
-| 18 | **F264** | Warlord's `SpellTypeGroup=16` target-selection dispatch is reconstructed, so the record a targeting gate reads stops being a ruling.
-| 19 | **F253.1** | `seedNonStatRecordFields` halts when a caller supplies a seeded key with no origin row in the active version, instead of erasing it. |
-| 20 | **F253.2** | The remaining erasure: a key whose origin row exists but whose step gate reads a different input key. Needs F252.1. |
-| 21 | **F259.1** | `derivation_equivalence` states which fields it does and does not vary, so a zero is self-qualifying. |
-| 22 | **F259.2** | The top-level input fields are varied, or the tool reports which gates its run cannot speak for. Needs F259.1. |
-| 23 | **F254.1** | Discipline's hero and Fantastic exclusion is read and stated for base CoM2 and for Warlord, which differ. |
-| 24 | **F254.2** | The exclusion is enforced at the positioned steps, with the Fantastic case stated by a probe. Needs F254.1. |
-| 25 | **F255.1** | `hasImplementationWrite` recognises `SETHEAB` and `SETOLENCHANTMENTFLAG`, so an honest narrow citation of either is not rejected as citing nothing. |
-| 26 | **F255.2** | The existing citations are re-audited for spans widened only to reach a recognised verb. Needs F255.1. |
-| 27 | **F256.1** | F147's "redundant second home" premise is corrected so `transmuteEquipment` is not deleted, and its three engine writer sites are recorded. |
-| 28 | **F256.2** | The Transmute Equipment cast becomes a modelled, version-scoped control with its `buffs` write. Needs F256.1. |
-| 29 | **F256.3** | The Caravanserai retrain and the Adamant/Orihalcon training write are modelled or declared out of scope. Needs F256.1. |
-| 30 | **F257.1** | The five retort-gated ascension writes are read and stated, and it is settled whether retorts are stated values or controls. |
-| 31 | **F257.2** | The input contract gains wizard retorts, with the `PROPOSALS.md` amendment, version gating, state round-trip and tooltips. Needs F257.1. |
-| 32 | **F257.3** | The five writes become positioned steps at their `UnitCalcPre.CAS` ranks, one per engine write. Needs F257.2. |
-| 33 | **F242** | Rust's cast strips all nine permanent flags the script clears, as `debuffs` steps after the roll. |
-| 34 | **F243** | Endurance, Lionheart and the figure-scaled grant read the post-building figure count. |
-| 35 | **F249** | CoM 1's Raise Dead race write moves from its deduced region-`c` rank to the creation-time `training` position the resurrection makes it at. |
-| 36 | **F250.1** | The nine curse flags and the two cast flags get a cited qualification and magic/non-magic classification out of the two `spells.ini` files. |
-| 37 | **F250.2** | The modern family's cast-flag writes are reconstructed or declared absent. Needs F250.1. |
-| 38 | **F250.3** | The DOS family's cast-flag writes are reconstructed or declared absent. Needs F250.1. |
-| 39 | **F250.4** | The Illusion Immunity branch and the four Warlord script-side writes get evidence or a declared gap. Needs F250.1. |
-| 40 | **F226.1** | Create Undead becomes a modelled, version-scoped flag with its own immunity gate. |
-| 41 | **F226.2** | Create Undead routes the damage it colours into the undead bucket, in both engine families. Needs F226.1. |
-| 42 | **F233** | The post-combat composition states a normalisation rule for overkill cells, where uncapped riders sum past the capped published total. |
-| 43 | **F229** | Exorcise's created-undead penalty loses the `fantastic_death` term no version's block tests. |
-| 44 | **F230** | Supreme Light stops testing the compact type token, so a Life-race hero passes the gate the binary passes it on. |
-| 45 | **F231** | `unit.raceNoHeal` gains a producer or goes, and Raise Dead stops healing naturally. |
-| 46 | **F232** | `UnitCalc.CAS:93-98`'s region-`d` Sanctify race re-write is read and either modelled or declared inapplicable. |
-| 47 | **F234** | The DOS Warp Reality exemption sheds the Fantastic term its block does not test, keeping a scalar race compare. |
-| 48 | **F235** | Whether Warlord Vampirism and Revenant set `EncUndead` for the classifier and the Eternal Night / True Light arms is settled against the scripts. |
-| 49 | **F251.1** | Each engine family's Elemental Armor / Resist Elements precedence moves out of the control shape and into the steps, so a both-marked unit is correct in all five versions. |
-| 50 | **F251.2** | The `elemArmor` select is replaced by two independent booleans, with a stored-state migration on the retired values. Needs F251.1. |
-| 51 | **F251.3** | Golem's intrinsic Resist Elements becomes an additive write, so a CoM 1 / CoM2 Golem under Elemental Armor takes both bonuses. Needs F251.2. |
-| 52 | **F236.1** | CoM 1's Holy-Arms/Heavenly-Light eligibility gate is stated as a rule, with its version scope and its custom-unit discriminator settled. |
-| 53 | **F236.2** | The gate is implemented so an ineligible unit cannot carry the granted effect. Needs F236.1. |
-| 54 | **F239** | The F209 and F200 stage 3 bodies stop naming retired `base:*` keys and the closed F210. |
-| 55 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
-| 56 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
-| 57 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
-| 58 | **F207** | The last published-value suppression that gates nothing goes. |
-| 59 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
-| 60 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
-| 61 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 62 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 63 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 64 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
-| 65 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
-| 66 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
-| 67 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
-| 68 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 69 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 70 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 71 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 72 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
-| 73 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
-| 74 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
-| 75 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
-| 76 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
-| 77 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
-| 78 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
-| 79 | **F153** | The modern gaze rider exclusion gets one home. |
-| 80 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
-| 81 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
-| 82 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
-| 83 | **F151** | A version's default-state map is built without resetting the live page. |
-| 84 | **F128** | The `Other` unit category no roster can fill goes. |
-| 85 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
-| 86 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
-| 87 | **F240** | The dead `traceBasePreparation` trace in `stats.js` goes. |
-| 88 | **F237** | The CAS audit attributes and gates a `/N` after a locator and a bare `:N` under a `@span` line or bare mention, keeping non-script numbers reported and ungated. |
-| 89 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
-| 90 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
-| 91 | **F238** | The Warlord source-order tables in `CoM2 binary - unit recalculation.md` are re-derived against 1.5.12.9 with label-bounded rows. |
-| 92 | **F41.1** | The DOS eight-threshold hero ladders. |
-| 93 | **F41.2** | The DOS template-ability formulas. |
-| 94 | **F41.3** | The modern nine-step hero table. |
-| 95 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
-| 96 | **M3** | The DOS Destruction path. Needs F41. |
-| 97 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
-| 98 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
-| 99 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
-| 100 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
-| 101 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
-| 102 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
-| 103 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
-| 104 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
-| 105 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
-| 106 | **H1** | Contact Seravy about the Blur bug. |
-| 107 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
-| 108 | **F265** | The ~60 `SPEC.md` references in `Calculator/*.js` name `CLAUDE.md`, the file that actually holds the content.
-| 109 | **F269** | The post-combat panel stops showing `Bonus HP / figure` / `Extra Hits / figure`; the quantity stays internal. |
-| 110 | **F270** | The tooltip system is overhauled. Low priority, deliberately late: nothing depends on it and the F268 pass left tooltip wording unasserted in the meantime. |
-**Provenance of the queue.** Items are named rather than numbered here, so a reorder does not rot this paragraph. **F260** and **F261** were filed 2026-09-05 out of the preset-suite cost measurement and moved above the backlog the same day so the rows below run against the cheaper suite; F261 is ordered after the refactor on the user’s ruling. **F252** and **F263** follow the F260 block on the user’s 2026-09-05 ruling that the ability-to-record migration comes straight after the DOM work. **F267** was filed 2026-09-05 out of the identity-object read and is sequenced beside F263; its first subtask absorbs the CoM 1 template-phase follow-up the F262 close proposed. **F264** and **F265** were filed 2026-09-05 out of the F244.3h and F246 close blocks. **F253** and **F259** were filed 2026-09-03 and 2026-09-04 out of the F244.3c close and the digest-blindness findings. **F254**, **F255**, **F256** and **F257** were filed 2026-09-04 out of the F244.3f and F244.3g reviews. Rust’s strip, the figure split and **F249** were approved 2026-09-03 from the No Heal merge. **F250**, the evidence debt the F244.3b writes declared, was filed 2026-09-03 on the user’s approval. Then the Create Undead damage-bucket item and the composition normalisation decision F225.1 surfaced, and below those the standalone and structural backlog, F251 and the F224 race and realm findings among it. F239–F248 were approved 2026-09-02 from the F210/F204 close. Closed: F244 (F244.1, F244.2, F244.3a–F244.3i), F245, F246, F247, F248, F258, F262, F260 (F260.1–F260.10, executed 2026-09-05/06; its tier promotions are an open `PROPOSALS.md` entry), F268 (F268.1–F268.7, executed 2026-09-06/07 on the user’s ruling that Playwright is retired for non-UI testing; `npm test` is now the Node default and `npm run test:all` is what a page change runs, with three further `PROPOSALS.md` entries open).
+| 4 | **F267.2** | `unittype`, `herotype` and `ishero` become record fields seeded at `template` rank, matching `Typedec.pas:203/246/247`. Nothing reads them yet; the digest must be 0.
+| 5 | **F267.3** | `specialUnit` dissolves into `u.unittype = <id>` comparisons against a version-scoped id table, the shape the engine uses. Needs F267.2.
+| 6 | **F267.4** | The seed record is constructed where `abilities` is, not at `stats.js:2531`, and the eager base-identity scalars read it. This is the input-boundary fix. Needs F267.2. (F267.1, its other prerequisite, closed 2026-09-07.)
+| 7 | **F267.5** | The live `identity.race`/`identity.fantastic` pair is deleted; `identityAt`, the hover trace, `ui_matrix.js` and `combat_effects.js` read the record. Needs F267.4.
+| 8 | **F267.6** | `initializeUnitIdentity` retires: the constructors stay as the input-shape declaration and produce a seed fragment. `version` leaves the unit. Needs F267.3, F267.5.
+| 9 | **F261** | The matrix's version filter becomes `abilityVersionGated`, closing the six-control Warlord gap and retiring the `blur` special case. Needs F260.3. |
+| 10 | **F264** | Warlord's `SpellTypeGroup=16` target-selection dispatch is reconstructed, so the record a targeting gate reads stops being a ruling.
+| 11 | **F253.1** | `seedNonStatRecordFields` halts when a caller supplies a seeded key with no origin row in the active version, instead of erasing it. |
+| 12 | **F253.2** | The remaining erasure: a key whose origin row exists but whose step gate reads a different input key. Needs F252.1. |
+| 13 | **F259.1** | `derivation_equivalence` states which fields it does and does not vary, so a zero is self-qualifying. |
+| 14 | **F259.2** | The top-level input fields are varied, or the tool reports which gates its run cannot speak for. Needs F259.1. |
+| 15 | **F254.1** | Discipline's hero and Fantastic exclusion is read and stated for base CoM2 and for Warlord, which differ. |
+| 16 | **F254.2** | The exclusion is enforced at the positioned steps, with the Fantastic case stated by a probe. Needs F254.1. |
+| 17 | **F255.1** | `hasImplementationWrite` recognises `SETHEAB` and `SETOLENCHANTMENTFLAG`, so an honest narrow citation of either is not rejected as citing nothing. |
+| 18 | **F255.2** | The existing citations are re-audited for spans widened only to reach a recognised verb. Needs F255.1. |
+| 19 | **F256.1** | F147's "redundant second home" premise is corrected so `transmuteEquipment` is not deleted, and its three engine writer sites are recorded. |
+| 20 | **F256.2** | The Transmute Equipment cast becomes a modelled, version-scoped control with its `buffs` write. Needs F256.1. |
+| 21 | **F256.3** | The Caravanserai retrain and the Adamant/Orihalcon training write are modelled or declared out of scope. Needs F256.1. |
+| 22 | **F257.1** | The five retort-gated ascension writes are read and stated, and it is settled whether retorts are stated values or controls. |
+| 23 | **F257.2** | The input contract gains wizard retorts, with the `PROPOSALS.md` amendment, version gating, state round-trip and tooltips. Needs F257.1. |
+| 24 | **F257.3** | The five writes become positioned steps at their `UnitCalcPre.CAS` ranks, one per engine write. Needs F257.2. |
+| 25 | **F242** | Rust's cast strips all nine permanent flags the script clears, as `debuffs` steps after the roll. |
+| 26 | **F243** | Endurance, Lionheart and the figure-scaled grant read the post-building figure count. |
+| 27 | **F249** | CoM 1's Raise Dead race write moves from its deduced region-`c` rank to the creation-time `training` position the resurrection makes it at. |
+| 28 | **F250.1** | The nine curse flags and the two cast flags get a cited qualification and magic/non-magic classification out of the two `spells.ini` files. |
+| 29 | **F250.2** | The modern family's cast-flag writes are reconstructed or declared absent. Needs F250.1. |
+| 30 | **F250.3** | The DOS family's cast-flag writes are reconstructed or declared absent. Needs F250.1. |
+| 31 | **F250.4** | The Illusion Immunity branch and the four Warlord script-side writes get evidence or a declared gap. Needs F250.1. |
+| 32 | **F226.1** | Create Undead becomes a modelled, version-scoped flag with its own immunity gate. |
+| 33 | **F226.2** | Create Undead routes the damage it colours into the undead bucket, in both engine families. Needs F226.1. |
+| 34 | **F233** | The post-combat composition states a normalisation rule for overkill cells, where uncapped riders sum past the capped published total. |
+| 35 | **F229** | Exorcise's created-undead penalty loses the `fantastic_death` term no version's block tests. |
+| 36 | **F230** | Supreme Light stops testing the compact type token, so a Life-race hero passes the gate the binary passes it on. |
+| 37 | **F231** | `unit.raceNoHeal` gains a producer or goes, and Raise Dead stops healing naturally. |
+| 38 | **F232** | `UnitCalc.CAS:93-98`'s region-`d` Sanctify race re-write is read and either modelled or declared inapplicable. |
+| 39 | **F234** | The DOS Warp Reality exemption sheds the Fantastic term its block does not test, keeping a scalar race compare. |
+| 40 | **F235** | Whether Warlord Vampirism and Revenant set `EncUndead` for the classifier and the Eternal Night / True Light arms is settled against the scripts. |
+| 41 | **F251.1** | Each engine family's Elemental Armor / Resist Elements precedence moves out of the control shape and into the steps, so a both-marked unit is correct in all five versions. |
+| 42 | **F251.2** | The `elemArmor` select is replaced by two independent booleans, with a stored-state migration on the retired values. Needs F251.1. |
+| 43 | **F251.3** | Golem's intrinsic Resist Elements becomes an additive write, so a CoM 1 / CoM2 Golem under Elemental Armor takes both bonuses. Needs F251.2. |
+| 44 | **F236.1** | CoM 1's Holy-Arms/Heavenly-Light eligibility gate is stated as a rule, with its version scope and its custom-unit discriminator settled. |
+| 45 | **F236.2** | The gate is implemented so an ineligible unit cannot carry the granted effect. Needs F236.1. |
+| 46 | **F239** | The F209 and F200 stage 3 bodies stop naming retired `base:*` keys and the closed F210. |
+| 47 | **F209.1** | F202's four immovable rulings reopen. Needs F210. |
+| 48 | **F209.2** | F200 stage 4's narrowing and base CoM2's empty training group reopen. Needs F210. |
+| 49 | **Q30** + **F200 stage 3** | Sancta Basilica's over-wide Sanctify grant is settled while its two grants take positions. One subtask: each names the other as the place it is settled. Needs F210. |
+| 50 | **F207** | The last published-value suppression that gates nothing goes. |
+| 51 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
+| 52 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
+| 53 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 54 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 55 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 56 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
+| 57 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
+| 58 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
+| 59 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
+| 60 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 61 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 62 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 63 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 64 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
+| 65 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
+| 66 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
+| 67 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
+| 68 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
+| 69 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
+| 70 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
+| 71 | **F153** | The modern gaze rider exclusion gets one home. |
+| 72 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
+| 73 | **F147** | Six derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
+| 74 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
+| 75 | **F151** | A version's default-state map is built without resetting the live page. |
+| 76 | **F128** | The `Other` unit category no roster can fill goes. |
+| 77 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
+| 78 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
+| 79 | **F240** | The dead `traceBasePreparation` trace in `stats.js` goes. |
+| 80 | **F237** | The CAS audit attributes and gates a `/N` after a locator and a bare `:N` under a `@span` line or bare mention, keeping non-script numbers reported and ungated. |
+| 81 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
+| 82 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
+| 83 | **F238** | The Warlord source-order tables in `CoM2 binary - unit recalculation.md` are re-derived against 1.5.12.9 with label-bounded rows. |
+| 84 | **F41.1** | The DOS eight-threshold hero ladders. |
+| 85 | **F41.2** | The DOS template-ability formulas. |
+| 86 | **F41.3** | The modern nine-step hero table. |
+| 87 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
+| 88 | **M3** | The DOS Destruction path. Needs F41. |
+| 89 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
+| 90 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
+| 91 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
+| 92 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
+| 93 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
+| 94 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
+| 95 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
+| 96 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
+| 97 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
+| 98 | **H1** | Contact Seravy about the Blur bug. |
+| 99 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
+| 100 | **F265** | The ~60 `SPEC.md` references in `Calculator/*.js` name `CLAUDE.md`, the file that actually holds the content.
+| 101 | **F269** | The post-combat panel stops showing `Bonus HP / figure` / `Extra Hits / figure`; the quantity stays internal. |
+| 102 | **F270** | The tooltip system is overhauled. Low priority, deliberately late: nothing depends on it and the F268 pass left tooltip wording unasserted in the meantime. |
+| 103 | **F271** | `deriveUnitStats` takes the innate and marked halves alone; the merged-`abilities` arm and its ~300 callers go. |
+**Provenance of the queue.** Items are named rather than numbered here, so a reorder does not rot this paragraph. **F260** and **F261** were filed 2026-09-05 out of the preset-suite cost measurement and moved above the backlog the same day so the rows below run against the cheaper suite; F261 is ordered after the refactor on the user’s ruling. **F267** was filed 2026-09-05 out of the identity-object read; its first subtask, F267.1, absorbed the CoM 1 template-phase follow-up the F262 close proposed and was executed 2026-09-07. **F264** and **F265** were filed 2026-09-05 out of the F244.3h and F246 close blocks. **F253** and **F259** were filed 2026-09-03 and 2026-09-04 out of the F244.3c close and the digest-blindness findings. **F254**, **F255**, **F256** and **F257** were filed 2026-09-04 out of the F244.3f and F244.3g reviews. Rust’s strip, the figure split and **F249** were approved 2026-09-03 from the No Heal merge. **F250**, the evidence debt the F244.3b writes declared, was filed 2026-09-03 on the user’s approval. Then the Create Undead damage-bucket item and the composition normalisation decision F225.1 surfaced, and below those the standalone and structural backlog, F251 and the F224 race and realm findings among it. F239–F248 were approved 2026-09-02 from the F210/F204 close. Closed: F244 (F244.1, F244.2, F244.3a–F244.3i), F245, F246, F247, F248, F252 (F252.1–F252.6, executed 2026-09-07; the marked half is a positioned write for every `immunities`/`buffs`/`debuffs` key the record carries, and the keys it does not carry are left unfinished rather than exempt — the scope question is open in `tmp/REPORT.F252.5.md` and `tmp/REPORT.F252.6.md`), F258, F262, F263 (executed 2026-09-07; the Sapiens label is a record field with its own `buffs:spiritLink:sapiens` write and the `NOTSAPIENS` gate is two `ctx.base` reads), F260 (F260.1–F260.10, executed 2026-09-05/06; its tier promotions are an open `PROPOSALS.md` entry), F268 (F268.1–F268.7, executed 2026-09-06/07 on the user’s ruling that Playwright is retired for non-UI testing; `npm test` is now the Node default and `npm run test:all` is what a page change runs, with three further `PROPOSALS.md` entries open).
 
 F211–F216 were filed 2026-08-30 from the T2.11–T2.23 run, which found them while reading fixtures
 against the code. Each is verified against source and none makes a test red.
@@ -702,6 +695,30 @@ the current keys and drop the dependency notes. One subtask; moves no number.
 `basePreparationTrace` is always empty and its entries never reach a tooltip. Delete the helper, the
 array and the spread that seeds `statTrace` from it. One subtask; moves no number.
 
+### F271 — The merged-`abilities` compatibility arm is deleted
+
+*Category: other.* Approved 2026-09-07 on the user's ruling that compatibility-only code is not
+kept (a `PROPOSALS.md` entry states the rule for `CLAUDE.md`). Low priority: nothing depends on it.
+
+F252.1 made the ability input boundary two halves, `innateAbilities` and `markedAbilities`, and
+F252.3–F252.6 turned each half into positioned writes. `deriveUnitStats` still accepts the old
+merged `abilities` map and reconstructs the halves from the def lists
+(`splitAbilityCalcValuesBySource`, `Calculator/ability_gating.js`), because roughly 300 callers
+under `tools/` state a control set rather than a card and cannot say which half a key came from.
+
+It is not merely redundant. For the nine dual-source keys the reconstruction puts one stated value
+into **both** halves, so a caller stating `fear: true` asks for a `template` write and a marked
+write from one stated fact. That is value-preserving only while the grant-position OR stays
+idempotent, which F252.2 established is not uniform across the engines — so every later change has
+to re-establish the arm's safety. F252.6 additionally found that a four-way check whose innate arm
+is conditional on an ability control existing cannot detect a step reading the merged map, which is
+the same blind spot seen from the test side.
+
+Delete the arm and `splitAbilityCalcValuesBySource`; move the `tools/` callers to stating the two
+halves. The def lists must keep one home — a second copy under `tools/` trades this duplication for
+another. Moves no number, so no equivalence run measures it; the acceptance test is that the arm's
+deletion leaves `npm test` green with the callers converted.
+
 ### F269 — The post-combat panel shows Bonus HP / figure, which is out of scope
 
 *Category: decision.* Approved 2026-09-06.
@@ -832,25 +849,9 @@ calculator starts from a stated card.
 One subtask.
 
 
-### F263 — The Sapiens label becomes a record field
-
-*Category: faithfulness.* Approved 2026-09-05. Warlord. Rides on F252.
-
-`CLAUDE.md` requires the calculator’s unit properties to match the binaries’. The `NOTSAPIENS`
-gate has two permanent-record terms –
-`IF (BASEFANTASTIC(U)>0) %AND (GETSTAT(U,SMultiLabel,1)<>14)` (`UnitCalcPre.CAS:1062`) — and only
-the first is a record field. The Sapiens label is an `ABILITY_DEFS` control read pre-sequence, and
-Spirit Link’s `SETSTAT(TU,SMultiLabel,1,14)` (`OLSpell.CAS:495`) travels as a
-`spiritLinkSentience` parameter rather than a write.
-
-F252.3 gives `sapiens` a `template` row for free. What is extra: Spirit Link’s label write becomes
-`buffs:spiritLink:sapiens`, positioned beside the existing `buffs:spiritLink:fantastic` under the same
-`IF BASEFANTASTIC(TU)` gate; `spiritLinkSentience` is deleted; and `sapiensEligible` becomes two
-record reads at its steps’ own rank. Needs F252.3.
-
 ### F267 — The identity object dissolves into the record
 
-*Category: faithfulness.* Approved 2026-09-05. Sequenced beside F263: both move state the engine
+*Category: faithfulness.* Approved 2026-09-05. Filed beside F263 (closed 2026-09-07): both move state the engine
 keeps on its unit record out of calculator-only side objects.
 
 `CLAUDE.md` *Architecture* requires the calculator’s unit properties to closely match the
@@ -895,9 +896,13 @@ folds the result into the seed record instead of keeping a live object beside it
 scope `specialUnit` validation against the version’s defs; F267.3 turns that into an id-table
 lookup at the roster boundary, and `input.version` / `statRunContext.version` already carry it.
 
-F267.1 is the prerequisite: while CoM 1’s `template:constructCatapult` and
-`template:summonBranch` write the calculated record at `template` rank, `u.fantastic` there is not
-the permanent flag and cannot replace `identity.baseFantastic`.
+**F267.1 is closed (2026-09-07).** The two CoM 1 conversions are region-`a` steps — the Construct
+Catapult one merged into `a:constructCatapult`, `a:summonBranch` beside it — so `u.fantastic` at
+`template` rank is the permanent flag in all five versions and can replace `identity.baseFantastic`.
+The persistent half of the same construction, `template:constructCatapult:weapon`, kept its rank.
+Nothing moved: 0 of 52,440 in `derivation_equivalence`, 0 of 7,360 in a saturated CoM 1 census and a
+card-path corpus sweep. The rank inside region `a` is a ruling rather than the literal instruction
+order, and `tmp/REPORT.F267.1.md` puts that fork to the user.
 
 ### F264 — Reconstruct Warlord's `SpellTypeGroup=16` target-selection dispatch
 
@@ -1120,83 +1125,6 @@ A zero from an instrument that does not vary the gate is not evidence.
 - **F259.2** the top-level input fields are varied, or the tool reports explicitly which gates its
   run cannot speak for. Report the new case count and any movement the added coverage exposes —
   earlier "0 of 52,440" results in the F244.3 run may not survive. Needs F259.1.
-
-### F252 — Innate abilities are `template` writes; marked enchantments are `immunities`/`buffs`/`debuffs` writes
-
-*Category: faithfulness.* Approved 2026-09-03. All five versions. Subsumes the Option B costed
-under F244.3b.
-
-`readAbilitiesFromDOM` (`ui_card.js:8`) folds every def through `mergeAbilityCalcValue`
-(`combat_abilities.js:31`) into one map keyed by `calcKey`, so by the time `deriveUnitStats` sees a
-key it cannot say whether the unit was built with it or the card marks it. The engine makes those
-two writes at different moments — creation and cast — and the phase table already names both
-(`template`; `immunities`/`buffs`/`debuffs`). The calculator conflates them, which is why F244.3b
-could not source the `immunities` phase from the enchantment control and settled for writing the
-merged card mark.
-
-The information is not lost at the control: `abilityUiDefs()` tags every def
-`source: 'ability' | 'enchantment'`, `ABILITY_DEFS` has 48 calcKeys and `ENCHANTMENT_DEFS` 163, of a
-202-key union. **Nine calcKeys are contributed by both** — `fear`, `holyBonus`, `immolation`,
-`invisibility`, `magicImmunity`, `missileImmunity`, `resistanceToAll`, `teleporting`, `undead` — and
-those nine are the whole of what the fold destroys. Everything else is single-source and its origin
-is already recoverable from which def list the key came from.
-
-The nine are not one shape. Four are the same effect declared twice (`immolation`, `invisibility`,
-`magicImmunity`, `undead`). Two are **two different quantities sharing a key**: `holyBonus` is
-"Holy bonus" against "Received holy bonus", and `resistanceToAll` is "Res. to all" against "Received
-res. to all" — provided against received. One is two different effects (`fear`: innate Cause Fear
-against marked Cloak of Fear). One has three contributors (`missileImmunity`: the innate control plus
-Guardian Wind and Hillfort). One is an innate ability with a distinct cast that grants it
-(`teleporting`, granted by Planewalking).
-
-For `teleporting` the split is **already asserted** and only the plumbing cannot carry it:
-`stats_origins.js:1116` files it as `template`/`control` and `buffs`/"the Planewalking cast writes
-Teleporting on the unit" (plus a Warlord `regionD` strip). Treat the origin table as the statement of
-intent this item makes executable, and check the other eight against it the same way.
-
-Rule: the innate half seeds the record at `template`; the marked half is a positioned write in
-`immunities`, `buffs` or `debuffs` per the phase table, admitted by the engine's own eligibility test
-read against the record as the earlier steps left it.
-
-- **F252.1** the input boundary carries the source. `readAbilitiesFromDOM` returns the innate and
-  marked halves separately, `mergeAbilityCalcValue` keeps its fold *within* a source, and
-  `deriveUnitStats` takes both and reconstructs today's merged map internally so nothing moves yet.
-  Call sites: `ui_card.js:63`, `ui_matrix.js:182` and `:263`, `parseAbilitiesFromUnit`,
-  `baseUnitInput` (`tools/unit_checks/assertions.js`), the Node checks, `derivation_equivalence.js`.
-  Pure refactor: the digest must be **0 of 52,440**, and that is the subtask's acceptance test.
-  This subtask also censuses the marked half by target phase, which may re-partition F252.4–F252.6
-  below — those slice bounds are a work partition, not a contract.
-- **F252.2** rule on the nine dual-source keys: what the record holds when a unit is built with the
-  ability *and* the card marks the enchantment. Today it is `!!a || !!b` for a bool and a
-  max/last-write for the numeric and select arms, which is a fold chosen for one merged map rather
-  than a ruling about two engine writes at different moments.
-  **`holyBonus` and `resistanceToAll` are already ruled** (user, 2026-09-03): the innate and marked
-  defs are the *provided* and the *received* value, they are not the same quantity, and they are
-  max'ed **with each other during the sequence** — not folded at input, which is where
-  `mergeAbilityCalcValue`'s `Math.max` arm does it today. Each becomes its own positioned write and
-  the max is taken at position.
-  The open question this subtask answers is the generalisation: whether that numeric arm survives at
-  all, or whether every numeric dual-source key becomes two positioned writes with the max taken in
-  the sequence. `teleporting` needs no ruling — `stats_origins.js` already states its split.
-  Needs F252.1.
-- **F252.3** the innate half becomes `template` writes: the seed carries it, and any innate key with
-  no template origin becomes a positioned `template` step. Retires the `immunities` origin
-  token if F252.4 supersedes it. (`TRANSFORM_SEED_CARRY` is already gone: F244.3g removed it.)
-  Needs F252.1.
-- **F252.4** the marked immunities become `immunities` writes sourced from the marked half alone,
-  superseding F244.3b's merged-mark variant for `magicImmunity` and `missileImmunity`. Needs F252.3.
-- **F252.5** the marked buffs become `buffs` writes sourced from the marked half. Needs F252.3.
-- **F252.6** the marked curses and detrimental conditions become `debuffs` writes sourced from the
-  marked half, rebinding the nine `debuffs:<curse>:cast` writes F244.3b built off the merged map.
-  Needs F252.3.
-
-**Ordering note.** F244.3h and F246 are closed and did not depend on this. F252 now runs straight
-after the F260 block on the user’s 2026-09-05 ruling: it completes the phase restructuring, and
-**F263** rides on it. It still revisits F244.3b's merged-mark variant.
-
-**Not in scope:** adding a control. A key with one control covering both the innate and the cast
-case stays governed by CLAUDE.md's assumed-cast-order deviation; this item recovers only origins the
-def lists already distinguish.
 
 ### T8 — Give the code's unsourced engine claims a citation or an evidence home
 

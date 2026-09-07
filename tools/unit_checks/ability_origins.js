@@ -229,6 +229,9 @@ function runAbilityOriginChecks(ctx) {
 
   // --- 1. the key universe, enumerated from the code -----------------------------------------
   const controlVersions = new Map();
+  // The innate half's scope on its own (F252.3): which versions an `ABILITY_DEFS` control offers
+  // the calc key in, which is what a `template` row states.
+  const innateControlVersions = new Map();
   const controlKeys = new Set();
   const controlsByKey = new Map();
   for (const def of read('abilityUiDefs')()) {
@@ -236,7 +239,14 @@ function runAbilityOriginChecks(ctx) {
     controlKeys.add(def.key);
     controlsByKey.set(def.key, key);
     if (!controlVersions.has(key)) controlVersions.set(key, new Set());
-    for (const version of versions) if (!gated(def, version)) controlVersions.get(key).add(version);
+    if (def.source === 'ability' && !innateControlVersions.has(key)) {
+      innateControlVersions.set(key, new Set());
+    }
+    for (const version of versions) {
+      if (gated(def, version)) continue;
+      controlVersions.get(key).add(version);
+      if (def.source === 'ability') innateControlVersions.get(key).add(version);
+    }
   }
   const universe = new Set(controlVersions.keys());
   for (const written of Object.values(TRANSFORM_WRITES)) for (const key of written) universe.add(key);
@@ -321,15 +331,34 @@ function runAbilityOriginChecks(ctx) {
   }
 
   // --- 4. the table against the control set ----------------------------------------------------
+  // The `template` row is the **innate** control's scope, not the union of both sources' (F252.3).
+  // Since the seed reads the innate half, a template row states what the unit can be *built* with;
+  // an enchantment control reaching the same calc key in some further version is a cast and takes a
+  // positioned `immunities`/`buffs`/`debuffs` write there, not a wider template row. The two
+  // scopes coincide for all 48 innate calc keys today, so this is a narrowing that costs nothing
+  // now and refuses the wrong widening later.
+  //
+  // The converse is the mechanical form of F252.3's second half — "any innate key with no
+  // `template` origin becomes a positioned `template` step". That set is **empty**: every calc key
+  // an `ABILITY_DEFS` control names already has a template row covering exactly the versions the
+  // control offers it, so the subtask positioned no new step. This assertion is what keeps it
+  // empty; a new innate control with no template row halts here instead of seeding nothing.
   for (const [key, rows] of Object.entries(table)) {
     const visible = controlVersions.get(key);
+    const innateVisible = innateControlVersions.get(key);
     const templateRow = rows.find(row => row.origin === 'template');
     if (templateRow) {
-      assert(!!visible, `${key}: a template row belongs to a key some control names`);
-      if (visible) {
-        assertSameKeyList([...templateRow.versions].sort(), [...visible].sort(),
-          `${key}: the template row covers exactly the versions a control offers the key in`);
+      assert(!!innateVisible, `${key}: a template row belongs to a key an ability control names`);
+      if (innateVisible) {
+        assertSameKeyList([...templateRow.versions].sort(), [...innateVisible].sort(),
+          `${key}: the template row covers exactly the versions the ability control offers the `
+          + "key in — the innate half is the seed's only source (F252.3)");
       }
+    }
+    if (innateVisible && innateVisible.size) {
+      assert(!!templateRow,
+        `${key}: an ability control offers it, so it has a template row — the innate half is a `
+        + 'seed write and there is no positioned `template` step to fall back on (F252.3)');
     }
     if (visible) {
       const covered = new Set();
@@ -387,7 +416,6 @@ function runAbilityOriginChecks(ctx) {
   // --- 7. the helpers -------------------------------------------------------------------------
   const abilityOriginPhases = read('abilityOriginPhases');
   const abilityOriginIsTemplate = read('abilityOriginIsTemplate');
-  const abilityOriginIsMarkedImmunity = read('abilityOriginIsMarkedImmunity');
   const phaseRank = read('STEP_PHASE_RANK');
   for (const key of Object.keys(table)) {
     const phases = abilityOriginPhases(key);
@@ -411,7 +439,7 @@ function runAbilityOriginChecks(ctx) {
   runTransformWriteChecks(ctx);
   runRecordSeedChecks(ctx, table, {
     magicCurses, grantFields, grantWrites, grantValueWrites, versions,
-    abilityOriginIsTemplate, abilityOriginIsMarkedImmunity, positioned,
+    abilityOriginIsTemplate, positioned,
   });
   runLavaSmelterGrantChecks(ctx, { versions, abilityOriginIsTemplate });
   runOutlanderReformGrantChecks(ctx, { versions, abilityOriginIsTemplate });
@@ -1197,9 +1225,11 @@ function runOutlanderReformGrantChecks(ctx, deps) {
       `${version}: and c:discipline moves Defense only there`);
   }
 
-  // The mixed-origin claim behind `cardAbilities` (F244.3d review, finding 1). A `buffs:*:cast`
-  // step says the *cast* wrote the flag, so it must read the card's own map and not the effective
-  // one, which also carries `deriveMarionettePackage`'s grants. The record ends up carrying the
+  // The mixed-origin claim behind the cast steps' half (F244.3d review, finding 1; F252.5). A
+  // `buffs:*:cast` step says the *cast* wrote the flag, so it must read the card's **marked**
+  // half — not the effective map, which used to carry `deriveMarionettePackage`'s grants of these
+  // same two keys, and not the merged card map, which for a dual-source key also carries what the
+  // unit was built with. The record ends up carrying the
   // flag either way, so the published set cannot tell the two apart and the **execution ledger**
   // is the assertion. It has to be the ledger and not `statTrace`: the two keys reach the record
   // from a step of their own now — `b:marionette:books:resistMagic` and `b:marionette:strayedPackage`
@@ -1393,7 +1423,7 @@ function runCombatOverrideChecks(deps) {
 function runRecordSeedChecks(ctx, table, deps) {
   const read = expression => vm.runInContext(expression, ctx);
   const { magicCurses, grantFields, grantWrites, grantValueWrites, versions,
-    abilityOriginIsTemplate, abilityOriginIsMarkedImmunity, positioned } = deps;
+    abilityOriginIsTemplate, positioned } = deps;
   const seeded = read('SEEDED_NON_STAT_KEYS');
   const scopes = read('STEP_VERSION_SCOPES');
   const transformWritten = new Set(Object.values(TRANSFORM_WRITES).flat());
@@ -1407,15 +1437,15 @@ function runRecordSeedChecks(ctx, table, deps) {
   // stood here checked each entry against the transform that granted it. With the Marionette
   // package's grants positioned there is nothing left to declare, and `seedNonStatRecordFields`
   // throws on that combination instead of consulting a list. This is the same condition, read off
-  // the two sources rather than off the carry: a transform may still write a seeded key that has a
-  // `template` row (Sancta Basilica's and Pillar of Faith's `lucky`) or an `immunities` row (Sancta
-  // Basilica's `magicImmunity`), because the seed takes those from the card either way.
+  // the table rather than off the carry: a transform may still write a seeded key that has a
+  // `template` row — Sancta Basilica's and Pillar of Faith's `lucky`, and Sancta Basilica's
+  // `magicImmunity`, which since F252.4 rides the template seed like any other dual-source key
+  // rather than being suppressed by its `immunities` row.
   for (const key of seeded) {
     if (!transformWritten.has(key)) continue;
-    const carried = versions.some(version => abilityOriginIsTemplate(key, version)
-      || abilityOriginIsMarkedImmunity(key, version));
+    const carried = versions.some(version => abilityOriginIsTemplate(key, version));
     assert(carried,
-      `a pre-sequence transform writes ${key}, which has no template or immunities row in any `
+      `a pre-sequence transform writes ${key}, which has no template row in any `
       + 'version, so the seed would drop it — give the grant a positioned write '
       + '(Calculator/stats_identity.js; seedNonStatRecordFields throws on exactly this)');
   }
@@ -1424,7 +1454,6 @@ function runRecordSeedChecks(ctx, table, deps) {
   // written by a step of its own. `blackpowder` and `energyCannon` are the shape that needs no
   // template row: nothing writes them before the sequence at all.
   for (const key of seeded) {
-    if (versions.some(version => abilityOriginIsMarkedImmunity(key, version))) continue;
     if (versions.some(version => abilityOriginIsTemplate(key, version))) continue;
     const rows = table[key] || [];
     const writers = rows.flatMap(row => (positioned.has(row.origin) ? row.producers : []))
@@ -1448,8 +1477,11 @@ function runRecordSeedChecks(ctx, table, deps) {
   }
 
   runSeedExecutionChecks(ctx, { seeded, versions, abilityOriginIsTemplate,
-    abilityOriginIsMarkedImmunity, magicCurses, grantWrites, grantValueWrites, table, scopes });
-  runMarkedImmunityPhaseChecks(ctx, { versions, abilityOriginIsMarkedImmunity, seeded });
+    magicCurses, grantWrites, grantValueWrites, table, scopes });
+  runMarkedImmunityPhaseChecks(ctx, { versions, table, seeded });
+  runMarkedBuffPhaseChecks(ctx, { versions, table, seeded, scopes });
+  runMarkedDebuffPhaseChecks(ctx, { versions, table, seeded, scopes });
+  runSapiensLabelChecks(ctx, { versions, table, seeded, scopes });
   runImmunityRefusalMatrix(ctx, magicCurses);
 }
 
@@ -1458,7 +1490,7 @@ function runRecordSeedChecks(ctx, table, deps) {
 // partition that is well formed on paper can still seed the wrong value.
 function runSeedExecutionChecks(ctx, deps) {
   const read = expression => vm.runInContext(expression, ctx);
-  const { seeded, versions, abilityOriginIsTemplate, abilityOriginIsMarkedImmunity,
+  const { seeded, versions, abilityOriginIsTemplate,
     magicCurses, grantWrites, grantValueWrites, table, scopes } = deps;
   const seedFn = read('seedNonStatRecordFields');
 
@@ -1467,17 +1499,15 @@ function runSeedExecutionChecks(ctx, deps) {
     // mark; a key without one starts unwritten however loudly the card states it, because its
     // arrival is a positioned write.
     const marked = Object.fromEntries(seeded.map(key => [key, true]));
-    const seed = seedFn(version, marked, marked);
+    const seed = seedFn(version, marked, marked, marked);
     assertSameKeyList(Object.keys(seed).sort(), [...seeded].sort(),
       `${version}: the seed names exactly the record's non-stat fields`);
     for (const key of seeded) {
-      // A marked immunity is written by its own `immunities` step, so it is unseeded even where it
-      // is template-capable — that is the whole of Option C (F244.3b).
-      const markedImmunity = abilityOriginIsMarkedImmunity(key, version);
-      const template = abilityOriginIsTemplate(key, version) && !markedImmunity;
-      assertEqual(!!seed[key], template,
-        `${version}: '${key}' is seeded only where the origin table gives it a template row and no `
-        + '`immunities` write');
+      // Since F252.4 there is no exception: the template row is the whole rule. The two marked
+      // immunities used to be forced false here however template-capable they were, which was the
+      // seed suppression the `immunities` token stood for.
+      assertEqual(!!seed[key], abilityOriginIsTemplate(key, version),
+        `${version}: '${key}' is seeded exactly where the origin table gives it a template row`);
     }
 
     // The mixed-origin case, probed one key at a time because the guard below halts on the first
@@ -1486,12 +1516,7 @@ function runSeedExecutionChecks(ctx, deps) {
     // F244.3g deleted the last `TRANSFORM_SEED_CARRY` entry every other key must halt rather than
     // seed in silence — there is no third branch any more.
     for (const key of seeded) {
-      const grantOnly = () => seedFn(version, { [key]: true }, {});
-      if (abilityOriginIsMarkedImmunity(key, version)) {
-        assertEqual(!!grantOnly()[key], false,
-          `${version}: '${key}' is a marked immunity, so no grant reaches its seed`);
-        continue;
-      }
+      const grantOnly = () => seedFn(version, {}, { [key]: true }, {});
       if (abilityOriginIsTemplate(key, version)) {
         assertEqual(!!grantOnly()[key], true,
           `${version}: '${key}' has a template row, so its seed still absorbs a transform grant`);
@@ -1511,7 +1536,7 @@ function runSeedExecutionChecks(ctx, deps) {
       // ascension block writes `SETSTAT(U,AFDestruction,0,0,1)`.
       let zeroHalted = false;
       try {
-        seedFn(version, { [key]: 0 }, {});
+        seedFn(version, {}, { [key]: 0 }, {});
       } catch (error) {
         zeroHalted = /yet a pre-sequence transform wrote it/.test(String(error.message));
       }
@@ -1521,9 +1546,40 @@ function runSeedExecutionChecks(ctx, deps) {
     }
     // A **deletion** is not a write and must not halt: `deriveOutlanderReformRecord` strips its
     // derived output names from the map on purpose, so `marked` is missing a key `supplied` had.
-    const deletionSeed = seedFn(version, {}, { armorclad: true, powerEngine: true });
+    const deletionSeed = seedFn(version, {}, {}, { armorclad: true, powerEngine: true });
     assertEqual(!!deletionSeed.armorclad, false,
       `${version}: a transform deleting a key seeds it false rather than halting`);
+
+    // --- the seed reads the innate half (F252.3) ----------------------------------------------
+    // The marked half is a cast, and a cast is a positioned write. Stated in the merged map alone
+    // — innate empty, supplied carrying the key — a template-seeded key must therefore either
+    // land in a positioned marked step or halt. Before F252.3 the seed simply took it, which put
+    // the cast's bit on the record at `template` rank.
+    for (const key of seeded) {
+      if (!abilityOriginIsTemplate(key, version)) continue;
+      const markedOnly = () => seedFn(version, {}, { [key]: true }, { [key]: true });
+      if (read('abilityMarkedWriteIsPositioned')(key, version)) {
+        assertEqual(!!markedOnly()[key], false,
+          `${version}: '${key}' has a positioned marked write, so the seed leaves the mark to it `
+          + 'rather than carrying it at template rank');
+        continue;
+      }
+      let halted = false;
+      try {
+        markedOnly();
+      } catch (error) {
+        halted = /no positioned/.test(String(error.message));
+      }
+      assert(halted,
+        `${version}: the marked half stating '${key}' halts — a template seed may not carry a `
+        + 'cast (F252.3)');
+    }
+    // And the innate half is what it *does* carry: the same key stated innate-only seeds true.
+    for (const key of seeded) {
+      if (!abilityOriginIsTemplate(key, version)) continue;
+      assertEqual(!!seedFn(version, { [key]: true }, { [key]: true }, { [key]: true })[key], true,
+        `${version}: '${key}' stated in the innate half is what the template seed carries`);
+    }
   }
 
   // The record has to be the carrier in both directions, not just inbound. `rebuild` was written
@@ -1557,18 +1613,22 @@ function runSeedExecutionChecks(ctx, deps) {
 }
 
 // The `immunities` phase, proved by running it rather than by reading the chain (F244.3b, Option
-// C). Three things have to hold together, and each of them failed in some earlier draft of this
-// subtask: the phase has entries in every version, the seed does *not* carry what those entries
-// write, and the write actually reaches the record — which is the difference between a positioned
-// write and a hoist the phase merely restates.
+// C; F252.4). Four things have to hold together, and each of them failed in some earlier draft:
+// the phase has entries in every version, the seed carries the **innate** half, the step carries
+// the **marked** half at its own rank, and the two together are the idempotent OR at the grant
+// position (F252.2, shape 1). Before F252.4 the seed was forced false for these keys and the step
+// read the merged map, so an innate-only unit fired a write claiming a cast had made it.
 function runMarkedImmunityPhaseChecks(ctx, deps) {
   const read = expression => vm.runInContext(expression, ctx);
-  const { versions, abilityOriginIsMarkedImmunity, seeded } = deps;
+  const { versions, table, seeded } = deps;
   const chain = read('statChain');
   const derive = read('deriveUnitStats');
   const seedFn = read('seedNonStatRecordFields');
 
-  const marked = seeded.filter(key => versions.some(v => abilityOriginIsMarkedImmunity(key, v)));
+  // Read off the table rather than named here, so a third marked immunity is covered by filing its
+  // row and nothing else.
+  const marked = seeded.filter(key => (table[key] || [])
+    .some(row => row.origin === 'immunities'));
   assert(marked.length > 0,
     'The immunities phase writes at least one marked immunity, so it is not an empty phase');
 
@@ -1580,20 +1640,430 @@ function runMarkedImmunityPhaseChecks(ctx, deps) {
       marked.map(key => `${key}:marked`).sort(),
       `${version}: the immunities phase writes exactly the marked immunities`);
 
+    const run = (innate, markedHalf) => derive(baseUnitInput({
+      version, innateAbilities: innate, markedAbilities: markedHalf }));
+    const markEvent = (result, key) => result.statExecutionTrace
+      .find(event => event.phase === 'immunities' && event.id === `${key}:marked`);
+
     for (const key of marked) {
-      // Unseeded...
-      const seed = seedFn(version, { [key]: true }, { [key]: true });
-      assertEqual(!!seed[key], false,
-        `${version}: the seed does not carry '${key}' — its immunities write is the only source`);
-      // ...and yet on the finished record, which is only possible if the step ran.
-      const on = derive(baseUnitInput({ version, abilities: { [key]: true } }));
-      assertEqual(!!on.abilities[key], true,
-        `${version}: 'immunities:${key}:marked' writes the marked immunity onto the record`);
-      const off = derive(baseUnitInput({ version, abilities: {} }));
-      assertEqual(!!off.abilities[key], false,
-        `${version}: '${key}' stays unwritten when the card does not mark it`);
+      // The seed carries the innate half — the suppression the `immunities` token used to impose
+      // is gone (F252.4).
+      assertEqual(!!seedFn(version, { [key]: true }, { [key]: true }, { [key]: true })[key], true,
+        `${version}: '${key}' stated innate is what the template seed carries`);
+      assertEqual(!!seedFn(version, {}, {}, {})[key], false,
+        `${version}: '${key}' unstated is seeded false`);
+
+      // Neither half: unwritten, and the step does not run either — the value assertion alone
+      // cannot tell "nothing wrote it" from "something wrote false" (review, finding 3).
+      const neither = run({}, {});
+      assertEqual(!!neither.abilities[key], false,
+        `${version}: '${key}' stays unwritten when neither half states it`);
+      assertEqual((markEvent(neither, key) || {}).status, 'skipped',
+        `${version}: and 'immunities:${key}:marked' does not run at all`);
+      // Innate alone: the seed is the writer and the marked step does not run. That is the whole
+      // of what the merged read hid — the step used to fire here.
+      const innateOnly = run({ [key]: true }, {});
+      assertEqual(!!innateOnly.abilities[key], true,
+        `${version}: the innate half alone carries '${key}', through the template seed`);
+      assertEqual((markEvent(innateOnly, key) || {}).status, 'skipped',
+        `${version}: and 'immunities:${key}:marked' is skipped — it reads the marked half, not `
+        + 'the merged map');
+      // Marked alone: the step is the only writer, at `immunities` rank.
+      const markedOnly = run({}, { [key]: true });
+      assertEqual(!!markedOnly.abilities[key], true,
+        `${version}: the marked half alone carries '${key}', through immunities:${key}:marked`);
+      assertEqual((markEvent(markedOnly, key) || {}).status, 'applied',
+        `${version}: and that step is what ran — the seed did not take the mark`);
+      // Both: the OR at the grant position, idempotent because the write is a set onto the same
+      // field (F252.2, shape 1).
+      const both = run({ [key]: true }, { [key]: true });
+      assertEqual(!!both.abilities[key], true,
+        `${version}: both halves is the idempotent OR at the grant position`);
+      assertEqual((markEvent(both, key) || {}).status, 'applied',
+        `${version}: and the step still runs over the seeded bit — the OR is idempotent because `
+        + 'the write is a set onto the same field, not because the step stands down');
     }
   }
+}
+
+// The `buffs` phase's marked half, proved by running it (F252.3 for `invisibility`, F252.5 for the
+// other seven). This is the immunity block one phase later and makes the same four claims, over
+// every key rather than over one: the step exists in exactly the versions its scope names, an
+// innate statement does not fire it, a marked statement does, and where a key has both controls
+// the two are the idempotent OR at the grant position (F252.2, shape 1).
+//
+// **The key list and the partition are read off the code, not named here.** A `buffs`-origin key
+// that is a sequence record field takes a positioned `buffs:<key>:cast` step; a `buffs`-origin key
+// that is *not* a record field has no step and no seed, so the merged ability map is its only
+// carrier. That second class is 41 of the 49 marked `buffs` keys today — `fear`, `immolation`,
+// `teleporting` and `undead` among them, the four dual-source ones. The assertion below keeps the
+// two classes from drifting: giving one of the 41 a record field without giving it a cast step, or
+// the reverse, fails here rather than silently putting a cast on the record at `template` rank.
+//
+// **It reconciles two implementation inventories; it does not say the 41 are exempt.** F252's rule
+// is that the marked half is a positioned write, and for the 41 that would mean giving each a
+// record field first and migrating its readers off the merged map — work F252.5 did not do and did
+// not have a ruling for (F252.5 review, finding 1). Read this as the partition the code currently
+// has, not as a discharge of that obligation.
+function runMarkedBuffPhaseChecks(ctx, deps) {
+  const read = expression => vm.runInContext(expression, ctx);
+  const { versions, table, seeded, scopes } = deps;
+  const derive = read('deriveUnitStats');
+  const uiDefs = read('abilityUiDefs()');
+  const abilityValueIsActive = read('abilityValueIsActive');
+  const seededSet = new Set(seeded);
+
+  // What a card states to turn each control on. Every one of the eight is a `bool` except
+  // `discipline`, whose control is a select and whose step writes the stated value rather than a
+  // flag. The mark is pinned against `abilityValueIsActive` below, so a def changing type cannot
+  // leave a silently inert mark here.
+  const MARK_VALUE = { discipline: 'overland' };
+  const markValue = key => (Object.prototype.hasOwnProperty.call(MARK_VALUE, key)
+    ? MARK_VALUE[key] : true);
+
+  const buffsRows = key => (table[key] || []).filter(row => row.origin === 'buffs');
+  const isPositioned = key => buffsRows(key).some(row => row.producers.length > 0
+    && row.producers.every(producer => producer === 'step:buffs:' + key + ':cast'));
+  const controlOf = (key, source) => uiDefs.find(def => def.calcKey === key && def.source === source);
+
+  // The partition. Every `buffs`-origin key the card can mark is on exactly one side of it.
+  const markedBuffKeys = Object.keys(table)
+    .filter(key => buffsRows(key).length > 0 && controlOf(key, 'enchantment'));
+  const cast = markedBuffKeys.filter(key => seededSet.has(key));
+  for (const key of markedBuffKeys) {
+    assertEqual(isPositioned(key), seededSet.has(key),
+      `'${key}' is a marked buffs key: it has a positioned buffs:${key}:cast step exactly where it `
+      + 'is a sequence record field, because a key the record does not carry has no rank to take');
+  }
+  assert(cast.length > 0, 'the buffs phase carries at least one marked cast write');
+
+  for (const key of cast) {
+    const stepKey = `buffs:${key}:cast`;
+    const scope = scopes[stepKey];
+    assert(Array.isArray(scope) && scope.length > 0, `${stepKey} has a canonical version scope`);
+    assert(abilityValueIsActive(controlOf(key, 'enchantment'), markValue(key)),
+      `the mark used for '${key}' is a value its own control reads as active`);
+    const innate = controlOf(key, 'ability');
+
+    for (const version of versions) {
+      const run = (innateHalf, markedHalf) => derive(baseUnitInput({
+        version, innateAbilities: innateHalf, markedAbilities: markedHalf }));
+      const event = result => result.statExecutionTrace
+        .find(entry => entry.phase === 'buffs' && entry.id === `${key}:cast`);
+      const inScope = scope.includes(version);
+      const mark = markValue(key);
+
+      // Neither half: unwritten, and the step does not run — the value alone cannot separate
+      // "nothing wrote it" from "something wrote false".
+      const neither = run({}, {});
+      assert(!neither.abilities[key],
+        `${version}: '${key}' stays unwritten when neither half states it`);
+      assertEqual((event(neither) || {}).status, inScope ? 'skipped' : undefined,
+        `${version}: and '${stepKey}' is in the chain exactly where its scope puts it`);
+
+      // Marked alone: the step is the writer, at `buffs` rank.
+      const markedOnly = run({}, { [key]: mark });
+      assertEqual((event(markedOnly) || {}).status, inScope ? 'applied' : undefined,
+        `${version}: the marked half fires '${stepKey}' exactly in scope`);
+      if (inScope) {
+        assertEqual(markedOnly.abilities[key], mark,
+          `${version}: and '${key}' reaches the record through it`);
+      } else {
+        assert(!markedOnly.abilities[key],
+          `${version}: out of scope nothing carries '${key}' — the record is the carrier`);
+      }
+
+      // Innate: seven of the eight have no ability control at all today, so for those the merged
+      // card map *is* the marked half and re-sourcing them moved no number. That is a coincidence
+      // of which controls exist, not a property — and this branch is what catches it changing:
+      // giving one of the seven an ability control makes `innate` truthy, and the innate-only
+      // assertion below then fails, because a key with no `template` row is not seeded.
+      // `invisibility` is the one dual-source key of the eight, where the seed is the writer and
+      // the cast step must stand down (F252.3). Reviewer-reproduced (F252.5 review, finding 2).
+      if (!innate) continue;
+      const innateOnly = run({ [key]: mark }, {});
+      assertEqual(!!innateOnly.abilities[key], true,
+        `${version}: the innate half alone carries '${key}', through the template seed`);
+      assertEqual((event(innateOnly) || {}).status, inScope ? 'skipped' : undefined,
+        `${version}: and '${stepKey}' is skipped — it reads the marked half, not the merged map`);
+      const both = run({ [key]: mark }, { [key]: mark });
+      assertEqual(!!both.abilities[key], true,
+        `${version}: both halves is the idempotent OR at the grant position (F252.2, shape 1)`);
+      assertEqual((event(both) || {}).status, inScope ? 'applied' : undefined,
+        `${version}: and the step still runs over the seeded bit — the OR is idempotent because `
+        + 'the write is a set onto the same field, not because the step stands down');
+    }
+  }
+}
+
+// The `debuffs` phase's marked half, proved by running it (F252.6). This is the `immunities` and
+// `buffs` blocks one phase later and makes the same claims over the phase's own key list: the
+// step is in the chain exactly where its scope puts it, neither half leaves the key unwritten
+// *and* the step applied, and the marked half alone puts the flag on the record.
+//
+// **Two things are different here, and both are the phase's own.** A `debuffs` write is refused by
+// an immunity standing on the record at its rank (`curseRefusedByImmunity`, `stats_identity.js`;
+// the user's ruling of 2026-09-02), so the marked-alone run is made on a unit with no immunity
+// stated and the refusal is asserted separately by `runImmunityRefusalMatrix` below. And **none of
+// the nine has an `ABILITY_DEFS` control**, so no card can state one of these keys in the innate
+// half — which means the merged map and the marked half are identical on every control-built
+// input, and a value probe cannot tell the F252.6 read from the F244.3b one. The innate arm below
+// therefore states the half **directly**, through `deriveUnitStats`' own documented input
+// boundary, and asserts the thing only the marked read makes true: a curse flag has no `template`
+// row in any version, so an innate statement reaches nothing and the cast step stands down.
+// Reverting `curseCastSteps`' argument to the merged map fails exactly there. `assertEqual(!!innate,
+// false, ...)` below is what makes a curse flag gaining an ability control fail rather than
+// silently changing what that arm means.
+//
+// **The key list and the partition are read off the code.** A `debuffs`-origin key that is a
+// sequence record field takes a positioned `debuffs:<key>:cast` step; a `debuffs`-origin key that
+// is not a record field has no such step, and the merged ability map is its only carrier. Today
+// that is 9 / 4: the nine curse flags against `hierophany`, `mislead`, `soulFlay` and `rust`.
+//
+// **It reconciles two implementation inventories; it does not say the four are exempt.** F252's
+// rule is that the marked half is a positioned write, and for the four that means giving each a
+// record field and migrating its readers off the merged map — the same obligation
+// `runMarkedBuffPhaseChecks` above leaves open for its 41. `rust` is the sharpest of the four: it
+// *does* have a positioned `debuffs` step, `debuffs:rust:material`, and F252.6 re-sourced that
+// step's cast term to the marked half with the nine (`rustActiveAt`, `stats.js`) — but `rust`
+// itself is still not a record field, so the key travels on the merged map to the melee -3 in
+// `combat_abilities.js` and to every other reader, and this block cannot range over it.
+function runMarkedDebuffPhaseChecks(ctx, deps) {
+  const read = expression => vm.runInContext(expression, ctx);
+  const { versions, table, seeded, scopes } = deps;
+  const chain = read('statChain');
+  const derive = read('deriveUnitStats');
+  const uiDefs = read('abilityUiDefs()');
+  const abilityValueIsActive = read('abilityValueIsActive');
+  const seededSet = new Set(seeded);
+
+  const debuffRows = key => (table[key] || []).filter(row => row.origin === 'debuffs');
+  const isPositioned = key => debuffRows(key).some(row => row.producers.length > 0
+    && row.producers.every(producer => producer === 'step:debuffs:' + key + ':cast'));
+  const controlOf = (key, source) => uiDefs.find(def => def.calcKey === key && def.source === source);
+
+  // The partition. Every `debuffs`-origin key the card can mark is on exactly one side of it.
+  const markedDebuffKeys = Object.keys(table)
+    .filter(key => debuffRows(key).length > 0 && controlOf(key, 'enchantment'));
+  const cast = markedDebuffKeys.filter(key => seededSet.has(key));
+  for (const key of markedDebuffKeys) {
+    assertEqual(isPositioned(key), seededSet.has(key),
+      `'${key}' is a marked debuffs key: it has a positioned debuffs:${key}:cast step exactly `
+      + 'where it is a sequence record field, because a key the record does not carry has no rank '
+      + 'to take');
+  }
+  assert(cast.length > 0, 'the debuffs phase carries at least one marked cast write');
+
+  // Completeness in the other direction: every `:cast` entry the phase actually runs is one of
+  // them, so a curse write added to the chain without a `debuffs` origin row fails here.
+  for (const version of versions) {
+    const inPhase = chain(version)
+      .filter(entry => entry.phase === 'debuffs' && entry.id.endsWith(':cast'))
+      .map(entry => entry.id).sort();
+    assertSameKeyList(inPhase,
+      cast.filter(key => (scopes[`debuffs:${key}:cast`] || []).includes(version))
+        .map(key => `${key}:cast`).sort(),
+      `${version}: the debuffs phase's cast writes are exactly the marked debuffs record fields `
+      + 'their scopes put here');
+  }
+
+  for (const key of cast) {
+    const stepKey = `debuffs:${key}:cast`;
+    const scope = scopes[stepKey];
+    assert(Array.isArray(scope) && scope.length > 0, `${stepKey} has a canonical version scope`);
+    assert(abilityValueIsActive(controlOf(key, 'enchantment'), true),
+      `the mark used for '${key}' is a value its own control reads as active`);
+    const innate = controlOf(key, 'ability');
+    assertEqual(!!innate, false,
+      `'${key}' has no ABILITY_DEFS control — the innate arm below is written for that, and a `
+      + 'curse flag gaining one owes a template row (F252.3) and a re-derivation here');
+
+    for (const version of versions) {
+      const run = (innateHalf, markedHalf) => derive(baseUnitInput({
+        version, innateAbilities: innateHalf, markedAbilities: markedHalf }));
+      const event = result => result.statExecutionTrace
+        .find(entry => entry.phase === 'debuffs' && entry.id === `${key}:cast`);
+      const inScope = scope.includes(version);
+
+      // Neither half: unwritten, and the step does not run — the value alone cannot separate
+      // "nothing wrote it" from "something wrote false".
+      const neither = run({}, {});
+      assert(!neither.abilities[key],
+        `${version}: '${key}' stays unwritten when neither half states it`);
+      assertEqual((event(neither) || {}).status, inScope ? 'skipped' : undefined,
+        `${version}: and '${stepKey}' is in the chain exactly where its scope puts it`);
+
+      // Marked alone, on a unit stating no immunity: the step is the writer, at `debuffs` rank.
+      const markedOnly = run({}, { [key]: true });
+      assertEqual((event(markedOnly) || {}).status, inScope ? 'applied' : undefined,
+        `${version}: the marked half fires '${stepKey}' exactly in scope`);
+      if (inScope) {
+        assertEqual(!!markedOnly.abilities[key], true,
+          `${version}: and '${key}' reaches the record through it`);
+      } else {
+        assert(!markedOnly.abilities[key],
+          `${version}: out of scope nothing carries '${key}' — the record is the carrier`);
+      }
+
+      // **The innate arm, run whether or not a control puts a key there.** This is what
+      // separates the marked read from the merged one, and it is the only thing that can: with
+      // no curse flag carrying an `ABILITY_DEFS` control, every *card* states these keys in the
+      // marked half alone, so the two maps are identical on every input a control can build and a
+      // value probe cannot see the difference. `deriveUnitStats`' halves are its documented input
+      // boundary, so the check states the innate half directly.
+      //
+      // A curse flag has no `template` row in any version, so the innate statement must reach
+      // nothing: the seed does not carry it and the cast step, reading the marked half, stands
+      // down. Under the merged read the step fires here and publishes the flag — which is
+      // precisely the defect F252.6 removed, and reverting the argument fails these two lines.
+      const innateOnly = run({ [key]: true }, {});
+      assert(!innateOnly.abilities[key],
+        `${version}: '${key}' stated in the innate half alone reaches nothing — it has no `
+        + 'template row, and the cast step reads the marked half');
+      assertEqual((event(innateOnly) || {}).status, inScope ? 'skipped' : undefined,
+        `${version}: and '${stepKey}' is skipped — it reads the marked half, not the merged map`);
+      // Both halves: the marked statement is what fires the step, and the innate one adds
+      // nothing. If one of the nine ever gains an ability control this stays true while the
+      // `innateOnly` arm above becomes the assertion that has to be re-derived — a `template` row
+      // would then be owed, and F252.3's guard is the second net.
+      const both = run({ [key]: true }, { [key]: true });
+      assertEqual((event(both) || {}).status, inScope ? 'applied' : undefined,
+        `${version}: the marked statement fires '${stepKey}' with the innate half stated too`);
+      assertEqual(!!both.abilities[key], inScope,
+        `${version}: and '${key}' is on the record exactly in scope`);
+    }
+  }
+}
+
+// --- 15. the Sapiens label is a record field (F263) -------------------------------------------
+// The `NOTSAPIENS` gate is `BASEFANTASTIC(U)>0 %AND (GETSTAT(U,SMultiLabel,1)<>14)`, and both
+// terms read the permanent record. F262 positioned the first; this block is the second, and it
+// asserts the three things the value of a reform grant alone cannot separate:
+//
+//   1. the label is a **sequence record field** whose innate control seeds it at `template` rank;
+//   2. Spirit Link's `SETSTAT(TU,SMultiLabel,1,14)` is a positioned `buffs:spiritLink:sapiens`
+//      write standing under the block's own `IF BASEFANTASTIC(TU)`, read off the record at its own
+//      rank — the step is ahead of `buffs:spiritLink:fantastic`, which is where the script writes
+//      it, so the clear has not yet falsified the flag it reads;
+//   3. `outlanderSapiensAt` reads **both** terms off `ctx.base`, so a unit whose permanent record
+//      is Fantastic keeps the reform grant exactly when the record also carries the label.
+//
+// The lesson F252.6 left is honoured two ways. The innate arm states `innateAbilities` directly
+// through `deriveUnitStats`' documented boundary rather than through a control-conditional branch,
+// and the label's two writers are *different keys* — the `sapiens` ability control and the
+// `spiritLink` enchantment — so no half-merge can make one stand in for the other.
+//
+// **What these assertions observe, exactly**: the published `abilities.sapiens` and each step's
+// execution status. That is enough to catch the writer being deleted and the pre-sequence
+// `sapiensLabelled` term restored — every number would stay where it is and the `applied` /
+// `skipped` arms would fail — and enough to catch the step's own `IF BASEFANTASTIC(TU)` gate
+// going. It is **not** enough to separate `outlanderSapiensAt`'s `ctx.base` read from a read of
+// the running record: no step writes `sapiens` after `a:baseCopy`, so the two records carry the
+// same label and no probe can tell them apart. That choice is correct by inspection against the
+// selector — `GETSTAT(U,SMultiLabel,1)`, `ABase` — and is asserted nowhere (F263 review,
+// finding 2).
+function runSapiensLabelChecks(ctx, deps) {
+  const read = expression => vm.runInContext(expression, ctx);
+  const { versions, table, seeded, scopes } = deps;
+  const derive = read('deriveUnitStats');
+  const stepKey = 'buffs:spiritLink:sapiens';
+  const warlord = 'com2_warlord_1.5.12.9';
+
+  // The classification, read off the code rather than restated. The label is a record field, its
+  // `buffs` row names exactly this step, and the step is Warlord's alone — the version whose
+  // scripts carry both the `NOTSAPIENS` gate and the Spirit Link block.
+  assert(seeded.includes('sapiens'),
+    'the Sapiens label is a sequence record field — the NOTSAPIENS gate reads it at a rank');
+  const buffsRow = (table.sapiens || []).find(row => row.origin === 'buffs');
+  assert(!!buffsRow && buffsRow.producers.length === 1
+    && buffsRow.producers[0] === `step:${stepKey}`,
+    'and its buffs origin is the positioned Spirit Link write, not a bare cast producer');
+  assertSameKeyList([...(scopes[stepKey] || [])].sort(), [warlord],
+    `${stepKey} is Warlord's alone`);
+
+  const run = (version, unitType, innate, marked) => derive(baseUnitInput({
+    version, unitType, innateAbilities: innate, markedAbilities: marked }));
+  const event = result => result.statExecutionTrace
+    .find(entry => entry.phase === 'buffs' && entry.id === 'spiritLink:sapiens');
+
+  for (const version of versions) {
+    const inScope = version === warlord;
+    // Neither writer: unwritten, and the step does not run. The value alone cannot separate
+    // "nothing wrote it" from "something wrote false", which is why the status is asserted beside
+    // it in every arm below.
+    const neither = run(version, 'normal', {}, {});
+    assert(!neither.abilities.sapiens,
+      `${version}: the label stays unwritten when neither writer states it`);
+    assertEqual((event(neither) || {}).status, inScope ? 'skipped' : undefined,
+      `${version}: and '${stepKey}' is in the chain exactly where its scope puts it`);
+
+    // The innate control alone: the template seed is the writer and the step stands down. Out of
+    // scope the key has no template row, so the statement reaches nothing — the record is the
+    // carrier, and the card's mark is not published past it.
+    const innateOnly = run(version, 'normal', { sapiens: true }, {});
+    assertEqual(!!innateOnly.abilities.sapiens, inScope,
+      `${version}: the innate half carries the label exactly where a template row offers it`);
+    assertEqual((event(innateOnly) || {}).status, inScope ? 'skipped' : undefined,
+      `${version}: and the cast step stands down — the seed is the innate half's writer`);
+
+    // Spirit Link on a **base-Fantastic** unit: the cast is the writer, at `buffs` rank.
+    const castFantastic = run(version, 'fantastic_chaos', {}, { spiritLink: true });
+    assertEqual((event(castFantastic) || {}).status, inScope ? 'applied' : undefined,
+      `${version}: Spirit Link fires '${stepKey}' exactly in scope`);
+    assertEqual(!!castFantastic.abilities.sapiens, inScope,
+      `${version}: and the label reaches the record through it`);
+
+    // Spirit Link on a **base-normal** unit: the block's own `IF BASEFANTASTIC(TU)` is false at
+    // this step's rank, so no label is written. This is the arm that fails if the step is given
+    // the cast's mark without the gate, and the arm a latched pre-sequence predicate could not
+    // distinguish from the one above without restating the flag.
+    const castNormal = run(version, 'normal', {}, { spiritLink: true });
+    assertEqual((event(castNormal) || {}).status, inScope ? 'skipped' : undefined,
+      `${version}: Spirit Link on a base-normal unit writes no label — the block gates on `
+      + 'BASEFANTASTIC(TU) and this step reads it off the record at its own rank');
+    assert(!castNormal.abilities.sapiens,
+      `${version}: and nothing carries the label for that unit`);
+
+    // Both writers: the idempotent OR at the grant position (F252.2, shape 1). The write is a set
+    // onto the same field, so the step still runs over the seeded bit rather than standing down.
+    const both = run(version, 'fantastic_chaos', { sapiens: true }, { spiritLink: true });
+    assertEqual(!!both.abilities.sapiens, inScope,
+      `${version}: both writers leave the label on the record exactly in scope`);
+    assertEqual((event(both) || {}).status, inScope ? 'applied' : undefined,
+      `${version}: and the step still runs over the seeded bit`);
+  }
+
+  // The reader, at the rank of the step asking. `b:bombsGrenades` is one of the six region-`b`
+  // steps `outlanderSapiensAt` gates, and the four combinations below are the gate's truth table
+  // read off the permanent record: the grant is withheld only where the record is Fantastic and
+  // carries no label. Destiny is the case that makes the two terms disagree — its
+  // `B.Fantastic := True` is re-made on every pass and does not touch `SMultiLabel` — so the
+  // label has to survive it, which is what a projection of "Spirit Link cleared the flag" could
+  // not express (F245).
+  const reform = { outlanderWizard: true, explosive: true };
+  const grant = (unitType, innate, marked) => {
+    const result = derive(baseUnitInput({ version: warlord, unitType, atk: 1, figs: 4,
+      innateAbilities: innate, markedAbilities: { ...reform, ...marked } }));
+    const entry = result.statExecutionTrace
+      .find(step => step.phase === 'b' && step.id === 'bombsGrenades');
+    return entry ? entry.status : 'absent';
+  };
+  assertEqual(grant('normal', {}, {}), 'applied',
+    'a base-normal unit takes Bombs & Grenades — the gate opens on the first term alone');
+  assertEqual(grant('fantastic_chaos', {}, {}), 'skipped',
+    'a base-Fantastic unit with no label does not — both terms of the conjunction hold');
+  assertEqual(grant('fantastic_chaos', { sapiens: true }, {}), 'applied',
+    'the innate label is the exemption, read off ctx.base at this step\'s own rank');
+  assertEqual(grant('fantastic_chaos', {}, { spiritLink: true }), 'applied',
+    "Spirit Link's own label write is the same exemption");
+  assertEqual(grant('normal', {}, { destiny: true }), 'skipped',
+    "Destiny's permanent B.Fantastic := True closes the gate for an unlabelled unit");
+  assertEqual(grant('normal', { sapiens: true }, { destiny: true }), 'applied',
+    'and the innate label survives it — the conjunction admits a labelled Fantastic unit');
+  assertEqual(grant('fantastic_chaos', {}, { spiritLink: true, destiny: true }), 'applied',
+    "Spirit Link's label survives Destiny re-asserting the flag its clear took away (F245)");
+  assertEqual(grant('normal', {}, { spiritLink: true, destiny: true }), 'skipped',
+    'while a base-normal Spirit Link target was never labelled, so Destiny closes the gate on it');
 }
 
 // The immunity matrix the review asked for: every curse against every immunity source, direct and

@@ -95,10 +95,16 @@ function crossSideEnchantmentDefs() {
   return found;
 }
 
-// The `calcKey` merge. Every control the state carries is folded onto its def's calc key by
-// `mergeAbilityCalcValue`, which is where the combining rule and its citation live; a control the
-// card does not have is absent from the state and contributes nothing, exactly as a missing DOM
-// element did.
+// The `calcKey` fold, **within one source**. Every control the state carries whose def comes
+// from `source` is folded onto its def's calc key by `mergeAbilityCalcValue`, which is where the
+// combining rule and its citation live; a control the card does not have is absent from the
+// state and contributes nothing, exactly as a missing DOM element did.
+//
+// The fold no longer crosses the two sources. `'ability'` is what the unit was built with and
+// `'enchantment'` is what the card marks — two engine writes at two moments — and the two halves
+// reach `deriveUnitStats` separately (F252.1). The uiKey injectivity check below still runs over
+// the whole def list, because a collision between an ability and an enchantment is exactly the
+// case it exists to catch.
 //
 // The state addresses controls by `uiKey`, so the whole model rests on `uiKey` being injective
 // over `abilityUiDefs()`. It is today — an enchantment sharing a key with an ability is prefixed
@@ -106,7 +112,12 @@ function crossSideEnchantmentDefs() {
 // would not fail: the second def would silently read the first's stored value and be interpreted
 // under its own type. That is precisely the failure this item exists to prevent, a path that
 // computes a *different unit* without saying so, so it halts instead (F260.1 review, risk 2).
-function cardStateAbilityCalcValues(state) {
+function cardStateAbilityCalcValues(state, source) {
+  if (source !== 'ability' && source !== 'enchantment') {
+    throw new Error("cardStateAbilityCalcValues: source is " + JSON.stringify(source)
+      + ", which is neither 'ability' (what the unit was built with) nor 'enchantment' "
+      + '(what the card marks). The fold runs within one source (F252.1).');
+  }
   const result = {};
   const seen = new Map();
   for (const abil of abilityUiDefs()) {
@@ -118,6 +129,7 @@ function cardStateAbilityCalcValues(state) {
         + 'addresses one control per uiKey, so the second would read the first\'s value.');
     }
     seen.set(uiKey, abil);
+    if (abil.source !== source) continue;
     const val = state.abilities[uiKey];
     if (val === undefined) continue;
     const calcKey = abil.calcKey || abil.key;
@@ -148,22 +160,14 @@ function cardStateModernSpecialValues(state, version) {
   }));
 }
 
-// What the enchantment section supplies for a calc key. The DOS block above is what this unit
-// *provides*; this is what it *receives*. Which controls count is a UI fact, and how the two
-// combine is `mergeAbilityCalcValue`'s cited rule.
-function cardStateDosReceivedValue(state, calcKey) {
-  let out;
-  for (const def of abilityUiDefs()) {
-    if (def.source !== 'enchantment' || def.calcKey !== calcKey) continue;
-    out = mergeAbilityCalcValue(def, out, state.abilities[cardStateAbilityUiKey(def)]);
-  }
-  return out;
-}
-
 // The DOS shared special byte, marshalled only: state in, `dosSpecialAbilityValues` decides.
-// `withReceived` is false on the matrix path, where the received side comes from matrix state and
-// is overlaid after this rather than from the enchantment controls.
-function cardStateDosSpecialValues(state, version, withReceived = true) {
+// This is what the unit *provides*, and it is the innate half alone. What it *receives* — the
+// enchantment controls naming the same calc key, `Received holy bonus` against `Holy bonus` — is
+// the marked half, and the two now contend at the boundary under the same
+// `mergeAbilityCalcValue` rule instead of being folded in here (F252.1). That is what retired
+// `cardStateDosReceivedValue` and the `withReceived` parameter, which the matrix already passed
+// false.
+function cardStateDosSpecialValues(state, version) {
   if (!dosSpecialIsActive(version)) return {};
   const block = state.dosSpecial || {};
   if (block.magnitude === undefined) return {};
@@ -177,12 +181,7 @@ function cardStateDosSpecialValues(state, version, withReceived = true) {
     const def = abilityDefByKey(key);
     const checked = flags[key];
     if (!def || checked === undefined) continue;
-    consumers.push({
-      def,
-      sign,
-      checked,
-      received: withReceived ? cardStateDosReceivedValue(state, def.calcKey || def.key) : undefined,
-    });
+    consumers.push({ def, sign, checked });
   }
   return dosSpecialAbilityValues({
     version,
@@ -463,11 +462,17 @@ function cardStateToDerivationInput(state, globals) {
   return {
     prefix,
     version,
-    abilities: {
-      ...cardStateAbilityCalcValues(state),
+    // The two halves of the ability input, kept apart at the boundary (F252.1). The unit was
+    // *built* with the innate half — the ability controls, and the version's own special-value
+    // block, which states what this unit provides — and the card *marks* the enchantment half.
+    // `deriveUnitStats` puts them back together for now; F252.3-F252.6 give each half its own
+    // positioned writes.
+    innateAbilities: {
+      ...cardStateAbilityCalcValues(state, 'ability'),
       ...cardStateModernSpecialValues(state, version),
       ...cardStateDosSpecialValues(state, version),
     },
+    markedAbilities: cardStateAbilityCalcValues(state, 'enchantment'),
     identity: cardStateIdentity(state, version),
     name: (state.identity || {}).name,
     level: state.level,

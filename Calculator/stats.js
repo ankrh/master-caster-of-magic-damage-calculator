@@ -28,7 +28,45 @@ function deriveUnitStats(input) {
   // CoM 1 (the DOS build). Kept distinct from `isCoM2` wherever a mechanic is settled for
   // one engine and open for the other — see the Warp Creature block and the gaze ladder.
   const isCoM2 = version.startsWith('com2');
-  const suppliedAbilities = { ...(input.abilities || {}) };
+  // The ability input boundary carries its source. `innateAbilities` is what the unit was
+  // built with (`ABILITY_DEFS`, the `template` moment) and `markedAbilities` is what the card
+  // marks (`ENCHANTMENT_DEFS`, the cast moment); the engine makes those two writes at different
+  // moments and the phase table names both. F252.1 splits them at the boundary and puts them
+  // back together here, so nothing has moved yet: `mergeAbilitySourceHalves` applies the same
+  // `mergeAbilityCalcValue` rule the single fold applied, in the same innate-first order.
+  // F252.3–F252.6 replace this reconstruction with positioned writes per half.
+  //
+  // A caller that states a control set rather than a card — every probe and sweep under
+  // `tools/` — supplies the merged `abilities` map instead and the def lists say which half each
+  // key belongs to. Supplying both shapes is two statements of one thing, so it halts.
+  const statesHalves = input.innateAbilities !== undefined || input.markedAbilities !== undefined;
+  if (statesHalves && input.abilities !== undefined) {
+    throw new Error(`deriveUnitStats: the input for side ${JSON.stringify(prefix)} states both `
+      + 'the merged `abilities` map and the innate/marked halves. The halves are the boundary; a '
+      + 'caller with no control sources states `abilities` alone.');
+  }
+  if (statesHalves) {
+    for (const half of ['innateAbilities', 'markedAbilities']) {
+      const value = input[half];
+      if (value !== undefined && (value === null || typeof value !== 'object')) {
+        throw new Error(`deriveUnitStats: the input for side ${JSON.stringify(prefix)} states `
+          + `${half} as ${JSON.stringify(value)}, which is not an ability map. A half that states `
+          + 'nothing is `{}`, not a falsy value.');
+      }
+    }
+  }
+  const abilityHalves = statesHalves
+    ? { innateAbilities: input.innateAbilities || {}, markedAbilities: input.markedAbilities || {} }
+    : splitAbilityCalcValuesBySource(input.abilities || {});
+  const suppliedAbilities = mergeAbilitySourceHalves(
+    abilityHalves.innateAbilities, abilityHalves.markedAbilities, 'deriveUnitStats');
+  // Holy Bonus and Resistance to All are the one pair whose two halves are two *quantities* —
+  // what the unit provides and what a stackmate provides to it — so they never merge into the
+  // record map. The received value travels beside it to the positioned step, which maxes the two
+  // there, because that is where both engines make the comparison: the DOS per-controller
+  // battlefield maximum and CoM2/Warlord's aura table both keep one winner and add it once
+  // (`ability_gating.js`, `PROVIDED_RECEIVED_CALC_KEYS`; F252.2).
+  const receivedAbilities = receivedAbilityValues(abilityHalves.markedAbilities);
   // ApplyAttack's modern Cause Fear setup reads Death Immunity from BaseUnits rather than
   // the recalculated Units record: the immunity test at 0x5B1D1C reads displacement
   // `BaseUnits + 0xC7` (`Reference docs/Caster binary/CoM2 binary - combat flow.md`, *Cause Fear
@@ -103,14 +141,13 @@ function deriveUnitStats(input) {
         marionetteDerivation.abilities,
         version, isHero ? 'hero' : baseUnitType, baseUnitRace, unitName),
       version),
-    version, isHero,
-    // Spirit Link's cast also writes the Sapiens label, `SETSTAT(TU,SMultiLabel,1,14)`, under
-    // the same gate as the Fantastic clear. The reform's `NOTSAPIENS` test reads that label
-    // beside the permanent Fantastic flag, and the two can disagree once Destiny re-asserts the
-    // flag, so it travels as its own term (F245). It is still a **pre-sequence** read, because
-    // the Sapiens label is not a record field yet; **F263** makes it one and finishes the
-    // migration this parameter is the last of.
-    spiritLinkClearsPermanentFantastic(identity, suppliedAbilities, version));
+    // Nothing about the Sapiens label travels here any more. Spirit Link's cast writes it —
+    // `SETSTAT(TU,SMultiLabel,1,14)`, under the same gate as the Fantastic clear — and the
+    // reform's `NOTSAPIENS` test reads it beside the permanent Fantastic flag, the two able to
+    // disagree once Destiny re-asserts the flag (F245). Both are record reads now:
+    // `buffs:spiritLink:sapiens` makes the write and `outlanderSapiensAt` reads the field off
+    // `ctx.base`, which retired the `spiritLinkSentience` parameter (F263).
+    version, isHero);
   const outlanderReform = outlanderDerivation.reform;
   // The curse strip is no longer folded in here, and since F244.3b there is no strip at all: each
   // of the nine curse flags is a field of the sequence record written by its own
@@ -342,10 +379,28 @@ function deriveUnitStats(input) {
   // stand behind `a:baseCopy` and read `ctx.base`; `rust:material` stands ahead of it, where the
   // running record *is* the permanent one, so it reads that. No identity conversion ranks between
   // `debuffs:rust:material` and `a:baseCopy` in the Warlord chain, so the four answer alike.
+  // That is the *eligibility* decision — the Fantastic exclusion below. Three of the four reach it
+  // through `rustActiveAt`; the melee -3 states its own `hasAbil(abilities, 'rust')` with no
+  // Fantastic term at all, so it is a fourth write of the same effect rather than a fourth caller
+  // of this predicate.
   const permanentFantasticAt = (u, runCtx) => (runCtx && runCtx.base
     ? !!runCtx.base.fantastic : !!u.fantastic);
+  // **The cast term reads the marked half (F252.6).** `debuffs:rust:material` is a `debuffs`-phase
+  // write, so under F252's rule "did the Rust cast land" is stated by the `ENCHANTMENT_DEFS` half
+  // and not by the merged map, which cannot say whether a cast or the roster template put the key
+  // there. The eligibility half above is untouched — the Fantastic exclusion and its record choice
+  // are `permanentFantasticAt`'s, and sharing an eligibility test does not oblige sharing a cast's
+  // input source (F252.6 review, finding 1).
+  //
+  // The two region-`d` reads take the same source because the predicate stays single-homed; that
+  // is not a migration of them, and it moves nothing, because `rust` has only an
+  // `ENCHANTMENT_DEFS` control and the two maps carry the same bit. The melee −3 in
+  // `combat_abilities.js` is a *different* predicate — a bare `hasAbil(abilities, 'rust')` with no
+  // Fantastic term, inside `getAbilityStatSteps`, which is handed the merged map and nothing else
+  // — so it is untouched here and is part of `rust`'s open record-field question rather than of
+  // this one.
   const rustActiveAt = (u, runCtx) => version.startsWith('com2_warlord')
-    && !!(abilities && abilities.rust) && !permanentFantasticAt(u, runCtx);
+    && !!abilityHalves.markedAbilities.rust && !permanentFantasticAt(u, runCtx);
   // The material block has no Fantastic gate in either engine family: it reads
   // `_UNITS[si].mutations & UM_WEAPON_QUALITY_MASK` and nothing else (`unitcalc.c`,
   // 131:0x8F02A / com1:0x8F024). The `!isFantasticBase` term in `weaponEligibleAt` below is the
@@ -374,18 +429,18 @@ function deriveUnitStats(input) {
   // what its city gave it, while a base-Fantastic unit had no city loadout to begin with and
   // Spirit Link's later `SETSTAT(TU,AFantastic,1,0)` does not hand it one.
   //
-  // **Why `identity.baseFantastic` rather than the running `u.fantastic`.** A `training` step's
-  // running record *is* the permanent record in four of the five chains — nothing writes
-  // `fantastic` in their `template` phase past the seed — so there the two are the same read. In
-  // **CoM 1** they are not: `template:constructCatapult` and `template:summonBranch`
-  // (`stats_identity.js`) are creation-time writes to the *calculated* record that happen to sit
-  // in that phase, and the engine makes the material read strictly ahead of them —
+  // **`identity.baseFantastic` and the running `u.fantastic` are the same read here, in all five
+  // versions.** A `training` step's running record *is* the permanent record: nothing writes
+  // `fantastic` in any chain's `template` phase past the seed. CoM 1 was the exception until
+  // F267.1 — `template:constructCatapult` and `template:summonBranch` wrote the *calculated*
+  // record from inside that phase — and the engine had always disagreed with them:
   // `Load_Battle_Unit` (`combat.c`, com1:0x75C8A) runs the quality read at com1:0x8F024 and
   // returns before the combat-summon path reaches `bu->Abilities |= UA_FANTASTIC` at
-  // com1:0x75D6C. A CoM 1 combat summon therefore keeps a stored material, and reading the
-  // running record here would have taken it away. This is the same value the file's two other
-  // `training`-phase Fantastic gates read, `trainingLevelEligible` and `baseNormalTrainingUnit`
-  // (F262 review, finding 1).
+  // com1:0x75D6C, so a CoM 1 combat summon keeps its stored material. Both conversions are
+  // region-`a` steps now (`a:constructCatapult`, `a:summonBranch`), which is what makes the
+  // invariant hold rather than the choice of expression. This is the same value the file's two
+  // other `training`-phase Fantastic gates read, `trainingLevelEligible` and
+  // `baseNormalTrainingUnit` (F262 review finding 1; F267.1).
   const weaponEligibleAt = () => !isFantasticBase || identity.specialUnit === 'zombies';
   // CoM 1's Catapult constructor writes `_UNITS[si].mutations = 1` for type 0x25 with `wp == 9`
   // (com1:0x8EEA4-0x8EEAF), and the weapon-quality read at com1:0x8F024 re-reads the record, so
@@ -469,9 +524,10 @@ function deriveUnitStats(input) {
   // permanent-record phases leave — Destiny's `B.Fantastic := True` at $0059A390 included, since that write
   // is to `BaseUnits` and persists into every later recalculation (F192). The same `NOTSAPIENS`
   // label also encloses Ballistics Training, Xenopsychology and Radio, which take the identical
-  // gate through `outlanderSapiensAt` — one home for one script test (F198). That gate is read at
-  // the asking step's own rank now, off `ctx.base`, rather than from a pre-sequence snapshot of
-  // the same flag (F262); every step it gates is region `b`, so the copy has been published.
+  // gate through `outlanderSapiensAt` — one home for one script test (F198). Both terms are read
+  // at the asking step's own rank now, off `ctx.base`, rather than from a pre-sequence snapshot:
+  // the Fantastic flag since F262 and the Sapiens label since F263, when the label became a
+  // record field. Every step it gates is region `b`, so the copy has been published.
   const explosiveOwned = isWarlord && !!abilities.explosive;
   const explosiveEligibleAt = ctx => explosiveOwned
     && outlanderSapiensAt(ctx, outlanderReform);
@@ -1292,8 +1348,9 @@ function deriveUnitStats(input) {
   // half reads `ctx.base.fantastic` at this region-`c` block's own position rather than the
   // unit's training-time flag. `buffs:destiny` writes `B.Fantastic := True` ($0059A390) and
   // `buffs:spiritLink:fantastic` clears it, and both stand ahead of the copy (F244.3h, F192).
-  // CoM 1 short-circuits the whole pair, so the read is modern-only — which matters, because
-  // CoM 1's three `template`-phase conversions make `ctx.base.fantastic` a different fact there.
+  // CoM 1 short-circuits the whole pair, so the read is modern-only. Since F267.1 that is a
+  // simplification rather than a rescue: CoM 1 makes no `template`-phase identity conversion at
+  // all, so `ctx.base.fantastic` there is the permanent flag exactly as in the other four.
   const heavenlyLightMaterialTail = (u, runCtx) => heavenlyLightActive
     && u.weaponMaterial === 'normal' && (isCoM1 || (!isHero && !runCtx.base.fantastic));
   // CoM 1 tests the *live* melee at its own position (`if (bu->melee > 0)`, com1:0x905F3), where
@@ -1946,6 +2003,9 @@ function deriveUnitStats(input) {
     // `b:magitekEngine`, neither of which has an ability key any more (F198).
     outlanderReform,
     strengthFields,
+    // What a stackmate provides, kept apart from what this unit provides so the maximum is taken
+    // at the aura step's own position rather than at the input boundary (F252.2).
+    receivedAbilities,
   }).map(step => {
     if (step.id !== 'rust') return step;
     const legacyApply = step.apply;
@@ -2413,12 +2473,15 @@ function deriveUnitStats(input) {
     warlordCombatFlameBlade, warlordEternalNightActive, warlordTrueLightStep,
     warpRealityActive, weaponStatSteps, wofDefenderBonusActiveAt,
     markedAbilities: effectiveAbilities, eyeOfHeavenActive: !!effectiveAbilities.eyeOfHeaven,
-    // The card's own ability set, before any pre-sequence transform ran. Only the `buffs:*:cast`
-    // steps read it, and they must: a `buffs:<key>:cast` step claims *the cast wrote this flag*,
-    // and `markedAbilities` above cannot support that claim because it also carries the
-    // Marionette book package's grants of `resistMagic` and `rebuild`. The two maps agree on
-    // every other key those steps write (F244.3d review, finding 1).
-    cardAbilities: suppliedAbilities,
+    // The card's **marked** half alone — the `ENCHANTMENT_DEFS` controls, what the card *marks*.
+    // Every positioned marked write reads it and nothing else: the two `immunities:*:marked`
+    // writes (F252.4) and all eight `buffs:*:cast` steps (F252.3 for `invisibility`, F252.5 for
+    // the rest). A step in one of those phases claims *a cast wrote this flag*, and the merged
+    // card set cannot support that claim — for a dual-source key it also carries what the unit was
+    // built with, so an innate Invisibility or Missile Immunity would fire a step asserting a cast
+    // that never happened. The merged set is still what the seed and the rest of the sequence
+    // read; it is only the marked phases that need the half.
+    cardMarkedAbilities: abilityHalves.markedAbilities,
   });
   // The raw assembly intentionally keeps the implementation fragments close to their formulas.
   // F20 performs one explicit manifest walk here so the executed list is source ordered, every
@@ -2553,7 +2616,14 @@ function deriveUnitStats(input) {
     // `SETSTAT(U,AF…,0,<n>,1)` is an assignment. `regeneration` is the seventh and the one
     // *increment* in that branch, with no control and no template row anywhere, so
     // `b:marionette:ascension:regeneration` is its only source.
-    ...seedNonStatRecordFields(version, effectiveAbilities, suppliedAbilities),
+    //
+    // The seed reads the **innate** half (F252.3): a `template` write is what the unit was
+    // built with, and the marked half's writes are positioned in `immunities`/`buffs`/
+    // `debuffs`. The effective and supplied maps travel beside it so the seed can still see
+    // what a pre-sequence transform wrote, which is the one thing outside the innate half it
+    // carries.
+    ...seedNonStatRecordFields(version, abilityHalves.innateAbilities,
+      effectiveAbilities, suppliedAbilities),
     // The calculated identity is part of the record, seeded from the permanent one. Every
     // conversion is a positioned write to these two fields (F163).
     race: identity.baseRace, fantastic: identity.baseFantastic,

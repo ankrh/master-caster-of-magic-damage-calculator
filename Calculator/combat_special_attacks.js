@@ -261,7 +261,8 @@ function deathGazeFailProb(defRes, defAbilities, modifier) {
 // The gazes read the same byte but are selected by `ranged_type` (103/104/105) rather than by a
 // flag of their own, so they take no entry here; the shared strength/type slot selects them.
 // Holy Bonus and Resistance to All are this unit's *provided* value; the received side is a
-// separate control and the two contend in `mergeAbilityCalcValue`.
+// separate control, and since F252.1 the two are the innate and the marked half of the derivation
+// input, contending at that boundary under `mergeAbilityCalcValue`.
 const DOS_SPECIAL_CONSUMERS = [
   ['stoningTouch', 'Stoning Touch', -1],
   ['deathTouch', 'Death Touch', -1],
@@ -305,22 +306,23 @@ function dosGazeAbilityValues(rangedType, magnitude) {
 // The DOS read side. Consumer values are derived from the one byte and its flags rather than
 // from per-effect inputs, so the record's contention holds however the state was reached —
 // roster, preset, share link or hand edit. `consumers` is marshalled by the caller: each entry
-// names the ability definition the byte feeds, the sign it carries, whether its flag is set,
-// and the value the same calc key receives from elsewhere (`undefined` on the matrix path,
-// where the received side is overlaid afterwards).
+// names the ability definition the byte feeds, the sign it carries, and whether its flag is set.
+// This is the *provided* side alone — the innate half. What the same calc key receives from an
+// enchantment control is the marked half and contends with this at the derivation boundary
+// (`mergeAbilitySourceHalves`, F252.1), which is what retired the `received` entry field.
 // PROVENANCE[dosSharedSpecialByte]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08; sources=Reference docs/DOS reconstructed/combat.c@span:20:058c9ea7d6c14be3d698e06a | Reference docs/DOS reconstructed/combat.c@span:22:cfb3908957e79fe942a78119 | Reference docs/DOS reconstructed/combat.c@span:19:2479e7f72df0edd5cef33c89
 function dosSpecialAbilityValues({ version, magnitude, rangedType, consumers }) {
   if (!dosSpecialIsActive(version)) return {};
   const mag = Math.abs(magnitude || 0);
   const out = {};
-  for (const { def, sign, checked, received } of consumers) {
+  for (const { def, sign, checked } of consumers) {
     const calcKey = def.calcKey || def.key;
     // `null` (absent) and 0 (present, modifier −0) are different states for a numcheck: the
     // engine tests the flag, so an unset flag must read back as null rather than 0.
     if (def.type === 'numcheck') {
       out[calcKey] = checked ? sign * mag : null;
     } else {
-      out[calcKey] = mergeAbilityCalcValue(def, received, checked ? sign * mag : 0);
+      out[calcKey] = mergeAbilityCalcValue(def, undefined, checked ? sign * mag : 0);
     }
   }
   return { ...out, ...dosGazeAbilityValues(rangedType, mag) };

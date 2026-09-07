@@ -46,7 +46,8 @@ function baseStatSteps(ctx) {
     naturalSelectionPowerMineralsCountAt, naturalSelectionEligibleAt,
     pillarOfFaithAt, pillarOfFaithCountAt, poolOfRepentance,
     rangedTypeFields, recordContext, sanctaBasilica, secondaryHitFields, strengthFields,
-    survivalInstinctToBlkBonus, thrownTypeFields, version, markedAbilities, cardAbilities,
+    survivalInstinctToBlkBonus, thrownTypeFields, version, markedAbilities,
+    cardMarkedAbilities,
     eyeOfHeavenActive,
     baseUnitType,
   } = ctx;
@@ -56,17 +57,22 @@ function baseStatSteps(ctx) {
     // A curse is refused where the record already carries the immunity that blocks it, so an
     // immune unit never receives the flag rather than receiving it and having it stripped
     // (`curseCastSteps`, `stats_identity.js`; the user's ruling of 2026-09-02, F244.3b).
-    // The cast steps read `cardAbilities`, the map before any transform ran, and every other
-    // group here reads `markedAbilities`, the map after them. That is deliberate: only a cast
-    // step claims a *cast* made the write, and the Marionette book package grants two of the
-    // keys it writes (F244.3d review, finding 1).
-    // The immunities the card marks, before anything tests them (`CLAUDE.md`, the phase table).
+    // Every cast step in these three groups reads `cardMarkedAbilities`, the card's **marked
+    // half** — the `ENCHANTMENT_DEFS` controls alone — and not `markedAbilities`, the merged map
+    // after the pre-sequence transforms. That is deliberate: only a cast step claims a *cast* made
+    // the write, and only the marked half states one (F252.4 for the immunities, F252.5 for the
+    // beneficial casts, F252.6 for the curses).
     // The five Lava Smelter mineral-pair grants, at the `CreateUnit.CAS` position their block
     // takes among the training writes (`lavaSmelterGrantSteps`, `stats_identity.js`, F244.3c).
     ...lavaSmelterGrantSteps(baseUnitType, markedAbilities),
-    ...markedImmunitySteps(markedAbilities),
-    ...permanentCastFlagSteps(version, cardAbilities),
-    ...curseCastSteps(version, markedAbilities, eyeOfHeavenActive),
+    // The immunities the card marks, before anything tests them (`CLAUDE.md`, the phase table).
+    // These read `cardMarkedAbilities`, the **marked half**, and not the merged map: both keys are
+    // dual-source, so the innate control seeds the record at `template` rank and only the
+    // enchantment half is a write here (F252.4). The Sancta Basilica Paladin grant of
+    // `magicImmunity` is a pre-sequence transform and reaches the seed that way, not this step.
+    ...markedImmunitySteps(cardMarkedAbilities),
+    ...permanentCastFlagSteps(version, cardMarkedAbilities),
+    ...curseCastSteps(version, cardMarkedAbilities, eyeOfHeavenActive),
     // Destiny's third permanent write, beside the `B.race` / `B.Fantastic` pair `buffs:destiny`
     // makes — one block, $0059A35E..$0059A633, whose permanent half runs in executable order.
     // It is a separate id because the identity conversion must keep writing `race` and
@@ -241,6 +247,36 @@ function baseStatSteps(ctx) {
       phase: 'buffs', writes: ['level'],
       when: () => destinyActiveForUnit(abilities, version),
       apply: u => { u.level = 'normal'; } }),
+    // Spirit Link's first write inside `IF BASEFANTASTIC(TU)` and the first of the block's three
+    // gated writes, `SETSTAT(TU,SMultiLabel,1,14)` — record selector 1, `ABase`
+    // (`MASTER.CAS~"ABase=1"`) — beside the `AFantastic := 0` that
+    // `buffs:spiritLink:fantastic` (`stats_identity.js`) makes and the `ALevel := 1` that
+    // `buffs:spiritLink:level` below makes. The ungated `SResist +2` is `buffs:spiritLink`
+    // (`combat_abilities.js`), so these are three of the block's four modelled permanent writes.
+    // 14 is the **Sapiens** label; `DisAbil.CAS` prints
+    // "Sapiens" on it, and `sapiens` is the record field standing for it (F263).
+    //
+    // It is a step of its own for the reason `buffs:destiny:supernatural` is: the completeness
+    // rule stated at `identityConversionSteps` (`stats_identity.js`) is that an identity
+    // conversion writes `race` and `fantastic` and nothing else, so the label cannot ride inside
+    // `buffs:spiritLink:fantastic`. It is ranked
+    // **ahead** of that clear, which is the script's own order inside the block, and that is what
+    // lets it read the block's `IF BASEFANTASTIC(TU)` off the record at its own position instead
+    // of taking the latch `buffs:spiritLink:level` needs — the clear has not run yet.
+    //
+    // The write is a **set**, not an assignment of the card's mark: the `sapiens` control seeds
+    // the field at `template` rank and this step ORs the cast's bit onto it at the grant position
+    // (F252.2, shape 1). A unit built Sapiens and then Spirit Linked therefore takes both writes,
+    // the second idempotent onto the same field, and the record reads the same either way. Its
+    // one modelled reader is `outlanderSapiensAt`
+    // (`stats_identity.js`), which reads the label off `ctx.base` beside the permanent Fantastic
+    // flag; the label's other appearance, `DisAbil.CAS`'s Bombs & Grenades line, is display text.
+    // PROVENANCE[spiritLink:sapiens]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
+    statStep({ id: 'spiritLink:sapiens', sourceId: 'spiritLink', sourceLabel: 'Spirit Link',
+      phase: 'buffs', writes: ['sapiens'],
+      when: u => !!(version && version.startsWith('com2_warlord'))
+        && !!(abilities && abilities.spiritLink) && !!u.fantastic,
+      apply: u => { u.sapiens = true; } }),
     // Spirit Link's third permanent write, `SETSTAT(TU,ALevel,1,1)` — record selector 1,
     // `ABase` (`MASTER.CAS~"ABase=1"`) — beside the `AFantastic := 0` that
     // `buffs:spiritLink:fantastic` (`stats_identity.js`) makes and the +2 Resistance that

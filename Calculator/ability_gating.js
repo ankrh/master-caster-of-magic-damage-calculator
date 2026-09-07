@@ -102,6 +102,196 @@ function globalEnchantmentAllowedForVersion(elementId, version) {
   }
 }
 
+// --- The two ability sources, named ---
+//
+// A calc key can be written by two different engine moments: the unit is *built* with the
+// ability (`ABILITY_DEFS`, the roster's own line) or the card *marks* the enchantment or
+// condition (`ENCHANTMENT_DEFS`, a cast). The phase table names both — `template` against
+// `immunities`/`buffs`/`debuffs` — so the derivation boundary carries the two halves separately
+// and only `mergeAbilitySourceHalves` puts them back together (F252.1).
+//
+// Nine calc keys are named by both lists: `fear`, `holyBonus`, `immolation`, `invisibility`,
+// `magicImmunity`, `missileImmunity`, `resistanceToAll`, `teleporting`, `undead`. Their two
+// writes are what the halves keep apart, and F252.2 rules on what the record then holds:
+//
+// - **Seven of them are booleans** (`fear`, `immolation`, `invisibility`, `magicImmunity`,
+//   `missileImmunity`, `teleporting`, `undead`). Each is an OR of the two sources at the grant
+//   position, so no fold is needed at input — but the engines reach that OR in three different
+//   ways, and the three must not be collapsed into one when F252.3-F252.6 position the writes:
+//
+//   1. **Same field, set onto the template's bit.** `missileImmunity`, `magicImmunity`,
+//      `immolation`, `invisibility`: the cast lives in its own enchantment word and the
+//      recalculation derives the ability field from it with a set — `bu->Attribs_1 |=
+//      USA_IMMUNITY_MISSILES` (`unitcalc.c`, com1:0x8F51A), `bu->Abilities |= UA_INVISIBILITY`
+//      (com1:0x8F32B), `U.missileImmunity := True` (`Units.RecalculateUnits.pas` $0059FD93),
+//      `U.magicimmunity := True` ($0059FDED), `U.immolation := True` ($005A00E7). Setting a set
+//      bit changes nothing, so two positioned writes need nothing between them. Modern
+//      `fear` joins this shape: `if U.EnchantmentFlags[EncCloakofFear] then U.fear := True`
+//      ($0059EA8B).
+//   2. **Distinct fields, OR'd by the consumer.** DOS `fear`: `BU_CauseFear` tests the innate
+//      `Attribs_2 & USA2_CAUSE_FEAR`, the battle enchantment, the item enchantment and the
+//      permanent unit enchantment as four separate disjuncts (131:0x9BB63, 0x9BB82, 0x9BBA1,
+//      0x9BBCE) and never merges them onto one field. The record keeps them apart; the OR is the
+//      *reader's*. Modelling that as one field is a calculator convenience, not the record shape,
+//      and F252.4-F252.6 must not read the equivalence the other way.
+//   3. **A condition flag that gates a normalisation, not a derived ability bit.** `undead` and
+//      `teleporting`. `$0059FBD0` tests `EncUndead` and rewrites race, Fantastic, three
+//      immunities, upkeep and healing; it derives no Undead ability field, and the DOS side gates
+//      the same normalisation on the `UM_UNDEAD` mutation (`unitcalc.c` com1:0x8F4B4). So the
+//      *innate* control here means "the record already carries that flag", which F252.3 has to
+//      state as a modelling decision rather than inherit — a Death-race Fantastic identity is not
+//      by itself evidence of the flag.
+//
+//   And the OR is scoped to the grant position, not to the whole sequence: Warlord's Hierophany
+//   strip clears `missileImmunity`, `magicImmunity` and `teleporting` later (`regionD` rows in
+//   `stats_origins.js`), so those clears must survive the migration. What the fold got wrong is
+//   *when*: the two sets happen at different ranks, and a step reading the field between them
+//   must see the innate bit alone.
+// - **Two are numbers** (`holyBonus`, `resistanceToAll`) and are not one quantity at all: the
+//   ability def is what the unit *provides* and the enchantment def what it *receives*. Neither
+//   engine folds them on the unit; each keeps a maximum across providers and adds the winner once
+//   at the pass that sums it. They are max'ed at that position instead — see
+//   `PROVIDED_RECEIVED_CALC_KEYS` below.
+//
+// The ruling generalises with nothing left over: measured over the 218 defs and 202 calc keys the
+// two lists hold, `holyBonus` and `resistanceToAll` are the **only** calc keys any two defs name
+// with a numeric type. Every other numeric key is single-def, so the numeric arm of
+// `mergeAbilityCalcValue` never contended anything else, and it no longer contends at all.
+
+// The provided/received pair (user ruling, 2026-09-03; implemented F252.2). The innate def states
+// what this unit provides to its stack and the marked def what a stackmate provides to it, and the
+// engine reads the two as candidates in one maximum rather than as one value:
+//
+// - DOS: `battlefield_holy_bonus_max[controller]` / `battlefield_resist_prayer_max[controller]`
+//   take the largest `Spec_Att_Attrib` over every battlefield unit of the controller carrying the
+//   provider bit (`combat.c` 131:0x9AA1C, 131:0x9AA70) — the unit's own value among them — and
+//   the recompute then adds that one number to melee/defense/resistance (`unitcalc.c`
+//   131:0x900C5, com1:0x900E8).
+// - CoM2/Warlord: `BuildAuraTable` adds `BaseUnits[i].HolyBonus` / `BaseUnits[i].ResistToAll` as
+//   an aura record ($005976CC), and `AddtoAuraTable` ($005973A4) retains only the higher value
+//   where owner, tile and type match; the region-`e` receiving loop ($005A6827..$005A6FDF) then
+//   applies the survivor once (`Units.RecalculateUnits.pas`).
+//
+// So these two keys never merge into the record map. The merged map carries the **provided**
+// value — the unit's own record field — and the received value travels to the positioned step,
+// which takes the maximum there.
+const PROVIDED_RECEIVED_CALC_KEYS = Object.freeze(['holyBonus', 'resistanceToAll']);
+
+// --- What an innate `undead` or `teleporting` control declares (F252.3) ---
+//
+// F252.2's third shape: these two keys are **condition flags gating a normalisation**, not ability
+// bits a recalculation derives. `$0059FBD0` tests `EncUndead` and rewrites race, Fantastic, three
+// immunities, upkeep and healing without ever writing an Undead ability field, and the DOS side
+// gates the same normalisation on the `UM_UNDEAD` mutation (`unitcalc.c` com1:0x8F4B4). Warlord's
+// Planewalking half of `teleporting` is the same shape, and the Hierophany strip clears it at
+// `regionD` (`stats_origins.js`).
+//
+// So there is no ability bit for a `template` write to seed, and the innate control cannot be
+// *derived* from anything the roster record states. **This is the declaration, and it is a
+// modelling decision rather than a reading of either engine:** ticking the innate Undead or
+// Teleporting control declares that the permanent record already carries that condition flag —
+// `EncUndead` / the `UM_UNDEAD` mutation, and the permanent Teleporting flag — when combat
+// recalculation begins, whatever put it there. It is not inferred from a Death-race Fantastic
+// identity, and no supported source makes such an identity evidence of the flag.
+//
+// The marked control is the other half and states the cast. The two are an OR at the grant
+// position like the other five booleans; what is declared here is only what the *innate* side
+// means, because the record shape gives it no derivation of its own.
+//
+// Neither key is a sequence record field (neither is in `SEEDED_NON_STAT_KEYS`,
+// `stats_identity.js`), so neither the declaration nor the cast carries a write today, and the
+// OR for these two still happens in `mergeAbilitySourceHalves` at the input boundary rather than
+// at a grant position on the record. F252.5 left it there: positioning it means giving each key a
+// record field and migrating its readers, which that subtask had no ruling for — so this is an
+// **open** part of F252's rule, not a settled exemption (F252.5 review, finding 1). Whichever
+// subtask gives either key a record field owes it a `buffs:<key>:cast` step in the same change,
+// and `runMarkedBuffPhaseChecks` (`tools/unit_checks/ability_origins.js`) fails if it does not. It is stated here, beside
+// the ruling that produced it, so a later subtask giving either key a record field inherits the
+// meaning rather than re-deciding it. The input rule itself — what ticking the control means — is
+// an open `PROPOSALS.md` entry against CLAUDE.md's *Deliberate deviations*, because it cannot be
+// re-derived from either binary (F252.3 review, finding 2).
+const INNATE_CONDITION_FLAG_KEYS = Object.freeze(['undead', 'teleporting']);
+
+// The def each half of a calc key comes from. A key can have several defs on one side —
+// Guardian Wind and Hillfort both write `missileImmunity` — and the fold within that side has
+// already contended them by the time the halves meet, so the *last* def is the one whose type
+// states how the two halves contend, exactly as it did when one fold ran over both lists. That is
+// the seven booleans; the provided/received pair does not contend here at all (F252.2).
+let _abilityCalcKeySources = null;
+function abilityCalcKeySources() {
+  if (!_abilityCalcKeySources) {
+    _abilityCalcKeySources = new Map();
+    for (const def of abilityUiDefs()) {
+      const entry = _abilityCalcKeySources.get(def.calcKey)
+        || { innate: null, marked: null };
+      entry[def.source === 'ability' ? 'innate' : 'marked'] = def;
+      _abilityCalcKeySources.set(def.calcKey, entry);
+    }
+  }
+  return _abilityCalcKeySources;
+}
+
+// Put the two halves back together. This is the one place the merged map a step reads is built,
+// and the rule it applies is `mergeAbilityCalcValue`'s — the cited engine rule for two sources of
+// one effect — applied innate-first, which is the order the single fold ran in
+// (`abilityUiDefs()` lists every ability def before every enchantment def).
+//
+// A marked key no def list names cannot have come from a control, so it halts rather than being
+// merged under a guessed type (`CLAUDE.md`, *Architecture*: fail loud).
+function mergeAbilitySourceHalves(innateAbilities, markedAbilities, source) {
+  const merged = { ...(innateAbilities || {}) };
+  for (const [calcKey, value] of Object.entries(markedAbilities || {})) {
+    const entry = abilityCalcKeySources().get(calcKey);
+    const def = entry && (entry.marked || entry.innate);
+    if (!def) {
+      throw new Error(`${source || 'mergeAbilitySourceHalves'}: the marked ability half names `
+        + `calc key '${calcKey}', which no ability or enchantment definition writes, so there is `
+        + 'no rule for how it combines with the innate half.');
+    }
+    // A control the card does not have is absent from the half and contributes nothing — the same
+    // statement `cardStateAbilityCalcValues` makes by skipping it. The key is still checked above,
+    // so an unknown key halts whether or not it carries a value.
+    if (value === undefined) continue;
+    // The provided/received pair is two quantities, not two statements of one, so the marked half
+    // does not enter the record map at all: it reaches its step through `receivedAbilityValues`
+    // and the maximum is taken there (F252.2).
+    if (PROVIDED_RECEIVED_CALC_KEYS.includes(calcKey)) continue;
+    merged[calcKey] = mergeAbilityCalcValue(def, merged[calcKey], value);
+  }
+  return merged;
+}
+
+// What the unit *receives* from a stackmate, for the steps that take the maximum at their own
+// position. Only the provided/received pair travels this way; every other marked key is a cast and
+// belongs in the record map. A key the marked half does not state is absent, which reads as no
+// provider rather than as a provider of zero.
+function receivedAbilityValues(markedAbilities) {
+  const received = {};
+  for (const calcKey of PROVIDED_RECEIVED_CALC_KEYS) {
+    const value = (markedAbilities || {})[calcKey];
+    if (value !== undefined) received[calcKey] = value;
+  }
+  return received;
+}
+
+// The reverse, for a caller that states a control set rather than a card: which half each calc
+// key belongs to is read off the def lists. The nine dual-source keys enter **both** halves,
+// which is value-preserving under F252.2's ruling — the caller stated one value, the seven
+// booleans OR it with itself, and the provided/received pair maxes it against itself. Those
+// duplicated values are one statement counted twice, not two independently stated source facts,
+// and must not be read as evidence of what the unit was built with. A key no def list names is a
+// raw record value the caller supplied directly; it has no cast behind it, so it is innate.
+function splitAbilityCalcValuesBySource(abilities) {
+  const innateAbilities = {};
+  const markedAbilities = {};
+  for (const [calcKey, value] of Object.entries(abilities || {})) {
+    const entry = abilityCalcKeySources().get(calcKey);
+    if (entry && entry.marked) markedAbilities[calcKey] = value;
+    if (!entry || entry.innate || !entry.marked) innateAbilities[calcKey] = value;
+  }
+  return { innateAbilities, markedAbilities };
+}
+
 // --- Modern card record shapes ---
 
 // Is this control's value a statement, or the absence of one? A `numcheck` distinguishes
