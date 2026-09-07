@@ -8,7 +8,8 @@
 // then the TEST_TREE group's `version` — and reports, per modern unit side, which notation it
 // uses and which To Hit fields it sets.
 //
-// It reads the fixture data only. It never evaluates a preset: that is browser `runTests()`.
+// It reads the fixture data only. It never evaluates a preset: the two runners that do are the
+// browser's `runTests()` and `tools/preset_checks.js`.
 //
 // Usage:
 //   node tools/preset_attack_notation_sweep.js [--json] [--list <class>]

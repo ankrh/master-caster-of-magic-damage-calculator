@@ -138,11 +138,17 @@ function matrixPropertyCandidates(box) {
     { key: 'cityWalls', label: 'City walls' },
     { key: 'damageTaken', label: 'Damage taken' },
   ];
-  // Armor quality doesn't exist in MoM (see armorExists in deriveUnitStats).
-  if (!version.startsWith('mom_')) list.push({ key: 'armor', label: 'Armor type' });
+  // Armor quality doesn't exist in MoM: `versionHasArmorQuality` (`ability_gating.js`) is the
+  // rule's one home, shared with the card's row hiding, `applyVersionGating` and
+  // `deriveUnitStats`'s `armorExists`.
+  if (versionHasArmorQuality(version)) list.push({ key: 'armor', label: 'Armor type' });
   for (const abil of abilityUiDefs()) {
     if (abil.source !== 'enchantment') continue;
-    if (!subgroupAllowedForVersion(abil.subgroup, version)) continue;
+    // `ABILITY_VERSION_GATES.matrix` (`ability_gating.js`) is the matrix's gating test, named so
+    // the divergence from the card's is visible rather than implicit in a bare subgroup call.
+    // F261 repoints all three matrix sites at `.card`; until then they must agree with each
+    // other, which one shared function is how they do.
+    if (ABILITY_VERSION_GATES.matrix(abil, version)) continue;
     list.push({ key: abil.uiKey, label: abilityDisplayLabel(abil) });
   }
   return list;
@@ -249,15 +255,16 @@ function matrixGlobalValue(key) {
 //
 // The version filter has to live here rather than in the stored state. Switching version hides a
 // row but never clears `matrixPropertyState`, so a row enabled under one version survives into
-// the next and stays readable. The card needs no such filter because `applyDisabled` clears
-// version-hidden controls, and a cleared checkbox reads unchecked; the matrix has no equivalent
-// cleaning step, and inheriting the card's assumption without its cleaning is how a Warlord-only
-// `enemyEyeOfHeaven` reached DOS matrix runs against INV-2 (F258.1).
+// the next and stays readable. The card needs no such filter because `applyVersionGating`
+// (`card_state.js`) clears version-hidden controls, and a cleared checkbox reads unchecked; the
+// matrix has no equivalent cleaning step, and inheriting the card's assumption without its
+// cleaning is how a Warlord-only `enemyEyeOfHeaven` reached DOS matrix runs against INV-2
+// (F258.1).
 //
 // `abilityValueIsActive` is the card's own predicate, so routing through it also makes the two
 // views agree on what "active" means rather than restating it a third time.
 function matrixEnchantmentValue(prefix, abil, version) {
-  if (!subgroupAllowedForVersion(abil.subgroup, version)) return undefined;
+  if (ABILITY_VERSION_GATES.matrix(abil, version)) return undefined;
   const row = matrixPropertyRow(prefix, abil.uiKey);
   if (!row || !row.enabled) return undefined;
   if (!abilityValueIsActive(abil, row.value)) return undefined;
@@ -320,9 +327,8 @@ function renderMatrixPropList(box) {
     if (!def) return false;
     if (box === 'global' && def.rangedOnly && activeMatrixMode !== 'ranged') return false;
     if (box === 'global' && def.modernOnly && !version.startsWith('com2')) return false;
-    if (def.abil && !subgroupAllowedForVersion(def.abil.subgroup, version)) return false;
-    if (def.abil && def.abil.key === 'blur' && abilityVersionGated(def.abil, version)) return false;
-    if (row.key === 'armor' && version.startsWith('mom_')) return false; // no armor in MoM
+    if (def.abil && ABILITY_VERSION_GATES.matrix(def.abil, version)) return false;
+    if (row.key === 'armor' && !versionHasArmorQuality(version)) return false; // no armor in MoM
     return true;
   });
   if (!rows.length) {

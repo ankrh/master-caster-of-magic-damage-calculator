@@ -941,7 +941,8 @@ const CURSE_CAST_LABELS = Object.freeze({
 // The value is the **merged** mark. The card's innate control and its enchantment control are
 // distinct DOM elements with distinct saved state (`aAbil_magicImmunity` and
 // `aAbil_enchantment_magicImmunity`; for Missile Immunity the innate control, Guardian Wind and
-// Hillfort), but `readAbilitiesFromDOM` runs them through `mergeAbilityCalcValue`, which is
+// Hillfort), but `cardStateAbilityCalcValues` (`card_state.js`) runs them through
+// `mergeAbilityCalcValue`, which is
 // `!!current || !!next` for a boolean, so the derivation is handed one flag. Writing that flag here
 // is what the ruling asks for; telling the two apart would be a change to the derivation's input
 // and is not this subtask's (F244.3b, Option C).

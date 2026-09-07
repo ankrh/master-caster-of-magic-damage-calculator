@@ -1,13 +1,10 @@
-// UI tests for the matrix modal's combined Settings & Filters side panel:
-// its push layout (opening shrinks the matrix), the responsive/persisted
-// open state, the live active-count badge, and the scroll-away header.
+// The matrix view's own surfaces: its drawers, and the property list it
+// assembles itself from the version select (`data-scope="page"`, so no Node
+// context reaches it).
 const { test, expect } = require('@playwright/test');
-const { openCalculator, expectNoConsoleErrors } = require('./helpers');
+const { expectNoConsoleErrors, openCalculator } = require('./helpers');
 
-// These tests assert panel layout, badge counts and scroll behavior — never a cell value —
-// but opening the matrix resolves combat for every roster unit against every other, which at
-// the default version is ~150x150 and cost about 19s per test. Trim the roster first; the
-// table still overflows both axes, so every scroll assertion keeps its meaning.
+// --- from matrix-drawers.spec.js ---
 const MATRIX_ROSTER_LIMIT = 40;
 
 async function useSmallRoster(page) {
@@ -208,5 +205,37 @@ test('scrolling the modal hides the header while the close stays visible and cli
   await close.click();
   await expect(page.locator('#matrixModal')).not.toHaveClass(/is-open/);
 
+  expectNoConsoleErrors(errors);
+});
+
+// --- from exorcise-f43-matrix.spec.js ---
+test('F43 offers Spell Lock as a matrix defender property in exactly the gated versions', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const matrixSpellLock = await page.evaluate(() => {
+    const versions = [
+      'mom_1.31',
+      'mom_cp_1.60.00',
+      'com_6.08',
+      'com2_1.05.11',
+      'com2_warlord_1.5.12.9',
+    ];
+    const versionSelect = document.getElementById('gameVersion');
+    return Object.fromEntries(versions.map(version => {
+      versionSelect.value = version;
+      return [version, matrixPropertyCandidates('b').some(def => def.key === 'spellLock')];
+    }));
+  });
+
+  // The matrix property list follows the same gating the card does for this control, so it becomes
+  // an offerable defender property in the three CoM-era versions. The two modern entries are
+  // F244.3f's correction: the shared modern executable refuses Exorcise on the Spell Lock flag, so
+  // the control belongs there too.
+  expect(matrixSpellLock).toEqual({
+    'mom_1.31': false,
+    'mom_cp_1.60.00': false,
+    'com_6.08': true,
+    'com2_1.05.11': true,
+    'com2_warlord_1.5.12.9': true,
+  });
   expectNoConsoleErrors(errors);
 });

@@ -38,6 +38,9 @@ const excludedJavaScript = new Map([
   ['Calculator/data.js', 'declarative UI/version metadata'],
   ['Calculator/abilities.js', 'declarative UI ability metadata'],
   ['Calculator/enchantments.js', 'declarative UI enchantment metadata'],
+  // Version gating and the two modern record shapes: which controls a version offers and what
+  // shape a modern card produces. It states no stat formula.
+  ['Calculator/ability_gating.js', 'ability/enchantment version gating and modern record shapes'],
   ['Calculator/presets.js', 'numeric preset fixtures'],
   ['Calculator/test_tree.js', 'preset browser grouping tree'],
   ['Calculator/engine.js', 'generic probability and damage-distribution math'],
@@ -47,6 +50,11 @@ const excludedJavaScript = new Map([
   // The origin table names engine writes, but as mentions: the anchor for each lives on the step
   // that reads the flag or the transform that makes it, which are formula-bearing sources above.
   ['Calculator/stats_origins.js', 'ability-key origin classification, carrying no stat formula'],
+  // The projection marshals control state into derivation input. Every rule it applies is cited
+  // where it lives — `mergeAbilityCalcValue` and `dosSpecialAbilityValues` in the formula-bearing
+  // sources above — and the file itself states no formula. It carried the same content while it
+  // was part of `ui_card.js`, excluded below.
+  ['Calculator/card_state.js', 'card control state and its projection into derivation input'],
   ['Calculator/ui.js', 'UI rendering, formatting, and page wiring'],
   ['Calculator/ui_abilities.js', 'UI ability controls and version gating'],
   ['Calculator/ui_units.js', 'UI unit selection and identity controls'],

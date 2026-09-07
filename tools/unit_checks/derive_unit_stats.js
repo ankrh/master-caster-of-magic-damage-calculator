@@ -3,7 +3,9 @@
 
 'use strict';
 
-const { evalInContext, assert, assertEqual, assertClose, baseUnitInput } = require('./assertions');
+const {
+  evalInContext, assert, assertEqual, assertClose, assertIs, baseUnitInput,
+} = require('./assertions');
 
 function runDeriveUnitStatsChecks(ctx) {
   const modernChannels = ctx.deriveUnitStats(baseUnitInput({
@@ -691,6 +693,21 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(naturalSelectionCount.res, 6,
     'Natural Selection adds the full Nightshade count from the saved Resistance snapshot');
 
+  // Wild Game adds a flat +1 to a physical or magical ranged attack. The magnitude needs a probe
+  // at a size the corpus does not carry: every shipped Wild Game fixture states strength 5, so a
+  // rounded percentage — `+= Math.trunc(strength / 5)` — is +1 there and agrees with all of them,
+  // while a strength-2 attacker takes +0 instead of +1. F268.5 deleted this claim as "covered by
+  // two fixtures" and its review disproved that with exactly this mutation: it passes all 1,161
+  // fixtures on four moments and ten category moments, and the whole Node tree. Restored here,
+  // which is the retired `r9-g1c` spec's only surviving assertion.
+  const wildGameFlatBonusAtLowStrength = ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.9',
+    abilities: { wildGame: true }, rtbType: 'missile', rtb: 2,
+    modernAttacks: { ranged: { strength: 2, type: 'missile' } },
+  }));
+  assertEqual(wildGameFlatBonusAtLowStrength.modernAttacks.ranged.strength, 3,
+    'Wild Game adds a flat +1, not a proportion of the ranged strength it reads');
+
   const wildGameDoesNotFollowFocus = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9',
     abilities: { wildGame: true, focusMagic: true }, rtbType: 'thrown', rtb: 2,
@@ -1186,4 +1203,152 @@ function runDeriveUnitStatsChecks(ctx) {
   assertEqual(enemyEternalNightDeathCoM2.res, 6, 'Enemy Eternal Night does not apply the extra resistance penalty to Death units');
 }
 
-module.exports = { runDeriveUnitStatsChecks };
+// --- F33 / F56: the modern hero ranged exemption, and the gaze fields the level ladder skips ---
+//
+// Tag: regression.  Anchor: F33, F56.  Migrated out of `tests/range-level-f33-f56.spec.js` by F268.4
+// and reduced there under that item's deletion default.  Everything kept below is
+// `data-scope="core"`, so the browser bought it nothing; it keeps its own
+// `--only range-level-f33-f56` command through `MIGRATED_SUITES`.
+//
+// **What survived, and why only this.**  Removing the hero exemption for `com2`/Warlord alone --
+// leaving CoM 1's intact -- left all 1,161 preset fixtures green on all four moments and all ten
+// damage-category moments, and the other 29,664 Node assertions with them.  No fixture pairs a
+// hero with a ranged distance above 1, so the modern arm is corpus-unreachable.  The *DOS and
+// CoM 1* arms are reachable and were dropped: removing the exemption outright fails
+// `distPenaltyHeroCoM12`, and replacing the CoM2 per-tile formula with CoM 1's divisor fails
+// `distPenaltyCoM2_6` and `distPenaltyCoM2_16`.
+//
+// **F56 stayed too, and the reasoning that first retired it was wrong.**  F268.4 initially
+// concluded the claim was unfalsifiable: a modern derived unit has no `gaze` or `doomGaze` field
+// (`'gaze' in derived === false` for `com2_1.05.11` -- those are the DOS record's), and writing
+// `u.abilities.stoningGaze` from inside the level step leaves the derived value at its stated
+// `-3`, so three separate mutations all moved no number.  **The review broke that** with a fourth
+// aimed at the object the derivation actually shares: `ctx.markedAbilities` is the
+// `effectiveAbilities` map `stats.js` hands the sequence, the published combat abilities copy it,
+// and the level step's closure can reach it.  Decrementing `ctx.markedAbilities.stoningGaze` by
+// the ranged level bonus -- the plausible mistake of running a modern gaze's resistance modifier
+// through the ranged ladder -- moves the elite value from `-3` to `-5` in both modern builds and
+// is caught by **nothing**: not the corpus, not the rest of the Node checks.  Reproduced before
+// restoring.  "I could not construct one" is a statement about the search, not about the code.
+//
+// The *DOS* half of F56 is a real behaviour and is corpus-reachable, so it stayed retired:
+// zeroing the DOS gaze level step fails the preset corpus.
+//
+// Also dropped, and lost with the spec: the `#rangedDistLabel` control tooltip's statement that
+// heroes ignore the penalty, which is a DOM read no Node context can make, and the three gaze
+// tooltips' "Level does not modify this independent gaze field" line.  Nothing else in the tree
+// asserts either -- see the F268.4 report's coverage-given-up paragraph.
+
+const F33_MODERN = ['com2_1.05.11', 'com2_warlord_1.5.12.9'];
+
+function runRangeLevelF33F56Checks(ctx) {
+  // ---- F33: CoM2 and Warlord exempt heroes from physical ranged distance penalties ----
+  const derive = (version, identity) => ctx.deriveUnitStats(baseUnitInput({
+    prefix: 'a', version, rtbType: 'missile', atk: 1, rtb: 10, def: 0, res: 5, hp: 10,
+    toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0, rangedCheck: true, rangedDist: 8, identity,
+    modernAttacks: { ranged: { strength: 10, type: 'missile' } },
+  }));
+
+  for (const version of F33_MODERN) {
+    // [F33-1] The rule at its own function, on both physical ranged types and on neither of the
+    // types it does not gate.  `distancePenalty`'s hero arm is `version.startsWith('com')`, so
+    // this is its modern half; the DOS and CoM 1 halves are the corpus's.
+    assertIs(ctx.distancePenalty(8, 'missile', false, version, true), 0,
+      `${version}: a hero takes no missile distance penalty`);
+    assertIs(ctx.distancePenalty(8, 'missile', false, version, false), -22,
+      `${version}: a non-hero takes the full missile distance penalty`);
+    assertIs(ctx.distancePenalty(8, 'boulder', false, version, true), 0,
+      `${version}: a hero takes no boulder distance penalty`);
+    assertIs(ctx.distancePenalty(8, 'boulder', false, version, false), -22,
+      `${version}: a non-hero takes the full boulder distance penalty`);
+
+    // [F33-2] and through a whole derivation, on a roster hero and a custom one, because the
+    // exemption is only worth anything if the hero flag reaches the call.  The roster arm also
+    // fails loud rather than passing vacuously if the roster stops shipping a physical-ranged
+    // hero at all.
+    const roster = evalInContext(ctx,
+      version === 'com2_1.05.11' ? 'COM2_UNITS_DATA' : 'WARLORD_UNITS_DATA');
+    const physical = unit => unit.ranged_type === 'Missile' || unit.ranged_type === 'Boulder';
+    const rosterHero = Object.values(roster).find(unit => unit.isHero && physical(unit));
+    const rosterNormal = Object.values(roster).find(unit => !unit.isHero && physical(unit));
+    assert(rosterHero && rosterNormal,
+      `${version}: the roster ships both a hero and a non-hero with a physical ranged attack, `
+      + 'so the pair below is not an empty comparison');
+    const derivedHero = derive(version, ctx.createRosterUnitIdentity(version, rosterHero));
+    const derivedNormal = derive(version, ctx.createRosterUnitIdentity(version, rosterNormal));
+    assertIs(derivedHero.isHero, true, `${version}: ${rosterHero.name} derives as a hero`);
+    assertIs(derivedHero.rtbDistPenalty, 0,
+      `${version}: the roster hero ${rosterHero.name} takes no distance penalty`);
+    assert(!derivedHero.modifierTraces.toHitRanged.entries
+      .some(entry => entry.source.id === 'distancePenalty'),
+    `${version}: the roster hero's To Hit chain records no distance step at all`);
+    assertIs(derivedNormal.isHero, false,
+      `${version}: ${rosterNormal.name} derives as a non-hero`);
+    assertIs(derivedNormal.rtbDistPenalty, -22,
+      `${version}: the roster non-hero ${rosterNormal.name} takes the full penalty`);
+    assert(derivedNormal.modifierTraces.toHitRanged.entries
+      .some(entry => entry.source.id === 'distancePenalty'),
+    `${version}: the roster non-hero's To Hit chain records the distance step`);
+
+    const customHero = derive(version, ctx.createCustomUnitIdentity(version, {
+      isHero: true, baseRace: 'High Men', baseFantastic: false,
+    }));
+    const customNormal = derive(version, ctx.createCustomUnitIdentity(version, {
+      isHero: false, baseRace: 'High Men', baseFantastic: false,
+    }));
+    assertIs(customHero.rtbDistPenalty, 0,
+      `${version}: a custom hero takes no distance penalty`);
+    assertIs(customNormal.rtbDistPenalty, -22,
+      `${version}: a custom non-hero takes the full penalty`);
+  }
+
+  // ---- F56: no modern gaze field is moved by the level bonus step ----
+  const gazeDerive = (version, overrides = {}) => ctx.deriveUnitStats(baseUnitInput({
+    prefix: 'a', version, abilities: { stoningGaze: -3, deathGaze: -2, doomGaze: 4 },
+    level: 'elite', atk: 1, def: 0, res: 5, hp: 10, toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
+    modernAttacks: {}, ...overrides,
+  }));
+
+  for (const version of F33_MODERN) {
+    const elite = gazeDerive(version);
+    const levelStep = elite.statTrace.find(entry => entry.id === 'level');
+    // [F56-1] the step's own write set names neither gaze field...
+    assert(!levelStep.changes.gaze && !levelStep.changes.doomGaze,
+      `${version}: the level step's write set names neither gaze field`);
+    // [F56-2] ...and the values the card reads back are the ones the record stated.  This is the
+    // assertion the review's counter-example needs: it reads the ability map, which is the object
+    // a level step could actually reach and move.
+    assertIs(elite.abilities.stoningGaze, -3, `${version}: elite Stoning Gaze is unmoved`);
+    assertIs(elite.abilities.deathGaze, -2, `${version}: elite Death Gaze is unmoved`);
+    assertIs(elite.abilities.doomGaze, 4, `${version}: elite Doom Gaze is unmoved`);
+    const hero = gazeDerive(version, {
+      identity: ctx.createCustomUnitIdentity(version, {
+        isHero: true, baseRace: 'High Men', baseFantastic: false,
+      }),
+    });
+    assertIs(hero.abilities.stoningGaze, -3, `${version}: elite hero Stoning Gaze is unmoved`);
+    assertIs(hero.abilities.deathGaze, -2, `${version}: elite hero Death Gaze is unmoved`);
+    assertIs(hero.abilities.doomGaze, 4, `${version}: elite hero Doom Gaze is unmoved`);
+
+    // [F56-3] The control the claim needs: the same elite step does move every conventional
+    // channel, so "unmoved" is about the gaze fields and not about the step being inert.
+    const conventional = gazeDerive(version, {
+      modernAttacks: {
+        ranged: { strength: 2, type: 'missile' },
+        thrown: { strength: 2, type: 'thrown' },
+        fireBreath: { strength: 2, type: 'fire' },
+        lightningBreath: { strength: 2, type: 'lightning' },
+      },
+    });
+    assertIs(conventional.modernAttacks.ranged.strength, 4,
+      `${version}: the elite ladder moves the conventional Ranged channel`);
+    assertIs(conventional.modernAttacks.thrown.strength, 3,
+      `${version}: the elite ladder moves the Thrown channel`);
+    assertIs(conventional.modernAttacks.fireBreath.strength, 3,
+      `${version}: the elite ladder moves the Fire Breath channel`);
+    assertIs(conventional.modernAttacks.lightningBreath.strength, 3,
+      `${version}: the elite ladder moves the Lightning Breath channel`);
+  }
+}
+
+module.exports = { runDeriveUnitStatsChecks, runRangeLevelF33F56Checks };

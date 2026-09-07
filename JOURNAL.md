@@ -4,6 +4,640 @@
 
 # Journal
 
+## 2026-09-07 — One fixture for modern Haste + Cause Fear, and what it measured
+
+`hasteIndependentFearSampleCoM2` (`Calculator/presets_ranged_and_haste.js`), the fixture F268.5
+put to the user: CoM2 1.05.11, a two-figure Hasted attacker (atk 1, res 8, hitChance 70) against a
+one-figure Cause Fear defender (res 8, hp 10). `fearFailProb` gives the CoM builds a -3 save
+modifier, so res 8 is an effective 5 and each figure is feared at 0.5; the strikes deal exactly 1
+each, so the total is the unfeared-figure count. Mean 2.000, spread 1.000.
+
+**CoM2 rather than Warlord** because the sampling sits behind `isCoM2 = version.startsWith('com2')`,
+which both modern builds satisfy — measured identical numbers and an identical response to the
+mutation — and all three existing modern Haste fixtures are Warlord.
+
+**The mutation, and a correction to how F268.5 stated it.** The defect has *two* halves in
+`combat_fear_and_touch.js`, not one:
+
+- `independentModernFear = false` alone makes the second call skip fear entirely
+  (`sharedDosFigures` falls back to `secondMaxFigs`): mean 2.000 -> **3.000**, spread
+  1.000 -> 0.707. Caught, but by the *mean* — not the signature F268.5 described.
+- Adding `sharedDosFigures = Math.max(0, secondMaxFigs - prior.fearFailures)` unconditionally is
+  the real shared sample: mean **2.000 = 2.000, err 0**, spread **1.000 -> 1.414, err 0.414**.
+  Exactly F268.5's prediction, and it fails **1 of 1,162** fixtures — this one.
+
+So `[HGF-6]`'s arithmetic was right and its *mutation recipe* was under-specified. Anyone
+reproducing it by flipping the one flag would have seen a moved mean and concluded the spread was
+not load-bearing.
+
+**`[HGF-6]` cannot be retired.** Only half of it is now corpus-covered. Under
+`firstStrike = true` the pair resolves through `applyFsBlockHasteWithHealing`
+(`combat_state.js`), where the two strikes are separate phase objects each drawing their own fear
+in `buildMeleePhase` — the mutation above leaves it at 1.000 in both modern versions. That is a
+second implementation of the same claim, and closing it would need a second fixture
+(`firstStrike: true`), which is a corpus-growth decision for the user. `[HGF-1]`..`[HGF-5]`
+(the gaze repeats) remain unreached: no fixture pairs modern Haste with a gaze.
+
+Note the coupled sibling `applyFsBlockHasteCoupledWithHealing` *does* share one `k` across both
+strikes by design (`coupleKa` / CoM1); the modern non-coupled branch is the one under test here.
+
+
+## 2026-09-06 — F268.6: the two commands, and what the suite actually costs now
+
+`npm test` is the Node default (`cas-citations` → `provenance` → `preset-checks` →
+`node-unit-checks`, cheapest first), `npm run test:ui` is Playwright, `npm run test:all` is both.
+Which one a task runs is stated in `TESTS.md`; the same rule is proposed for `CLAUDE.md`.
+
+**Measured alone, idle machine, this laptop.** Node default **110.4s** — cas 1.4, provenance
+3.9 + 3.9, preset-checks 9.8, node-unit-checks 91.4. UI suite **393s** for 137 tests. Before this
+row a non-UI task ran the old `npm test` (preset-checks + Playwright) *plus* the three Node suites
+separately: ~500s, of which ~390s was the browser. The default is **4.5x faster**, and that is the
+item's whole delivery.
+
+**The suite did not get faster; it got split.** The 2026-09-05 entry measured 144 tests at 196.5s.
+Today's 137 tests take 393s. F268 removed 36 tests and added one, so it is not the cause — F260's
+four two-path suites arrived in between (`preset-applier-f260.6` ~100s,
+`preset-equivalence-gate-f260.8` ~65s, `card-state-writer-f260.7` ~20s,
+`roster-card-state-f260.4`), each walking 1,161 fixtures or a whole roster through the real page.
+Those are precisely the suites that cannot move to Node, since comparing the browser against Node
+needs both. **Worth stating plainly: F268 made the default cheap by not running the expensive
+thing, not by making the expensive thing cheaper.** If a UI task's 6.5 minutes becomes the
+complaint, the target is those four, not the 25 specs around them.
+
+**The item's arithmetic, counted rather than netted** (the first draft of this entry netted it and
+the review caught three errors). The 12 deleted spec files held **39** tests; F268 added **3**
+(`exorcise-f43-matrix`, plus one test each in `presets.spec.js` for the spreads and the category
+pairs); 173 → 137 is the net −36. Spec files 36 → 29 (−12, +1, +4 of F260's). Node 29,664 →
+30,055, **+391 for the item** (the +138 is F268.5's share alone), in **five** new
+`tools/unit_checks/` files of which F268.4 deleted two. Corpus comparisons 2,306 → 4,612 plus
+23,220 new category comparisons: **+25,526**, not the ~27,800 that is the combined total. So: fewer
+tests, more assertions — the shape the item wanted, since the growth sits inside families that
+already existed and inside a fixture format that costs no measurable wall clock (a whole-corpus run
+with the second moment stubbed out timed no faster).
+
+**The finding worth keeping from this row, from its GPT review.** The premise underneath the whole
+item — *core sources load headlessly, so Node can carry them* — is true of Node and false of the
+matrix worker. Node loads the whole manifest; the worker loads only the nine `data-worker` sources.
+Relocating `convolveDists` from `engine.js` to `data.js` is a core-to-core refactor that moves no
+number, passes all 30,055 Node assertions, all 1,161 fixtures, provenance and the CAS audit, and
+makes the worker throw `ReferenceError: convolveDists is not defined`. The only surviving guard is
+`chaos-conjunction-f39`'s worker-boundary test, in Playwright. So the boundary in `TESTS.md` names
+manifest and file-scope changes explicitly — a prose mitigation for a mechanical gap. **A Node
+check that loads the nine worker sources alone and calls the matrix handler would close it, and
+does not exist.**
+
+## 2026-09-06 - F268.3: a second moment for the preset corpus
+
+`expected` blocks now state four numbers, not two: `sdDmgToA` / `sdDmgToB` beside the means. The
+useful findings, none of which is a reason on its own - re-verify against the code.
+
+**The evidence the later rows were filed on.** A mean-preserving perturbation of `convolveDists`
+(1% of each interior cell's mass moved symmetrically outwards; the first moment is unchanged by
+construction) fails **330** of 1,161 fixtures. Of those 330, **313** have both means *exactly* on
+their expectations and **317** have both means inside tolerance, so only **13** are reachable by a
+mean at all. The GPT reviewer reproduced it from the description and got the same 330 and the same
+313. F268.4 and F268.5 judge deletions against that.
+
+**What two moments cannot reach, which matters more to the disposition rows than what they can.**
+The reviewer's counter-examples, all confirmed: `[0.25,0.25,0.25,0.25]` and `[0.2,0.4,0.1,0.3]`
+both render mean 1.500 and spread 1.118, so the corpus cannot separate them; and
+`[0.999999,0.000001]` renders 0.000/0.001, which passes against a stated 0.000/0.000, so a zero
+spread means "deterministic to three decimals", not "deterministic". A claim needing skew,
+multimodality or the joint across the two sides is a claim this corpus cannot carry, and F268's own
+rule for that case is to report it rather than design around it.
+
+**433 of 2,306 spreads are non-zero.** The other 1,873 say a side is deterministic to three
+decimals, which is a real claim - it fails the moment a wrong implementation introduces variance
+where the engine has none (the M1 sweep's first two hits were exactly that, `sdToB` 0 -> 0.1).
+
+**Where the two oracles could still have drifted, and what closed it.** The comparison is
+deliberately restated in each runner (F260's design, pinned by literal self-checks). What is *not*
+restated is the reading of the `expected` block: `presetExpectation` in `Calculator/presets.js` is
+one shipped function both call, because the block's shape is the half a new field silently changes
+in one place and not the other. Same reasoning for `distributionStdDev` in `Calculator/engine.js` -
+one function, called by `renderDistPanel` and by the Node evaluation.
+
+**Pairing was not enough on its own, and the review is what found that.** The rule stops half a
+side being deleted; it does not stop a *whole* side going. Removing `dmgToA` and `sdDmgToA`
+together took the corpus from 4,612 comparisons to 4,610 and reported a pass, because every count
+in the tree was derived from the very expectations that had been deleted. The fix is to pin the
+corpus's shape independently of the fixtures: every fixture states the defender side, and at most
+16 omit the attacker side. Both live in `preset_checks`' `report`. The lesson generalises past this
+row - a vacuity guard computed from the thing it is guarding is not a guard.
+
+**The mandatory pairing is the other half of the anti-vacuity device.** A side stating a mean without its spread
+halts every runner. Without that, F260.9's "an `expected` block with no numbers is a passing check"
+comes straight back one field down: deleting 1,161 `sdDmgToB` lines would have halved the
+comparisons and left a green run. Both runners now report the comparison count (4,612), and
+`presets.spec.js` recomputes the expected count from the corpus in its own `page.evaluate` so the
+number answers to something other than itself.
+
+**`data-sd` on the `.avg` span.** The page had no rendered spread to read, and the alternatives were
+worse: a module-level `lastCombatResult` can go stale against the panel the mean was read from, and
+rendering a visible sigma is a UI change nobody asked for in a testability row. The attribute is on
+the *same element* the mean's text comes from, so the two moments provably describe one panel of one
+render. Removing it halts `runTests` rather than comparing NaN (probed).
+
+**Timing.** `preset_checks` took 24-30s here against the 8.5s F260.9 recorded. It is not the second
+moment: a whole-corpus run with `distributionStdDev` stubbed out timed *no faster* (30.5s), 100
+iterations of both spreads cost 2ms, and `hasteComplexThrownDefenderGaze160` alone spent 13.3s
+inside `resolveCombat`. The wall clock is that one fixture. Machine-of-the-day, or tree drift since
+F260.9 - not established which, and worth knowing before F268.6 makes this the default `npm test`.
+
+**A duplication to surface, not fix.** `expectedDamage` (`combat_fear_and_touch.js:708`) and
+`distExpectedValue` (`ui_matrix.js:49`) are the same four-line mean over a distribution, in two
+files. A third copy inside `MATRIX_WORKER_HANDLER` (`ui_matrix.js:305`) is legitimate - a worker
+blob has no access to the page's scope. `distributionStdDev` deliberately did not become a fourth
+of anything, but it also did not merge the existing two; that is someone's call, not this row's.
+
+## 2026-09-06 — F268.1: the Node home for migrated browser regressions
+
+`tools/unit_checks/` already was the home — one file per check family, each exporting a
+`run*Checks(ctx)` the entry point calls. F268.1 did not invent a place; it decided what a
+*migrated* family owes that a native one does not, and the answer is an identity of its own.
+
+Shape the six later rows copy:
+
+1. One file per migrated spec, named for the spec (`phase_order_f29.js`,
+   `mechanical_expert_f196.js`). Not one collecting file: seven rows would put ~700 lines of
+   unrelated probes in one place, lose the 1:1 spec→family mapping the parity accounting depends
+   on, and give six sequential subtasks one file to conflict over.
+2. A `MIGRATED_SUITES` registry in `tools/node_unit_checks.js` keyed by the suite's `TESTS.md`
+   name, plus `--only <name>`. This is what makes the anchor survive: a migrated suite whose only
+   command is `node tools/node_unit_checks.js` has been absorbed into that entry's `scaffolding`
+   tag, and its own `regression` tag stops meaning anything runnable. `--only` keeps the
+   `TESTS.md` section honest.
+3. The migrated spec's own probe builder is carried over **verbatim**, not rebased onto
+   `baseUnitInput`. F29's builder differs from the shared one in `atk`, `hp`, `res` and every
+   to-hit field — exactly the fields F29 is about. Rebasing would have changed the inputs while
+   the assertions stayed still, which is the silent weakening the item exists to prevent.
+4. Parity is stated per assertion, not in aggregate: each check carries an `[F29-N]` / `[F196-N]`
+   marker, and the assertion total moved by exactly the expect count (29,664 → 29,690 = +20 +6).
+   Counting equal is not the same as claiming equal — see the review notes below.
+
+**The GPT review was worth more than the migration.** It built working counter-examples against
+three assertion substitutions I had taken for equivalent, and each one is a trap the later rows
+would have copied:
+
+- `assertClose(x, 2, msg, 1e-12)` is *not* `expect(x).toBeCloseTo(2, 12)`. The matcher's predicate
+  is `|d| < 10**-precision / 2`, i.e. `< 5e-13`, strict; `assertClose` accepts `<= 1e-12`. Worse,
+  `Math.abs(NaN - e) > eps` is false, so `assertClose` accepts `NaN` outright. A Lightning Breath
+  distribution of `[1 - 7.5e-13, 7.5e-13]` and one of `[NaN]` both failed the retired spec and
+  passed my first migration.
+- `assertSameKeyList` compares `join(', ')`, which erases element type. Replacing a phase label
+  string with a singleton array holding that string passed the whole new family.
+- `String(label).includes('Melee')` coerces the receiver, so `['Wrong Melee']` passed where
+  `toContain('Melee')` failed.
+
+`tools/unit_checks/assertions.js` now carries `assertCloseToPrecision`, `assertStrictArrayEqual`
+and `assertStringContains`, each documented with the counter-example that forced it. **A migrated
+family uses these, not the nearest-looking general helper.** Note that `assertClose`'s `NaN` hole
+is repo-wide and older than F268 — untouched here, and worth its own item.
+
+The review also broke my `expectNoConsoleErrors` reasoning. `openCalculator` installs its
+listeners before navigating and leaves them installed, so the tail caught errors raised inside the
+spec's own `page.evaluate` — not only page-load ones. A `console.error` on the path of F29's
+synthetic one-HP breath attacker against its retaliation-gaze defender is reachable by nothing
+else in the tree; `roster-smoke` does not build that matchup. So the tail migrated rather than
+being dropped: `assertNoConsoleErrors(ctx, label, body)` swaps the `vm` context's `console` for a
+recorder around the body and asserts nothing was recorded. Only `error` is captured, because
+Playwright's `msg.type() === 'error'` is `console.error` alone. One per retired *test*, which is
+why F29 has two: parity is 20 and 6, not 18 and 5.
+
+And it found a fail-loud hole in my own argument parsing: `--only phase-order-f29 --only bogus`
+exited green having run one suite, because `indexOf` validates only the first occurrence. Every
+argument is now consumed and checked.
+
+One more thing worth knowing before the later rows move a spec carrying CAS citations:
+`tools/cas_citation_audit.js` reaches into `tools/`, and it failed the new F196 file for a
+`!NOTGOBLINCOUNT!+12` offset whose statement quote I had wrapped onto the next line. The quote
+must sit on the citation's own line, however long that makes it.
+
+Mutation probes, run before the reviewer and restored byte-identically: reordering
+`combat_phases.js:492` `['lightningBreath', 'fireBreath', 'thrown']` fails old spec and new family
+at the same opening-order assertion; deleting "Klackon" from the `mechanicalExpert` tooltip fails
+both at the same naming assertion.
+
+## 2026-09-06 — F260.10: the browser preset suite becomes a 146-fixture control-path sample
+
+`tests/presets.spec.js` no longer drives 1,161 fixtures. **42.1 s -> 13.4 s** (236 fixtures; 11.1 s for
+the sample leg, 0.7 s for the drawer contract), measured alone. The numeric run is `tools/preset_checks.js`,
+which `npm test` now runs first so the authority is in what a routine run executes.
+
+**The sample is derived, not listed.** `tools/preset_control_path_sample.js` gives every fixture a
+token set — version, fixture file, each field and enumerated value it states, the kinds of value its
+ability rows hold, and the magnitude bucket of each expected mean — and greedily covers the
+vocabulary. 236 fixtures over 876 tokens, all five versions, all seven fixture files. A hardcoded
+list would go stale in the one direction that still looks green; this one grows when a fixture
+states a control nothing else states, and halts when a token cannot be covered.
+
+**The argument for a sample was wrong as first written, and the GPT review broke it.** The claim
+had been: gate (inputs, all 1,161) + `preset_checks` (numbers, all 1,161) + both realms running the
+same sources ⟹ the browser-only residue is `render(mean) -> text -> parseFloat`, a function of one
+number. It is not. Everything the page does *after* building the input is browser-only —
+`readUnitStats` handing it to `deriveUnitStats`, `recalculate` wiring the combat arguments,
+`resolveCombat`, and `renderDistPanel` computing the mean itself. The reviewer's counter-example:
+forcing `abilities.longRange = false` inside `readUnitStats` moves `longRangeMissile` 0.900 -> 0.700
+and `longRangeBoulder` 0.900 -> 0.800, with every field of every derivation input still matching and
+neither fixture sampled. The old whole-corpus browser run caught it; the arrangement as first
+proposed did not.
+
+**The fix cost nothing, which is the interesting part.** The gate's corpus leg already runs the full
+`applyPreset` 1,161 times, and `applyPreset` recalculates — so the rendered mean is sitting in the
+DOM when the leg reads the card. It now reads `.dist-header .avg` where `runTests` reads it and
+compares to the same `expected` block: 2,306 comparisons, and the leg went 43.0 s -> 42.5 s, inside
+the noise. **The page's numbers never left the browser.** What `presets.spec.js` gave up is the
+*second* browser pass over them, not the only one.
+
+**Measured, not assumed:** a token vocabulary scoping every ability key *per version* selects
+**531** fixtures — half the corpus, and most of that is coverage the gate already has field by
+field. Dropping the version scope from the row tokens while keeping the row *name* gives **236**;
+dropping the row name entirely gave 146 but made `abilities.longRange` indistinguishable from any
+other boolean, which is how both Long Range fixtures came to be unsampled.
+
+**The five homes for "presets are browser-bound" are now one.** `TESTS.md` gained a *The preset
+corpus* section stating which suite carries which claim; `tools/node_unit_checks.js`,
+`Calculator/presets.js`, `tools/calculator_sources.js` and `tests/presets.spec.js` point at it
+instead of restating it. The prohibition on reconstructing the translation stays where it belongs,
+in `node_unit_checks.js`, because it is a rule about that file.
+
+**`defaultSelectedVersion` has one home.** Moved to `tools/calculator_sources.js`, which already
+owns reading `index.html`; `tools/unit_checks/preset_applier.js`'s hardcoded `'mom_1.31'` is gone.
+Probe P6 shows the constant is **inert for `preset_checks` on the shipped corpus** — 857 fixtures
+state their own version and the other 304 resolve through `TEST_TREE`, so the fallback is never
+reached — and probe P6b shows the gate spec catches a wrong value. A third reader of the same
+`<select>` remains: `tests/helpers.js`, for the version *list*, which is a different fact.
+
+**The terminus moved once and is worth knowing where it is.** Every guard inside
+`controlPathSample` runs *before* it returns, so trimming the returned array at the return statement
+escaped all of them: `names: sampleNames.slice(0, 1)` reported five versions, seven files and a
+1,161 corpus while returning one fixture (probe R2, the reviewer's). The selector now returns
+per-name `meta` and `tests/presets.spec.js` recomputes the spread from the names it actually got.
+Deleting the selector's own spread guard still survives (probe P8) — the usual terminus, one level
+further out than it was.
+
+**Sixteen mutation probes across two sweeps, 15 caught.** The five from the review (R1-R5) are all
+caught. Target text verified present exactly once before each sweep; tree md5-verified
+byte-identical after each.
+
+## 2026-09-06 — F260.9: the corpus runs in Node in 10 s, and a `vm` context costs 5.5x
+
+`tools/preset_checks.js` evaluates all 1,161 shipped fixtures through
+`presetToCardState` → `cardStateToDerivationInput` → `deriveUnitStats` → `resolveCombat` and checks
+the same `expected` blocks the browser's `runTests()` checks, at the same 0.002 tolerance. All
+1,161 pass. **10 s** on 8 cores against the browser spec's 42.1 s, measured alone.
+
+**The measurement worth keeping: a `vm` context is 5.5x slower than the realm's own global.**
+Same sources, same corpus, same thread — `vm.runInContext` 116.9 s, `vm.runInThisContext` 21.3 s.
+It is not `setStatStepDebug` and not `riderChains`: the four cells of that 2x2 are 116.9 / 124.9 /
+115.1 / 133.1 s, all inside the noise of each other. The gap concentrates where the work is —
+`hasteComplexThrownDefenderGaze160` alone is 59.1 s in a context and 7.6 s in the realm. Property
+lookups on a context's global proxy do not stay on V8's fast path, and the derivation is little
+else. `node_unit_checks.js` pays this today (~85 s, every suite in a `vm` context); nobody has
+measured what it would cost in a worker's own global, and that is a real item, not a micro-tuning
+one. So the worker loader (`loadPresetSourcesIntoRealm`) runs the manifest's sources into the
+worker's global, where a `worker_threads` isolate already provides the separation a context was
+standing in for.
+
+Second measurement: **four fixtures are the corpus.** 7.6 + 4.8 + 1.1 + 1.0 s of a 21.3 s serial
+total; the other 1,157 come to ~7 s. So the parallel floor is one fixture, not one core — past
+four workers the wall clock barely moves, and static sharding would be actively bad because two
+heavy fixtures can land in one shard. The queue hands out one fixture at a time instead.
+
+Third: **F260.8's licence to parallelise re-checked on the numbers, not the inputs.**
+`--compare-chained` walks the corpus independently and then chained, in one realm, and compares the
+two damage averages fixture by fixture: **0 of 1,161 differ.** Blunter than the gate's claim rather
+than stronger — rounding to three decimals can absorb a small input difference — but it is the
+property the split actually needs, stated where the split is made. `--compare-base` is the same
+shape for the other claim `presetDefaultCardState` rests on: the applier's default card against the
+page's own (Hell Hounds and War Bears), also 0 of 1,161. Nothing measured that pair before; F260.8's
+test 2 hands the page's card to both of its walks.
+
+**A survivor verdict the GPT review overturned, and it is the interesting one.** Dropping the
+TEST_TREE version map survived the sweep, and the census above (857 fixtures state their own
+version, the other 304 all map to `mom_1.31`, which is also the fallback) made that look like the
+map being inert. It is not. The browser's fallback is the *currently selected* version, not a
+constant, and it chains — so without the map the 19th fixture, `thrownBasic`, inherits CoM2 from
+`distPenaltyCoM2_16` and halts on the modern record. Independent evaluation hands every fixture the
+start version and cannot see it. That is the one thing the parallel model covers less of than the
+page, and `--chained` is where it comes back.
+
+**Five homes for "presets are browser-bound", not the two `TASKS.md` names.** Found while lifting
+the prohibition: `tools/node_unit_checks.js`'s header, `TESTS.md`'s `node-unit-checks` entry,
+`Calculator/presets.js`'s header, `tools/calculator_sources.js`'s `FIXTURE_SOURCE` comment, and
+`tests/presets.spec.js`'s header. The first four were made true here; the fifth is still true of
+that spec and is F260.10's. Whether the claim should have one home at all is F260.10's question,
+and the answer is probably `TESTS.md` with the code comments pointing at it.
+
+`presetDefaultCardState`'s "the state a fresh page has" is corrected in all three places it was
+stated (F260.8's finding 1, documentation only). It matters more than it did: the Node runner is
+the first caller that actually takes the default `base`.
+
+## 2026-09-06 — F260.8, the equivalence gate
+
+The row's stated shape ("every preset through both paths, derivation inputs compared field by
+field") had partly degenerated: since F260.7 the page *is* the pure path, so a page-versus-pure
+comparison inside the browser is a comparison of a thing with itself through the writer, and
+`preset-applier-f260.6.spec.js` already makes it. The gate was built as headless-versus-page
+instead — the Node-built derivation input against the browser-built one — which is what F260.9 and
+F260.10 need and what no suite made.
+
+**A fresh page does not hold `presetDefaultCardState`.** `resetCalculatorState` (`ui_state.js`)
+writes those defaults and then runs `selectDefaultUnit`, so a fresh page and the Reset button both
+leave Hell Hounds and War Bears selected. The function's own comment and `presetToCardState`'s
+`base` documentation both say otherwise. Nothing depends on it today — every page caller passes its
+own `base` — but a control-free caller that takes the default starts from a card no page ever has.
+The gate therefore hands the page's own starting card in.
+
+**Independent evaluation is not the same run as the page's.** Applied over the starting card rather
+than over the previous fixture's finished one, 138 of the 1,161 shipped fixtures end on a different
+card state. All of it is `modernAttacks` on a custom side under a DOS version, which
+`cardStateToDerivationInput` nulls off those versions — so no difference reaches a derivation input
+and a parallel Node evaluator computes the same numbers. That is the fact F260.9 needs, and the
+gate asserts it rather than assuming it.
+
+**Two censuses, both measured from what the gate applies.** Over the shipped corpus alone, 169
+card-state and globals fields hold one single value — the `chaosConjunction` hazard, at scale. The
+saturating fixtures cut that to four, all `null` by construction. Varying each field turned out not
+to be enough: the GPT review found `magitekScience` and `xenopsychology` carrying the *same vector*
+of values in every case, so a writer sending one row into the other was invisible. The fixtures now
+give every ability row and every card scalar its own vector, which needs nine variants per version
+rather than two — a version-gated row is only free to move in the version that offers it. 24 groups
+of fields still move together, and all 24 are projections of one control.
+
+**The page takes about 65 s to render a card with every ability on**, against 414 ms for the same
+combat in Node with rider chains asked for. That is why the saturating fixtures take
+`applyPreset`'s body without its final `recalculate()`. Not investigated further; it is rendering
+cost, not combat cost, and no shipped fixture comes near it.
+
+The saturated fixtures cannot state `rangedCheck` under Warlord: with every ability on, side a's
+derived Ranged strength is zero there, and `assertPresetRangedMode` halts on a tick that would not
+survive the page's own withdrawal. The generator applies each fixture once and drops the tick where
+that happens, in Node, before the fixture is shipped to the page — so both realms state the same
+thing.
+
+## 2026-09-05 — F260.7: `applyPreset` becomes the pure applier plus a control writer
+
+`applyPreset` (`Calculator/ui_state.js`) no longer decides anything. It calls
+`presetToCardState` with the card as `base`, runs `onVersionChange` for its page work, and then
+writes: per side the roster/custom selection, `writeCardStateToControls`, `refreshUnitLockDom`,
+`syncUnitDisplay`; then `writeGlobalsToControls`, `refreshAbilityFieldVisibility`, `recalculate`.
+The Test Cases drawer is unchanged for the user (the F260 user ruling).
+
+`writeCardStateToControls` (`ui_card.js`) replaces `writeRosterCardState` and is written as the
+deliberate inverse of `collectCardState`, so `applyUnit` uses it too — one writer, not two. It
+also writes the two facts the reader takes from the page's JS maps, `unitIdentity[prefix]` and
+`unitBaseStats[prefix].generic`, because without them the round trip loses the display name, the
+template ids and the roster flag.
+
+Three things worth remembering:
+
+- **The stored identity record is not the card state's identity.** Writing the card identity
+  straight into `unitIdentity[prefix]` dropped its `version` field, which
+  `tests/identity.spec.js` and `tests/identity-r8.4.spec.js` read. `setCardStateIdentityRecord`
+  rebuilds the record through `createUnitIdentity({ ...identity, version })`, which is what both
+  existing producers (`rosterStoredIdentity`, `setCustomUnitIdentity`) produce.
+- **Ordering: the loadout reset must not run after the fixture's own level.** `updateUnitLock`
+  mixes value writes into its DOM work — its custom branch resets a locked Level or Weapon — and
+  the pure applier already applied that reset *before* re-applying the fixture's own. So the
+  value-free half was split out as `refreshUnitLockDom` and `applyPreset` calls that;
+  `updateUnitLock` now calls it too, which is where its `clearUnitInnateLocks`/`markUnitInnateLocks`
+  pair moved from.
+- **The Golem undo buffer.** The writer replaces the identity record, so `_preGolemElemArmor` does
+  not survive a preset. That is the F260.6 review's finding 3 (a stale buffer overwriting a
+  fixture's stated `elemArmor`) ceasing to happen on the preset path. No shipped fixture names a
+  special unit, so no number moves. The hidden `IdentityPreGolemElemArmor` control is still not
+  cleared with it — pre-existing, and only reachable by hand.
+
+**The GPT review found two defects, both in the Golem undo buffer, and both of them mine.** The
+buffer (`_preGolemElemArmor` on the identity record, plus the hidden `IdentityPreGolemElemArmor`
+control) is page state that a whole-card write has to *state*, not inherit — which is what
+`setCardStateGolemMemory` now does. Unifying `writeRosterCardState` into `writeCardStateToControls`
+made the writer write the enchantment rows, and `applyRosterUnit` states `elemArmor:
+'resistElements'` for a Golem record, so selecting a roster Golem remembered the derived value
+instead of the user's own and destroyed what it exists to restore. Separately, replacing the
+identity record dropped the property while leaving the hidden control set, and
+`updateSpecialUnitDerivedEffects` prefers the hidden control — so a later Golem selection restored a
+value belonging to an identity the card no longer had. Neither is visible to a round trip or a
+corpus walk, because the buffer is not card state; `tests/card-state-writer-f260.7.spec.js` now
+drives both sequences directly.
+
+The generalisable lesson, and it is the same one as probe M9: **a green suite says nothing about a
+field no fixture and no record ever moves off its default.** M9 dropped `chaosConjunction` from the
+globals writer and the 1,161-fixture walk compared `false` against `false` every time. The reviewer
+then ran the same census over the card writer and named `hitMelee` and sixteen ability keys in the
+same position. Both are closed by writing *varied* values rather than data-derived ones.
+
+Also folded in: the global-enchantment clearing had three statements (F260.3 question 2, F260.6's
+surfaced note). `GLOBAL_ENCHANTMENT_CONTROL_IDS` (`ability_gating.js`) names the four ids,
+`updateGlobalEnchantmentVisibility` is the one DOM home (class, `disabled`, and the clearing taken
+from `applyGlobalVersionGating`), `updateTypeVisibility` calls it, and the three now-dominated call
+sites in `ui_state.js` are gone. `chaosConjunction` consequently gains the `disabled` treatment the
+other three already had, on a row that is `version-hidden` at the same moment.
+
+## 2026-09-05 — F260.6: the preset applier becomes pure, and the two paths measurably agree
+
+`presetToCardState(name, preset, options)` (`Calculator/card_state.js`, `data-scope="core"`)
+returns both sides' card states and the globals object for a fixture, with no DOM anywhere. It runs
+`applyPreset`'s own order — version, clear, unit, the roster-side enchantment overlay, identity,
+loadout fixups, globals tail, Golem derive, version gating, then the two asserts — and the order is
+load-bearing: `assertPresetRangedMode` reads side a's *derived* record, so it can only run once
+everything else is finished.
+
+The claim was measured rather than argued. `tests/preset-applier-f260.6.spec.js` walks the whole
+1,161-fixture corpus in the browser, comparing the page's finished card states and globals against
+the pure applier's field by field, with the page's own pre-preset state handed in as `base`. It
+agrees on **every field of both sides and every global, for every fixture**, and the derived
+records agree too. The four fields `applyPreset` never writes were given a declared exemption while
+the suite was being written; it fired zero times over the corpus, so the exemption was deleted
+instead of kept — a category filter that never fires is a place a future divergence would hide.
+
+Three page inputs had to become parameters rather than reads, because core may not reach page
+scope: the selected version, the TEST_TREE group-version map (`presetVersionsFromTestTree`, now a
+pure fold the renderer folds into `PRESET_VERSIONS`), and the roster lookup (`loadUnitDatabase`,
+passed as `roster`). The alternative — moving `loadUnitDatabase` and its `unitDatabases` cache into
+core — was rejected to keep `card_state.js` free of mutable page caches.
+
+`assertPresetRangedMode` no longer calls `readUnitStats`. It takes `held` (did the tick survive the
+withdrawal) and `describeSideA` (a thunk for the failing branch's message). On the page `held` is
+the checkbox as `updateTypeVisibility` left it; in the pure applier it is
+`declared && hasConventionalRangedAttack(sideA)` — the same thing, because the globals tail writes
+the fixture's own value immediately before the withdrawal runs. `hasConventionalRangedAttack` moved
+to core for that reason.
+
+Two moves that were not strictly required and are worth remembering: `loadoutLockState`
+(`ui_abilities.js`) kept its DOM half and handed the rule to `cardStateLoadoutLocks`, because the
+preset applier has to reproduce `updateUnitLock`'s level/weapon reset; and `syncModernSpecialCard`'s
+mirror became `cardStateModernSpecialMirror`, which `applyRosterUnit` had already open-coded.
+
+`unitBaseStats` is finally `{ generic }` alone. F260.4 found its stat fields dead and F260.5 left
+them; they were a second copy of the roster statement that no longer answered anything. One reader
+had to move with them: `tests/custom-level-f42.spec.js` read `unitBaseStats.a.atk` where it means
+the roster record's melee, which it now reads off the record. Cost: `setRosterUnitRecords` no longer
+calls `predefinedModernAttacks`, so the restore path (`updateUnitLock(prefix, false)`) loses that
+record validation — `applyRosterUnit` still performs it at selection.
+
+The GPT review found three reachable divergences the corpus walk could not see, and all three are
+worth remembering as a pattern rather than as three bugs: **a corpus walk from a fresh card cannot
+test what a preset inherits.** Every one of them lived in the fields `applyPreset` does not restate.
+
+1. `chaosConjunction` was missing from the globals model altogether — not just from the pure
+   applier, but from `collectGlobals` and `REQUIRED_GLOBAL_FIELDS` since F260.1. It is the one
+   battlefield enchantment the derivation does not read (`resolveCombat` takes it as an option), so
+   the list built from "what the projection needs" dropped it, and `applyGlobalVersionGating` never
+   gated it. The page gated it anyway in `updateGlobalEnchantmentVisibility`, so nothing had moved.
+   Both oracles omitted it, which is why both suites passed.
+2. The version switch inside `applyPreset` resets a locked Level or Weapon **under the target
+   version**, over the card as it stands, before the preset states either side. A fantastic side
+   holding `elite` under Warlord with Spirit Link ticked loses the level when a CoM2 preset is
+   applied, because CoM2's Spirit Link lifts no lock. This is now reproduced, and the Playwright
+   suite gained a second walk over a *perturbed* card to keep it honest: dropping the step fails on
+   `a.level`, `a.weapon`, `b.level`, `b.weapon` and on nothing else in the repository.
+3. The Golem undo buffer (`_preGolemElemArmor`) survives into a *later* preset. Applying a Golem
+   preset and then a non-Golem one that states `elemArmor` leaves the page holding the remembered
+   pre-Golem value, because `updateSpecialUnitDerivedEffects` restores it after the fixture's own
+   abilities were written and the custom path never writes them again. **Not reproduced** — the
+   page is wrong there, a fixture's explicit statement overwritten by a stale buffer — and filed
+   rather than copied. It does not contradict F260.5's ruling that the memory is page-only; it
+   shows that the memory is a page *defect*, which is a different thing.
+
+Two smaller ones. The `roster` callback the applier first took is gone: a callback receives the
+version but nothing checks it *read* it, and a provider ignoring its argument applies the MoM Hell
+Hounds record under CoM2 rules. `rosterRecordsForVersion` is core now and `loadUnitDatabase` is the
+page's cache over it, so there is no provider to get wrong. And the `unitBaseStats` trim silently
+removed a halt: `setRosterUnitRecords` had been reaching the roster record's projectile-vocabulary
+checks by accident, through `predefinedModernAttacks` called for a stat copy that is now deleted.
+The restore path is the only caller that does not also run `applyRosterUnit`, so it had lost the
+check entirely. `assertRosterRecordStatable` names it and calls it on purpose. **Deleting dead
+state can delete a live assertion with it** — worth checking for next time, not just "is anything
+reading this?".
+
+Assertion delta 29,353 → 29,664 is +311, all the one new `preset_applier` family, which loads the
+fixture corpus and so builds its own `loadPresetContext` context.
+
+## 2026-09-05 — F260.5: the card state carries one identity, and a preset states one without controls
+
+`storedIdentity` + `identityControls` on the card state become a single `identity` field. The
+choice between them — a stored record naming a template is a roster pick and wins, otherwise the
+four editable controls state the unit — moved from *reading* the identity (`cardStateIdentity`,
+which is now one `createUnitIdentity` call) to *stating* it. Three producers state one:
+`rosterCardIdentity(unit, version)`, `customCardIdentity(values, version, source)` and
+`presetIdentity(fixture, version, source)`, all in `Calculator/card_state.js`. The page's producer
+is `cardIdentity(prefix)` (`ui_units.js`), which is also all `unitIdentityForDerivation` is now.
+
+`presetIdentity` was a closure inside `applyPreset` (`ui_state.js`); it is core and pure now, and
+it **clamps** the special-unit key. That is not cosmetic: on the DOM path a fixture naming `golem`
+under a MoM version leaves the card holding `none`, because `populateSpecialUnitOptions` and
+`setIdentityControls` both clamp before writing. Without the clamp in the pure translation, F260.6
+would have derived a Golem where the page derives an ordinary unit — the item's stated failure
+mode, and invisible to every existing suite because no preset does it. The two questions keep
+their order: `specialUnitAllowed` asks `specialUnitDef` first, so an *undefined* key still halts
+and only a *defined, disallowed* one clamps.
+
+Findings worth keeping:
+
+- **The roster clamp is inert, and now provably so.** `specialUnitForRoster` guards every answer
+  with a version test at least as narrow as that key's own `versions` entry, so the roster's
+  identity is the same before and after the clamp. Asserted per record per version in
+  `runIdentityChecks` rather than reasoned about, because a future key with a wider roster map
+  would otherwise change what a roster card derives with nothing noticing.
+- **`_preGolemElemArmor` stays page-only.** It leaked onto the card state before, through
+  `collectCardState`'s `{ ...unitIdentity[prefix] }` spread, and nothing read it there. It is the
+  undo buffer for the one control an identity *derives*; the derived value itself is fully
+  determined by `(version, specialUnit)` through `specialUnitDerivesResistElements`, which the
+  card state already states. A control-free caller has no previous selection to restore, so the
+  field could never be filled on that path. Dropping it deleted the last declared allowance from
+  `tests/roster-card-state-f260.4.spec.js`, which now compares the identity whole.
+- `unitIdentity[prefix]` (the page's module map) survives, because the persistence path reads it —
+  `persistedIdentity`, `applyFullState` and the swap in `ui_state.js`. It is now upstream of the
+  card state rather than beside it.
+- **`unitIdentityForDerivation` had no coverage at all.** It is the matrix's only identity reader
+  (`buildMatrixUnitStats`, `ui_matrix.js`); rewriting it to resolve from the controls alone left
+  the full Playwright suite at 149 passed. Found by mutation, closed in
+  `tests/roster-card-state-f260.4.spec.js`.
+- Three behaviour changes on **malformed** input, none reachable from shipped data (the GPT review
+  found the last two): a non-string `specialUnit` now halts instead of silently becoming `none`; a
+  present non-string `baseRace` now halts instead of reaching the derivation as the literal
+  `[object Object]` the `<select>` coerced it to; and an identity that is a `Date` or `RegExp`
+  rather than a plain object now halts instead of spreading to an all-defaults unit. The
+  plain-object test is `Object.prototype.toString`, not a prototype comparison, because the Node
+  suites build a card state in one realm and project it in a `vm` in another.
+
+## 2026-09-05 — F260.4: the roster statement becomes a pure card-state transform
+
+`applyRosterUnit(state, unit, version)` (`Calculator/card_state.js`) returns the card state a
+roster selection produces; `applyUnit` (`Calculator/ui_units.js`) computes it and
+`writeRosterCardState` (`Calculator/ui_card.js`) writes it. Five pure helpers moved into core with
+it — `predefinedUnitRtb`, `predefinedUnitRtbType`, `predefinedModernAttacks` (were `ui_matrix.js`),
+`parseAbilitiesFromUnit` (was `ui_abilities.js`) and `specialUnitAllowed` (was `ui_units.js`) —
+plus `abilityValueIsActive`, which moved to `ability_gating.js` because the pure DOS block asks it.
+
+Measured, not assumed:
+
+- `tests/roster-card-state-f260.4.spec.js` compares the two paths field by field over all 1099
+  roster records of the five versions: the page's state after `applyUnit` equals
+  `applyVersionGating(applyRosterUnit(before, unit, version), version, ABILITY_VERSION_GATES.card)`
+  everywhere, with one declared exception (Golem's derived Elements value, F260.5's).
+- **Write order matters and was preserved**: the card mirrors the modern nine-value block from the
+  ability rows *between* the two DOS steps, so in a DOS version that block holds the record's
+  parsed consumer values, not the shared magnitude the ability rows end up with. Mirroring it after
+  the write-back instead moves the block on the 13 MoM 1.31 records whose consumers take a
+  magnitude (13 in 1.60, 15 in CoM 1) — measured by making that mistake and reading the diff. Invisible to the derivation
+  (`cardStateModernSpecialValues` reads it only in the modern versions), visible in the state.
+- **The matrix's roster rows do not apply the DOS shared byte at all.** `buildMatrixUnitStats`
+  (`ui_matrix.js`) hands `parseAbilitiesFromUnit`'s output straight to `deriveUnitStats`, so where
+  the card gives Wraiths `lifeSteal: -3` from `spec_att_attrib`, the matrix gives `0`, and Great
+  Wyrm's Poison Touch is 1 rather than 15. **41 records**: 13 in MoM 1.31, 13 in 1.60, 15 in CoM 1.
+  Pre-existing, numbers move if fixed, so it was surfaced rather than touched.
+
+The GPT review found three real defects, all fixed: `applyRosterUnit` did not state Golem's
+derived Resist Elements (so a control-free Golem was a different unit); the new spec's oracle
+omitted `rtbType`, the modern projectile, the stored identity and every innate ability but the six
+DOS consumers; and `to_hit`, `to_block`, `figures` and `spec_att_attrib` were unvalidated. Thirteen
+mutations across three rounds are now caught by the spec — the first round caught only three of
+eight, because `applyUnit` *calls* `applyRosterUnit` and a wrong rule moves both sides of that
+comparison equally. A pure twin's test needs an oracle that does not go through the twin.
+
+The three duplicate statements of the MoM "no armor quality" rule F260.3 surfaced
+(`stats.js`'s `armorExists`, and two in `ui_matrix_properties.js`) now read
+`versionHasArmorQuality`. Same expression in every case, so no number moved.
+
+## 2026-09-05 — F260.3: the version-gating clear becomes pure, and two hazards found
+
+`applyVersionGating(state, version, gate)` (`Calculator/card_state.js`) is now the only
+implementation of the clearing `updateTypeVisibility` did inline; the page collects a card state,
+runs it, and writes back only the values it changed. `applyGlobalVersionGating(globals)` is the
+same for the battlefield-wide enchantments. The gate is a mandatory argument out of
+`ABILITY_VERSION_GATES` (`Calculator/ability_gating.js`), because the card and the matrix disagree
+and F260 must move no number.
+
+Measured, not assumed (probe over `abilityUiDefs()` × `ENGINE_VERSIONS`):
+
+- The card/matrix gate divergence is **exactly six defs, all in `com2_warlord_1.5.12.9`** —
+  `flameBlade`, `landLinking`, `discipline`, `destiny`, `mislead`, `blazingEyes` — and always in
+  the direction of the matrix admitting what the card hides. That is F261's list.
+- The `blur` exception at the matrix render filter is **dead**: the only `blur` def carries
+  `subgroup: '_All versions bools'` and no version overrides, so `abilityVersionGated` is false for
+  it in all five versions. It was preserved verbatim inside `abilityGatedForMatrix` so this subtask
+  moved no number; F261 deletes it with the rest.
+
+Two hazards found while reading the code they replace, both **pre-existing and both carried, not
+fixed**:
+
+1. `applyDisabled` cleared a checkbox and a select and **touched neither a `num` input nor a
+   `numcheck` pair**. So 17 version-gated numeric controls in MoM 1.31/1.60 (13 in CoM 1, 11 in
+   CoM2, 0 in Warlord) keep their values when the version hides them, and their `calcKey`s reach
+   `deriveUnitStats`. `tools/unit_checks/hidden_control_gating.js` shows none of them moves a
+   derived stat, so INV-2 holds — by what the derivation happens to read, not by construction.
+2. The clearing of a version-hidden **global** enchantment lives in two DOM places,
+   `updateGlobalEnchantmentVisibility` (four ids, including `chaosConjunction`) and the block in
+   `updateTypeVisibility` (three ids). Both now share `globalEnchantmentAllowedForVersion` for the
+   rule, but the write is still duplicated.
+
+Also: the MoM "no armor quality" rule had three homes (`loadoutLockState`, the reset in
+`updateLoadoutLocks`, and `armorExists` in `stats.js:423`). The first two now call
+`versionHasArmorQuality`; `stats.js` was left alone deliberately and raised to the user instead.
+
 ## 2026-09-05 — The identity object read against `Typedec.pas` (F267 filed)
 
 Asked why `identity` exists at all. Read the engine record rather than arguing from our code.
@@ -5059,7 +5693,7 @@ Unfixed, and reported instead because it is outside F196: the `artificer` contro
 `Reference docs/Source discrepancies.md:31` records the helptext as corrected in v1.5.12.6.2 — but
 `:191` of that same doc still says the tooltip "notes the divergence". Two stale claims, one fact.
 
-`tests/mechanical-expert-f196.spec.js` (scaffolding) resolves the eight ids out of the live roster
+The `mechanical-expert-f196` suite (scaffolding) resolves the eight ids out of the live roster
 and asserts each resolved name's words appear in the tooltip, so a roster rename fails there rather
 than leaving the tooltip quietly wrong. `tools/derivation_equivalence.js`: byte-identical against a
 worktree at the parent commit, 0 of 52,440.
@@ -5991,3 +6625,342 @@ Dropped with it, unfiled: the three tooltips that describe the flag three ways �
 discloses "wall breaking", `explosive` says "plus Wall Crusher" with no disclosure, `breakthrough`
 says "Not modeled: Wall Crusher". Under the ruling `breakthrough`'s wording is the correct one, so
 the other two still disagree with it.
+
+## 2026-09-05 — F260.1: the card state, and what the split cost
+
+`readUnitStats` is now `deriveUnitStats(cardStateToDerivationInput(collectCardState(prefix),
+collectGlobals(overrides)))`. The projection lives in the new `Calculator/card_state.js`,
+`data-scope="core"`.
+
+Shape decisions the later subtasks inherit:
+
+- **The state carries no version.** Both engine families' fields are read unconditionally and the
+  projection selects; `globals.version` is the only statement of which engine is running. That is
+  what lets `applyVersionGating(state, version)` (F260.3) take version as a parameter instead of
+  reading a control.
+- **Abilities are keyed by `uiKey`, one entry per control.** The `calcKey` merge happens in the
+  projection. `uiKey` is injective over `abilityUiDefs()` by construction: an enchantment sharing a
+  key with an ability is prefixed `enchantment_` exactly when both lists carry the key.
+- **The cross-side enchantments travel in `globals.perSide`**, keyed by the side that *owns* them,
+  and the projection reads the enemy's entry. Eternal Night and Eye of Heaven are battlefield-wide
+  effects whose control sits on an owner's panel, so this is where they belong rather than in
+  either card's state.
+- **Identity is on the state as its two raw inputs** — `storedIdentity` (a snapshot of
+  `unitIdentity[prefix]`) and `identityControls` — not as a resolved record. The resolution moved
+  into the projection unchanged. F260.5 still owns replacing the two inputs with something a
+  preset can state directly.
+
+Found while doing it, and not fixed here: **`modernAttackRecord` (`ui_units.js`) is page-scope and
+the projection calls it**, so the modern half of `cardStateToDerivationInput` is not callable in a
+headless core context. F260.2's extraction list (`abilityUiDefs`, `abilityVersionGated`,
+`subgroupAllowedForVersion`, `globalEnchantmentAllowedForVersion`, `MODERN_SPECIAL_FIELDS`) does not
+name it. Measured, not guessed: loading `core` + `ui_abilities.js` + `ui_card.js` into a `vm` with
+no `document` projects and derives all three DOS versions and throws `modernAttackRecord is not
+defined` on both modern ones; adding `ui_units.js` makes all five pass.
+
+`node_unit_checks.js` went 23,210 → 23,211. The delta is exactly the per-manifest-source
+`exists on disk` assertion for the new file (`runSourceManifestChecks`); no family gained a case.
+
+## 2026-09-05 - F260.2: the gating helpers become core, and the projection becomes callable
+
+`Calculator/ability_gating.js` (`data-scope="core"`, manifest position right after
+`enchantments.js`) now holds `SHARED_ABILITY_KEYS`, `abilityUiDefs`, `subgroupAllowedForVersion`,
+`abilityVersionGated`, `globalEnchantmentAllowedForVersion`, `MODERN_SPECIAL_FIELDS` and
+`modernAttackRecord`. Bodies unchanged; the DOM-bound callers stayed in `ui_abilities.js`,
+`ui_card.js` and `ui_units.js`.
+
+What the move actually bought, measured: `cardStateToDerivationInput` now projects **and derives**
+in `loadCalculatorContext()` for all five versions. Before it threw
+`ReferenceError: modernAttackRecord is not defined` on the two modern ones. That is asserted now
+(`tools/unit_checks/card_state_projection.js`), so F260.9 does not discover it.
+
+Side effect worth remembering: five Node tools were reaching into `Calculator/ui_abilities.js`
+with a raw `vm.runInContext(fs.readFileSync(...))` to borrow `abilityUiDefs` /
+`abilityVersionGated`, each with its own paragraph explaining that a page-scope file loads without
+a DOM. All five injections are now redundant and gone; `ability_origins.js` keeps the guard as a
+throw instead. The pattern is a smell to watch for elsewhere - a tool injecting a page source is
+a scope boundary in the wrong place, not a clever trick.
+
+Assertion delta 23,211 -> 23,245 is exactly +1 manifest "exists on disk" and +33 from the new
+family. No existing check family gained a case.
+
+## 2026-09-06 - F268.2: three more regressions leave Playwright, and one claim does not
+
+`damage-spell-f35-f37-f38` (49 assertions), `defense-cap-bless-f32-f34` (216) and `exorcise-f43`
+(21) are now `tools/unit_checks/*.js` families registered in `MIGRATED_SUITES`. Node total
+29,690 -> 29,976 (+286, exactly the migrated `expect` count, counted as executed). Playwright
+170 -> 165: six tests deleted, one kept.
+
+The one kept is the split: `tests/exorcise-f43-matrix.spec.js` holds F43's claim that the matrix's
+property list offers Spell Lock in exactly the gated versions. `matrixPropertyCandidates` is
+`data-scope="page"`, reads `#gameVersion` and assembles the list itself; no Node context loads a
+`page` source, and restating the claim against `ABILITY_VERSION_GATES.matrix` would still pass with
+the matrix's own `enchantment` filter or `uiKey` push broken. The gate is asserted in Node, the
+list following the gate in the browser.
+
+Two new matcher-faithfulness traps beyond F268.1's three, both real in this row's specs and both
+now helpers in `assertions.js`:
+
+- `expect(report.angelAbilities).toContain('Exorcise')` has an **array** receiver, so it is
+  membership, not a substring test. `assertStringContains` would have accepted an abilities list
+  holding only `'Exorcise=3'` - which is precisely the valued form the next assertion asserts is
+  absent. `assertArrayContains`.
+- Every `toEqual` in these specs compares an **object** (the gate table, the target-class table,
+  the four version mechanics). `assertSameKeyList` compares joined *keys*, so it would have ignored
+  every value in all four tables. `assertDeepEqual` (recursive, `Object.is` at the leaves,
+  `undefined`-valued keys ignored as `toEqual` does).
+
+`assertIs` was added for `toBe` as well: `!==` is weaker than the matcher in one direction, since
+`-0 !== 0` is false.
+
+Four mutation probes, tree restored byte-identically each time, retired spec and new family both
+red at the corresponding assertion: `damageSpellArm`'s Magic-Immunity/Black-Sleep order swapped;
+`capDice: 15` -> `16`; `exorciseFailProb`'s CoM 1 literal penalty replaced by `-modifier`;
+`spellLock`'s subgroup narrowed to CoM 1, which also reddens the retained matrix spec.
+
+## 2026-09-06 — F268.7: what the corpus can and cannot reach about the damage categories
+
+Eight category pairs joined the `expected` block: undead damage, irrecoverable/irreversible damage,
+bonus HP / Extra Hits per figure, and recoverable damage healed away, per side. The shape of the
+work is in `TESTS.md`; what follows is what the measurements said, some of which is unwelcome.
+
+**The corpus is far emptier of these quantities than expected.** Non-zero pairs across all 1,161
+fixtures: `irrDmgToB` 59, `bonusHpToA` 9, `undDmgToB` 9, `healToA` 6, `irrDmgToA` 1, and **zero** for
+`undDmgToA`, `bonusHpToB`, `healToB`. 84 pairs out of 9,288; 68 fixtures carry any.
+
+**Two of the three mutations the brief named are unreachable by this corpus, and neither is a
+field-design failure.** Both were traced to composition, not to the fields:
+
+- *Overheal's division dropped.* `combatHealTransition`'s `bonusHpGain = Math.trunc(amount /
+  livingFigures)` (`engine.js`) is entered 30 times over the whole corpus and **every one has
+  `livingFigures === 1`** (instrumented histogram: `{"1": 30}`). The divisor is the identity
+  everywhere the corpus goes, so replacing it with `amount` moves nothing anywhere — no fixture
+  field of any kind can see it. Closing this needs a fixture with a *multi-figure* overhealing
+  attacker.
+- *Healing not booked out of its category.* All six fixtures with non-zero `healToA` are DOS
+  (`lifeStealBasic`, `lifeStealNoMod`, `lifeStealNegativeRes`, `blessLifeSteal`,
+  `righteousnessLifeStealDrain`, `righteousnessLifeStealDrain160`) and every one heals an
+  **undamaged** attacker, so `state.regularDamage -= regular` in `dosLifeStealHealTransition` is a
+  no-op on a zero. Closing this needs a fixture with a *damaged* healer. Separately, **no modern
+  fixture has non-zero `healedDamage` at all**, so the modern `combatHealTransition` healing
+  accounting is unreached by the corpus.
+
+**What is reached**, each with all four total-damage moments at `err 0` in every failing fixture:
+irrecoverable booked as normal → 32 fixtures; undead booked as normal → 3; overheal's bonus-HP
+grant zeroed → 3; DOS healing not reported → 6.
+
+**`regularDamage` was excluded, and the exclusion was wrong — the reasoning is the reusable part.**
+A baseline capturing it alongside the four showed it moving in *exactly* the same fixtures as
+`undDmg`/`irrDmg` under both category mutations (32 and 3), which looked like redundancy. It is not:
+that experiment only ever mutated the **other** categories. The GPT reviewer mutated regular damage
+itself — dropping the `next.regularDamage + outcome.normalDamage` booking in
+`applyOutcomeDamageToState` — and moved **161 fixture-sides** with every total, every spread and
+every other category standing still, and the corpus reported green. The DOS record *stores* its
+regular byte rather than deriving it, and the front-figure/current-figure arithmetic consumes the
+full damage sum regardless, so the two are genuinely independent there. The lesson worth keeping:
+*a redundancy claim tested only in the direction that confirms it is not tested.*
+
+`regularDamage` is now the fifth quantity, with its own default — a side's published total rather
+than zero, since it equals that total in 2,245 of 2,322 sides and departs in 77.
+
+**A trap worth remembering: `aPostCombatStateMean` and the new distributions are two walks of one
+joint.** Rather than leave them unchecked, `renderedCategoryMoments` (`tools/preset_evaluation.js`)
+compares three of the four to 1e-9 on every fixture in both runners. It passed on all 1,161 first
+time, which is evidence the walks agree, not evidence the walk is right.
+
+**Two incidental findings, neither mine to fix.**
+
+- `tools/preset_checks.js` contains a literal **NUL byte** in `runSelfChecks`' halting fixture
+  (`aUnitName: '\0 no such unit'`, F268.3). It is harmless to the check but makes `grep`/ripgrep
+  treat the file as binary, so content search on it silently returns nothing.
+- The same file's failure detail joins with `'\n'` — a literal backslash-n, not a newline — so a
+  multi-fixture failure prints on one line. Cosmetic, visible only on a red run.
+- `tools/cas_citation_audit.js` walks `tmp/`. A scratch copy of a fixture file inside the repo is
+  read as a source and its citations counted; the audit has no scratch-directory exclusion.
+
+### Later the same day — what the F268.7 review changed
+
+Three P2 findings, all reproduced, all accepted. Beyond the `regularDamage` one above:
+
+- **A fixture could fail a category comparison and be dropped from the verdict.** `judge` sets
+  `checked: comparedA || comparedB`, and `report` filtered failures by `checked` — so `expected: {}`
+  compared no total, made (and could fail) all twenty category comparisons, and left
+  `allPassed: true` with every shape literal untouched. Failures are now collected from every
+  result, and the three corpus-shape guards ask every fixture that *states a block* rather than
+  every fixture that *compared a total*. Both halts reproduced by blanking a real fixture's block.
+- **Invalid healing was repaired rather than refused.** `Math.max(0, outcome.healedDamage || 0)`
+  turned `-1`, `NaN` and a string into a clean `0`, which then passed against an absent pair. Only a
+  genuinely missing value defaults now; anything present and not a whole non-negative number halts
+  naming the outcome and the value.
+
+**What the ~23,000 default comparisons are actually worth**, since the count is 99% defaults and
+that shape has bitten this project three times. Measured, not argued: a mutation booking every
+ordinary attack's damage into the undead category fails **276** fixtures, of which only **9** state
+an `undDmgToB` pair. **267 are caught by an unwritten pair alone.** If an absence were skipped
+rather than compared, that mutation would have cost nine fixtures instead of 276.
+
+## 2026-09-06 — F268.4: what the corpus can and cannot reach, measured over eight suites
+
+39 mutations, each applied to the working tree and then run against `tools/preset_checks.js`
+(1,161 fixtures, 4,612 moment comparisons, 23,220 category comparisons) and against a copy of
+`node_unit_checks.js` with **all five migrated suites removed**, so a claim could not be shown
+redundant by the very family under test. Tree restored and checked byte-identical after each.
+
+**Corpus-reachable, so retired** (fixtures named because they are now load-bearing): the DOS phase
+opening — `wallOfFireAfterThrown`, `wallOfFireAfterGazeCounter`, `wallOfFireAfterThrownAndGaze`;
+the Black-Sleeping attacker — `blackSleepAttackerCannotInitiateMelee`; Bless's Resistance half (4
+fixtures); Exorcise's target classes and Undead penalty; Destruction's payload (9) and per-figure
+independence (1); the DOS/CoM 1 hero ranged arms and the CoM2 distance formula.
+
+**Retired and then restored, because the reviewer found what the fixtures miss.** I deleted the
+whole modern defense-dice split on the strength of three mutations that all failed
+`weaponImmunityAfterMissileImmunityCoM2` and `lavaSmelterProtectionsStackWarlord`, and most of
+Bless's Defense gate on five more. Both fixtures roll their first 15 dice at **100%**, so applying
+the split only when the chance is already 1 moves the mean blocks over 20 dice from 10.5 to 12 and
+passes everything; and every fixture carrying Bless's realm gate exercises the **Chaos** arm, so
+dropping the Death arm takes the death-spell defence from 9 to 4 (CoM2) and 11 to 4 (Warlord) and
+also passes everything. **A fixture set that catches three mutations of a rule can still be blind
+to the rule's ordinary case** — "N fixtures fail" measures the mutations I happened to write.
+
+**Corpus-unreachable, so kept:** the modern phase opening and casualty propagation; the modern
+Area spell HP cap; Magic Immunity before Black Sleep; Bless's `spellId > 0` term; CoM 1's literal
+Exorcise modifier and the Angel's bare flag; the modern gaze rider exclusion; the CoM2/Warlord
+hero ranged exemption; every composer guard; and chain order.
+
+**Three lessons worth more than the table.**
+
+1. *An assertion can be defended by more mechanisms than it names.* F25's gaze/rider exclusion is
+   enforced three times. Flipping `modernGazeSkipsRiders`, and separately giving the modern gaze
+   the melee touch record, each produce output **byte-identical** to the baseline — so neither the
+   retired spec nor its migration fails on either. Only wiring the gaze `commonSpec` to the touch
+   values the DOS gaze wires moves a number, and that is caught. Had the sweep stopped at the
+   first two, F25 would have been deleted as vacuous on false evidence.
+2. *"I could not construct a wrong implementation" is a statement about the search, not the code.*
+   I retired F56 as unfalsifiable on exactly that reasoning: a modern derived unit has no
+   `gaze`/`doomGaze` field, and writing `u.abilities.stoningGaze` from inside the level step moves
+   nothing, across three mutations. The reviewer aimed a fourth at the object the derivation
+   actually shares — `ctx.markedAbilities`, the `effectiveAbilities` map `stats.js` hands the
+   sequence, which the published combat abilities copy and the level step's closure can reach.
+   Decrementing it by the ranged level bonus takes the elite gaze from −3 to −5 in both modern
+   builds, caught by nothing in the tree. F56 restored. **The negative claim is the one to make
+   last and least confidently.**
+3. *A premise in a TASKS body is still a claim.* F268 filed `f20-source-order` as mostly deletable
+   because `composeStatSteps` already enforces source order. It does not: swapping two adjacent
+   region-c chain entries moves no number, so the corpus and 29,664 other assertions stay green and
+   the F20 anchors are the only failure; and removing any composer guard is caught by nothing,
+   since every derivation feeds it well-formed input. Verify the body's premise by mutation before
+   deleting on it.
+
+**A gap I recorded and then had to withdraw.** I claimed swapping `c:level` with `c:destiny` is
+numerically meaningful and caught by nothing. It is not meaningful: Destiny's permanent write
+resets the calculated level to Normal, whose ladder bonuses are zero, so with Destiny active both
+orders agree and with Destiny absent its step never runs. Probed at Normal, Elite and Champion,
+with and without Destiny — identical either way. I had inferred "non-commutative" from reading the
+two steps rather than from running them.
+
+**A real duplication, surfaced not fixed.** `ability_origins.js:667` already asserts Exorcise's
+Spell Lock refusal that `exorcise_f43` also asserted — one rule, two homes.
+
+**Method note for the next pass.** Two probe scripts of mine restored a file from a snapshot taken
+*after* an earlier edit in the same group, leaving `stats_sequence.js` half-mutated and a later
+anchor lookup silently returning zero matches. Save every file once, before the first edit of a
+group, and assert the anchor count rather than trusting `str.replace`.
+
+## 2026-09-06 — F268.5: the four specs the corpus is least likely to reach
+
+37 mutations over `r9-g1c`, `priority-prerequisites`, `haste-gaze-fear-f30-f31` and
+`life-steal-healing`, each run against `tools/preset_checks.js` and the whole Node tree, tree
+restored and `git status` compared to a pre-run baseline after every one. 20 claims covered
+elsewhere, **23 covered by nothing**, 6 mutations inert. Playwright 159 -> 138, Node 29,917 ->
+30,049. Three suites migrated into existing families; `r9-g1c` deleted with no survivor.
+
+**The finding that matters for the next disposition pass.** F268.3 and F268.7 both predicted
+`haste-gaze-fear`'s independence claim would survive *because two moments cannot see it*. That
+reasoning is wrong, and the mutation says so: sharing one Cause Fear sample across the two Hasted
+calls turns `Binomial(4, 1/2)` into `2 x Binomial(2, 1/2)`, holding the mean at 2 while the
+standard deviation goes 1 -> 1.414. `sdDmgToB` would catch it outright. What actually stops every
+gate is **corpus composition** — no fixture pairs modern Haste with Cause Fear or with a gaze at
+all. The distinction is not pedantic: "the field cannot express it" argues for a new field, and
+"no fixture selects it" argues for a fixture. Only the second is true here.
+
+**A second-order version of F268.4's lesson.** F268.4 learned that mutations you write yourself
+agree with each other. F268.5 hit the mirror image: a mutation that *passes* does not prove the
+assertion is worthless. The F54/F55 summon refusal survived two separate single-site mutations
+because it is **doubly guarded** — `isConstructCatapultUnit`'s own version test and the step's
+`when: () => isBaseCoM2 && ...` each block it alone. Only removing both moved anything. Before
+concluding "no wrong implementation fails this", count the guards.
+
+**Where refusals actually live.** The brief expected `STEP_VERSION_SCOPES` to cover the refusal
+claims exhaustively. It does not, and the reason generalises: a scope row says which engines
+*compose* a step, not which inputs its predicate admits. `a:constructCatapult` and
+`a:callToArmsPaladins` are both `SCOPE_MODERN`, so the table permits Warlord; `c:supremeLight` has
+one row across engines that disagree about Focus Magic. Every refusal of that shape is invisible to
+`version_scope.js` by construction.
+
+**Corpus composition, measured.** Modern fixtures whose derived record carries Haste: three -- `bloodsuckerHasteDoublesWarlord`,
+`temporalEngineeringHasteWarlord`, `temporalGravityDriveWarlord` -- none with `fear` or a gaze.
+Two of the three *derive* Haste from Temporal Engineering, so a grep for `haste:` finds one and a
+substring grep for `haste` finds two unrelated fixtures whose prose quotes the filename
+`presets_ranged_and_haste.js`. The review caught both errors; measure a grant by deriving, not by
+grepping. Fixtures with both `haste` and `fear`: four, all MoM 1.31/1.60. Fixtures marking
+`supremeLight`: all CoM 2 or Warlord, none with Focus Magic, a Life race, or a permanently magical
+ranged field. Fixtures with non-zero healing: six, all DOS, all on an undamaged attacker. That last
+one is F268.7's; the others are this row's.
+
+**Environment.** The background mutation batch was OS-killed for memory partway through H7 and left
+`Calculator/combat_fear_and_touch.js` mutated — the harness's `finally` never ran. Caught by
+comparing `git status --porcelain` to the pre-run baseline, restored from HEAD, the mutation re-run.
+`node tools/preset_checks.js --workers=3` reports identical totals to the default 8 and survives in
+the background; the remaining batches ran in the foreground in chunks of four.
+
+**Surfaced, not fixed.** `tools/state_persistence_check.js` covers abilities of all four control
+kinds and has no `TESTS.md` entry, so it runs in no cycle. `Calculator/combat_fear_and_touch.js:658`
+has a dead local (`const remaining = remHP;`) that nothing reads — the vestige of the cap check the
+stateless repeat path still makes at `:536`, and the reason the frozen-snapshot claim needed a
+different mutation than the obvious one.
+
+**The review reversed one deletion and corrected two dispositions.** (1) Wild Game's ranged `+1`
+was deleted on two fixtures that both state strength 5; `+= trunc(strength / 5)` agrees with both
+and is wrong at strength 2, with every gate green. Restored. The pass had *noticed* that both
+fixtures were strength 5 and then tested only the leak direction, not the magnitude at another
+size, which is F268.4's lesson recurring one level up: it is not enough to ask what the catching
+fixtures have in common, you have to aim a mutation at it. (2) The 200-point incoming category
+ceiling was recorded as inert because the probe hit `engine.js`' Extra Hits arm; the claim is
+about `combat_state.js:137-142`. Kept. (3) `assertStrictArrayEqual` used `every`, which skips
+array holes, so a PMF with a hole passed where `toEqual` rejects it -- a hole in a distribution is
+exactly what INV-1 forbids, and the helper is shared with every F268 suite. Fixed in
+`assertions.js`. Separately self-caught before the review: `assertEqual` is `!==` where the
+matcher it stands for is `Object.is`, so `-0` passed where `toBe(0)` fails, and `Math.trunc`
+reaches `-0` on the very field `bonusHpGain` asserts; the migrated blocks now use `assertIs`.
+
+## 2026-09-07 — The test list collapses to 11, and what that gave up
+
+43 registry entries became 11 on the user's direct approval. The consolidations retired nothing:
+`result-invariants` + `persistence` + `share-link` -> `invariants`; `layout-invariants` +
+`mobile-layout` + `touch-tooltips` -> `layout`; `matrix-drawers` + `exorcise-f43-matrix` ->
+`matrix`; `modifier-trace-tooltips` -> `modifier-traces`; `presets` -> `preset-equivalence-gate`;
+`provenance` + `cas-citations` -> one `npm run citations`. Every assertion relocated.
+
+Fourteen suites were deleted. **The ordinary-case probe that `CLAUDE.md` *Retiring a test* requires
+was not run for any of them** — the user asked for immediate execution, and the probe is a
+per-claim mutation battery. The claims and their new homes, so the loss is at least not silent:
+
+| Deleted | Claim | Now carried by |
+|---|---|---|
+| `fail-loud-f113` | each converted site throws, naming the value | nothing — retired by the ruling that fail-loud is inspection-level |
+| `roster-card-state-f260.4` | `applyUnit` equals the pure twin, per record per version | `card_state_projection`, `preset_applier` |
+| `preset-applier-f260.6` | `presetToCardState` over the corpus | `preset_applier` — same subject, same corpus |
+| `card-state-writer-f260.7` | the card-state writer's field-by-field result | `card_state_projection` |
+| `identity`, `identity-r8.3`, `identity-r8.4` | base identity fields, ordered conversions, the v1 reader | `identity`, `identity_record_choice` |
+| `custom-level-f42` | the Custom card stays the editable pre-level boundary | `card_state_projection` + fixtures |
+| `roster-statement-f136` | the roster record is stated once, at selection | `card_state_projection` |
+| `roster-to-block` | roster To Defend deltas reach card, derivation and matrix | `derivation_stages` + fixtures |
+| `blur-global` | Blur on both cards; retired globals gone; state migrates | `version_gate_divergence` + fixtures |
+| `marionette` | the Wanderer/Channeler package through UI and share state | `warlord_abilities` + fixtures |
+| `chaos-conjunction-f39` | Immolation scales 10->13 exactly once, and survives state/swap/matrix | fixtures + `invariants` (INV-6) |
+| `wall-of-fire-f36-f40` | Warlord WoF spills across figure boundaries; Teleporting and Merging stay independent | fixtures + `phases` |
+
+The three rows with no Node family named against them — `chaos-conjunction-f39`,
+`wall-of-fire-f36-f40` and `custom-level-f42` — rest on the corpus alone, which is the position
+F268's reviews twice showed to be weaker than it looks. If any of the three is worth re-probing,
+those are the three.

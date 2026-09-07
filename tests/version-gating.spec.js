@@ -103,8 +103,8 @@ test('a hidden ability does not leak into the result', async ({ page }) => {
 test('a hidden enchantment does not leak into the matrix', async ({ page }) => {
   const errors = await openCalculator(page);
 
-  // The card is protected by `applyDisabled` clearing version-hidden controls, so its readers
-  // need no version test. The matrix has no equivalent cleaning step: switching version only
+  // The card is protected by `applyVersionGating` (`card_state.js`) clearing version-hidden
+  // controls, so its readers need no version test. The matrix has no equivalent cleaning step: switching version only
   // hides a row, and nothing clears `matrixPropertyState`. The filter therefore has to hold in
   // the reader, which is what `matrixEnchantmentValue` is for. Eye of Heaven is Warlord-only and
   // reaches the derivation as the top-level `enemyEyeOfHeaven` — the input F258.1 found reaching

@@ -108,58 +108,6 @@ function rangedMatrixCellColor(value) {
   };
 }
 
-function predefinedUnitRtb(unit) {
-  return (unit.ranged && parseInt(unit.ranged, 10) > 0) ? parseInt(unit.ranged, 10)
-    : (unit.breath && parseInt(unit.breath, 10) > 0) ? parseInt(unit.breath, 10)
-    : (unit.thrown_breath && parseInt(unit.thrown_breath, 10) > 0) ? parseInt(unit.thrown_breath, 10) : 0;
-}
-
-// The roster writes `ranged_type` in the display spelling `RANGED_TYPE_NORMALIZE` keys, and
-// `thrown_breath_type` already in the calculator's own lowercase token. A third spelling is a
-// projectile class the card has no field for, and passing it through unrecognized is how it
-// would reach the resolver looking derived (`SPEC.md`, *Out-of-range values stop the run*).
-function predefinedUnitRtbType(unit) {
-  const rawRtb = (unit.ranged_type && unit.ranged_type !== 'none') ? unit.ranged_type
-    : (unit.thrown_breath_type && unit.thrown_breath_type !== 'none') ? unit.thrown_breath_type
-    : 'none';
-  if (rawRtb === 'none' || THROWN_TYPES.includes(rawRtb)) return rawRtb;
-  const normalized = RANGED_TYPE_NORMALIZE[rawRtb];
-  if (!normalized) {
-    throw new Error(
-      `predefinedUnitRtbType: roster record ${JSON.stringify(unit.name || unit.id)} carries `
-      + `attack type '${rawRtb}', which names no calculator channel type. Expected a display `
-      + `spelling from RANGED_TYPE_NORMALIZE (${Object.keys(RANGED_TYPE_NORMALIZE).join(', ')}) `
-      + `or one of ${THROWN_TYPES.join('/')}.`);
-  }
-  return normalized;
-}
-
-// Caster.exe keeps these attacks in separate fields, so a roster record states all four. The
-// card and the matrix both read a roster unit through here and hand the result to the same
-// `deriveUnitStats` boundary (`SPEC.md`, *UI contract*), and `modernAttackRecord` is where the
-// shape they share is decided — including the empty case, which is a record with four empty
-// fields rather than no record. Off the modern versions there is no such record at all, which
-// is the answer `modernCardAttacks` gives for the same version.
-function predefinedModernAttacks(unit, version) {
-  if (typeof version !== 'string') {
-    throw new Error(
-      `predefinedModernAttacks: no game version for roster record `
-      + `${JSON.stringify(unit && (unit.name || unit.id))}; the modern record exists only in the `
-      + `CoM2/Warlord versions, so the caller must say which version it is reading.`);
-  }
-  if (!version.startsWith('com2')) return null;
-  return modernAttackRecord({
-    ranged: unit.ranged,
-    // `thrown_breath_type` is the shared slot's projection and never names this record, so the
-    // type is read from `ranged_type` alone.
-    rangedType: predefinedUnitRtbType(
-      { id: unit.id, name: unit.name, ranged_type: unit.ranged_type }),
-    thrown: unit.thrown,
-    fireBreath: unit.fire_breath,
-    lightningBreath: unit.lightning_breath,
-  });
-}
-
 function matrixRealmClassForUnitType(unitType) {
   const realm = String(unitType || '').replace(/^fantastic_/, '');
   return ['life', 'death', 'chaos', 'nature', 'sorcery', 'arcane'].includes(realm) ? `realm-${realm}` : '';

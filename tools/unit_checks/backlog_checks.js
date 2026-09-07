@@ -3,7 +3,8 @@
 'use strict';
 
 const {
-  evalInContext, assert, assertEqual, assertClose, baseUnitInput, modernRecordForSharedSlot,
+  evalInContext, assert, assertEqual, assertClose, assertIs, baseUnitInput,
+  modernRecordForSharedSlot,
 } = require('./assertions');
 
 function runF19Checks(ctx) {
@@ -834,4 +835,142 @@ function runR9G1eChecks(ctx) {
   }
 }
 
-module.exports = { runF19Checks, runF23Checks, runF50F51F53Checks, runR9G1eChecks };
+
+// --- priority-prerequisites, migrated out of Playwright by F268.5 ---
+//
+// Tag: regression.  Anchor: F7, F52, F54, F55, R9-G1g.  `TESTS.md` keeps this suite's own
+// section; the command there names this family, not the Playwright file it came from.
+//
+// F268.5 measured all 25 of the retired spec's `expect` calls by mutation, against the enriched
+// preset corpus (1,161 fixtures, four moments per side plus ten damage-category moments) and
+// against the rest of the Node tree.  What follows is everything that survived that: the claims a
+// wrong implementation breaks with **every other gate in the repository still green**.
+//
+// **What F268.5 retired here, each shown covered elsewhere by mutation:**
+//
+//   * F7's ties-to-even rounding and its shipped 34% ratio.  Rounding half away from zero fails
+//     `derive_unit_stats.js`' own `supernaturalMinDamageForHits` assertions; a 33% ratio fails
+//     those *and* the `supernaturalFormulaCoM2` fixture.
+//   * R9-G1g's claim that CoM 1 Supernatural supplies no callback and no minimum damage.  Making
+//     the `$2000` trait live fails `supernaturalFormulaCoM` and `derive_unit_stats.js` both.
+//   * F22's two Blood Lust gates.  Dropping the Fantastic-target test fails two fixtures and
+//     `phases.js:51`; dropping the version test fails `version_scope.js:336`.
+//   * M6's five Lava Smelter grants and the permanent-Fantastic gate that admits them.  Dropping
+//     the gate fails `ability_origins.js:416` and a fixture; the grants themselves are
+//     `runLavaSmelterGrantChecks`' subject, over both the control and the legacy selector, and the
+//     two protections' stacking is `lavaSmelterProtectionsStackWarlord`'s.
+//   * F52's Defence write `trunc(res / 3)`.  A `/ 4` divisor fails `backlog_checks.js`' own F53
+//     assertion and the corpus.
+//   * Warlord's `magic_lightning` projectile being a magical ranged type — the corpus catches it.
+//   * The roster-control DOM reads (checked, disabled, hidden), the two `supernatural` tooltip
+//     wording assertions, and the 11-name CoM Supernatural carrier list.  See the F268.5 report's
+//     coverage-given-up paragraph; the *behaviour* those tooltips describe is
+//     `supernaturalFormulaCoM`'s.
+//
+// **What stayed, because mutation showed nothing else reaches it.**  The Supreme Light
+// eligibility table is the bulk of it: four of its alternatives, in both directions, are asserted
+// by no fixture and no other Node family.  The reason is corpus composition — every shipped
+// `supremeLight` fixture is CoM 2 or Warlord and none pairs the enchantment with Focus Magic, a
+// Life race, or a permanently-magical ranged field.  `STEP_VERSION_SCOPES` cannot stand in for
+// them either: the engine difference is inside `supremeLightActiveForUnit`, not in the scope
+// table, and `c:supremeLight`'s row is identical in the two engines that disagree.
+function runPriorityPrerequisitesChecks(ctx) {
+  const read = expression => evalInContext(ctx, expression);
+  const supremeLight = (abilities, unitType, version, rangedContext) =>
+    read('supremeLightActiveForUnit')(abilities, unitType, version, rangedContext || {});
+
+  // [PP-1] F7's moddable half.  `supernaturalMinDamageForHits` takes MODDING.INI's
+  // SupernaturalStarts and SupernaturalRatio as a third argument, and **no code in `Calculator/`
+  // passes it** — `supernaturalMinDamageFn` is the only caller and it calls with two arguments.
+  // So the shipped tables are the only values any fixture can reach, and hardcoding 0/34 in place
+  // of the argument passes the whole tree.  That the formula is the moddable one rather than the
+  // shipped constants is `combat_abilities.js`' stated claim, so it is asserted here rather than
+  // left to a parameter nothing exercises.  See the F268.5 report's close block: whether that
+  // extension point should exist at all is the user's call, not this suite's.
+  assertIs(read('supernaturalMinDamageForHits')(15, 'com2_1.05.11', { starts: 5, ratio: 25 }), 2,
+    '[PP-1] F7 Supernatural applies MODDING.INI starts and ratio rather than the shipped 0/34');
+
+  // [PP-2..PP-7] F52 — CoM 1's eligibility alternatives.  CoM 1 has one arm the modern builds do
+  // not: a Focus Magic carrier qualifies even with no magical ranged field of its own
+  // (`unitcalc.c`; the modern block at `Units.RecalculateUnits.pas:2632` has no such test).
+  const com1 = 'com_6.08';
+  assertIs(supremeLight({ supremeLight: true }, 'normal', com1,
+    { liveRangedType: 'magic_c', baseRangedType: 'missile' }), true,
+  '[PP-2] F52 CoM 1 Supreme Light admits a live magical ranged field');
+  assertIs(supremeLight({ supremeLight: true }, 'normal_life', com1), true,
+    '[PP-3] F52 CoM 1 Supreme Light admits a Life race');
+  assertIs(supremeLight({ supremeLight: true, caster: true }, 'normal', com1), true,
+    '[PP-4] F52 CoM 1 Supreme Light admits a mana pool');
+  assertIs(supremeLight({ supremeLight: true, focusMagic: true }, 'normal', com1), true,
+    '[PP-5] F52 CoM 1 Supreme Light admits a Focus Magic carrier');
+  assertIs(supremeLight({ supremeLight: true }, 'normal', com1,
+    { liveRangedType: 'missile', baseRangedType: 'magic_s' }), true,
+  '[PP-6] F52 CoM 1 Supreme Light admits a permanently magical ranged field');
+  assertIs(supremeLight({ supremeLight: true }, 'normal', com1,
+    { liveRangedType: 'missile', baseRangedType: 'missile' }), false,
+  '[PP-7] F52 CoM 1 Supreme Light refuses a unit meeting none of its alternatives');
+
+  // [PP-8..PP-14] R9-G1g — the compiled-modern table, and the one alternative it **refuses**.
+  // The refusal is the load-bearing half and the reason this block is not a restatement of the
+  // one above: adding Focus Magic to the modern arm passes the entire corpus and the entire Node
+  // tree, because no shipped fixture marks Focus Magic beside Supreme Light.
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
+    assertIs(supremeLight({ supremeLight: true }, 'normal', version,
+      { liveRangedType: 'magic', baseRangedType: 'missile' }), true,
+    `[PP-8] R9-G1g ${version} Supreme Light admits a live magical ranged field`);
+    assertIs(supremeLight({ supremeLight: true }, 'normal', version,
+      { liveRangedType: 'missile', baseRangedType: 'magic' }), true,
+    `[PP-9] R9-G1g ${version} Supreme Light admits a permanently magical ranged field`);
+    assertIs(supremeLight({ supremeLight: true }, 'fantastic_life', version), true,
+      `[PP-10] R9-G1g ${version} Supreme Light admits a Fantastic Life unit`);
+    assertIs(supremeLight({ supremeLight: true }, 'normal_life', version), true,
+      `[PP-11] R9-G1g ${version} Supreme Light admits a normal Life unit`);
+    assertIs(supremeLight({ supremeLight: true, caster: true }, 'normal', version), true,
+      `[PP-12] R9-G1g ${version} Supreme Light admits a mana pool`);
+    assertIs(supremeLight({ supremeLight: true, focusMagic: true }, 'normal', version), false,
+      `[PP-13] R9-G1g ${version} Supreme Light does NOT admit Focus Magic alone, as CoM 1 does`);
+    assertIs(supremeLight({ supremeLight: true }, 'normal', version,
+      { liveRangedType: 'missile', baseRangedType: 'missile' }), false,
+    `[PP-14] R9-G1g ${version} Supreme Light refuses a unit meeting none of its alternatives`);
+  }
+
+  // [PP-15, PP-16] F54/F55 — two combat-summon identity conversions that base CoM 2 makes and
+  // Warlord does not.  `STEP_VERSION_SCOPES` says `SCOPE_MODERN` for both keys (`steps.js:214`,
+  // `:217`), so the scope table *permits* Warlord and cannot be the guard; the refusal is the
+  // steps' own `when: () => isBaseCoM2 && ...` (`stats_identity.js:349`, `:354`).  Widening both
+  // to `isModern` passes the corpus, `version_scope.js` and `ability_origins.js` alike, and the
+  // Node checks that already name these two steps (`resolution_steps.js:322-324`,
+  // `identity.js:400`) only assert that they *fire* in base CoM 2.  The F268.5 report puts the
+  // question of a mechanical predicate-scope check to the user; until then this is the guard.
+  const warlord = 'com2_warlord_1.5.12.9';
+  const summoned = templateId => ctx.deriveUnitStats(baseUnitInput({
+    version: warlord, atk: 1, def: 0, res: 0, hp: 10,
+    abilities: { combatSummoned: true },
+    identity: ctx.createUnitIdentity({
+      version: warlord, templateId,
+      baseRace: templateId === 37 ? 'Special' : 'High Men',
+      baseFantastic: false,
+    }),
+  }));
+  const construct = summoned(37);
+  assertIs(construct.identity.race, 'Special',
+    '[PP-15] F54 Warlord keeps base CoM 2\'s Construct Catapult Nature conversion out');
+  assert(!construct.identityTrace.some(step => step.id === 'constructCatapult'),
+    '[PP-15] F54 Warlord composes no a:constructCatapult step');
+  const paladins = summoned(113);
+  assertIs(paladins.identity.race, 'High Men',
+    '[PP-16] F55 Warlord keeps base CoM 2\'s Call to Arms Paladins Life conversion out');
+  assert(!paladins.identityTrace.some(step => step.id === 'callToArmsPaladins'),
+    '[PP-16] F55 Warlord composes no a:callToArmsPaladins step');
+  // Both are still `combatSummoned`, so the absence above is the conversion's and not the whole
+  // summon block failing to run — without this the two assertions would pass on a broken input.
+  assertIs(construct.identity.fantastic, true,
+    '[PP-17] F54 the Warlord Construct Catapult is still combat-summoned Fantastic');
+  assertIs(paladins.identity.fantastic, true,
+    '[PP-17] F55 the Warlord Paladins are still combat-summoned Fantastic');
+}
+
+module.exports = {
+  runF19Checks, runF23Checks, runF50F51F53Checks, runR9G1eChecks,
+  runPriorityPrerequisitesChecks,
+};

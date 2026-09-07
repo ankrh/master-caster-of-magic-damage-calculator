@@ -1,9 +1,96 @@
-// Touch tooltip behavior (long-press shows, tap dismisses) and the iOS
-// focus-zoom guard (>=16px input text at phone widths).
+// The page renders usably: layout invariants, the mobile breakpoint, and touch
+// tooltip behaviour. Nothing here asserts a number.
 const { test, expect } = require('@playwright/test');
-const {
-  openCalculator, expectNoConsoleErrors, setValue, warmDefaultStateCache,
-} = require('./helpers');
+const { expectNoConsoleErrors, gameVersions, openCalculator, setValue, warmDefaultStateCache } = require('./helpers');
+
+// --- from layout-invariants.spec.js ---
+const VERSIONS = gameVersions();
+const REALM_RANK = { '': 0, arcane: 1, life: 2, death: 3, chaos: 4, nature: 5, sorcery: 6 };
+
+for (const version of VERSIONS) {
+  test(`ench-bools is realm-ordered (${version})`, async ({ page }) => {
+    const errors = await openCalculator(page);
+    await setValue(page, 'gameVersion', version);
+
+    // Show all so version-hidden items are the only ones excluded, then read
+    // the realm rank of each visible checkbox item in DOM order.
+    const ranks = await page.evaluate((rank) => {
+      document.querySelectorAll('#aAbilities .toggle-abil-btn').forEach(btn => {
+        if (btn.textContent === 'Show all') btn.click();
+      });
+      const block = document.querySelector('#aAbilities .ench-bools');
+      if (!block) return null;
+      return [...block.querySelectorAll('.abil-item')]
+        .filter(el => !el.classList.contains('abil-hidden'))
+        .map(el => ({ realm: el.dataset.realm || '', rank: rank[el.dataset.realm || ''] ?? 0 }));
+    }, REALM_RANK);
+
+    expect(ranks, '.ench-bools block exists').not.toBeNull();
+    expect(ranks.length, 'block has visible checkbox items').toBeGreaterThan(1);
+
+    // Non-decreasing realm rank down the block.
+    for (let i = 1; i < ranks.length; i++) {
+      expect(ranks[i].rank, `item ${i} (realm ${ranks[i].realm}) not before item ${i - 1} (realm ${ranks[i - 1].realm})`)
+        .toBeGreaterThanOrEqual(ranks[i - 1].rank);
+    }
+    expectNoConsoleErrors(errors);
+  });
+}
+
+// --- from mobile-layout.spec.js ---
+async function childBoxes(page) {
+  return page.evaluate(() => {
+    // results-area has no id — grab it as the middle flex child.
+    const row = document.querySelector('.four-col-row');
+    const kids = [
+      document.getElementById('panelA'),
+      row.querySelector('.results-area'),
+      document.getElementById('panelB'),
+    ];
+    return kids.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+    });
+  });
+}
+
+test('main calculator is responsive across viewport widths', async ({ page }) => {
+  const errors = await openCalculator(page);
+
+  for (const width of [360, 390, 700, 768, 1200]) {
+    await page.setViewportSize({ width, height: 900 });
+    // Let layout settle.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+
+    // (a) No horizontal document scroll.
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, `no horizontal scroll at ${width}px`).toBeLessThanOrEqual(0);
+
+    // (b) At <=700 the three children stack attacker -> defender -> results.
+    if (width <= 700) {
+      const [a, results, b] = await childBoxes(page);
+      expect(b.top, `defender below attacker at ${width}px`)
+        .toBeGreaterThanOrEqual(a.bottom - 1);
+      expect(results.top, `results below defender at ${width}px`)
+        .toBeGreaterThanOrEqual(b.bottom - 1);
+    }
+  }
+
+  // (c) At a desktop width the three are side by side (tops roughly equal).
+  await page.setViewportSize({ width: 1500, height: 900 });
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  const [a, results, b] = await childBoxes(page);
+  expect(Math.abs(a.top - results.top), 'attacker/results tops aligned at 1500px').toBeLessThanOrEqual(2);
+  expect(Math.abs(results.top - b.top), 'results/defender tops aligned at 1500px').toBeLessThanOrEqual(2);
+  // And genuinely horizontally separated.
+  expect(a.right).toBeLessThanOrEqual(results.left + 1);
+  expect(results.right).toBeLessThanOrEqual(b.left + 1);
+
+  expectNoConsoleErrors(errors);
+});
+
+// --- from touch-tooltips.spec.js ---
 
 test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 

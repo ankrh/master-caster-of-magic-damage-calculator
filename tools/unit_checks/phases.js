@@ -5,7 +5,7 @@
 
 const {
   evalInContext, assert, assertEqual, assertClose, assertDistSumsToOne, assertSameKeyList,
-  baseUnitInput,
+  assertCloseToPrecision, assertGreaterThan, assertIs, assertStrictArrayEqual, baseUnitInput,
 } = require('./assertions');
 
 function runPhaseChecks(ctx) {
@@ -1249,4 +1249,569 @@ function runRiderChainChecks(ctx) {
   'F222.5 the wall bonus is one entry, not none and not two');
 }
 
-module.exports = { runPhaseChecks, runRiderHistogramChecks, runRiderChainChecks };
+// --- F25: the modern gaze call runs no touch rider ---
+//
+// Tag: regression.  Anchor: F25.  Migrated out of `tests/modern-riders.spec.js` by F268.4 and
+// reduced there under that item's deletion default.  Kept its own `--only modern-gaze-riders-f25`
+// through `MIGRATED_SUITES` so the anchor stays runnable; folded into this file rather than given
+// one of its own, because the rider-routing checks it belongs beside are already here.
+//
+// The claim: modern `ApplyAttack` attack types 6..8 jump past all six rider blocks
+// (`Reference docs/Caster binary/Combat.ApplyAttack.R5.2c.evidence.md`), so adding every rider an
+// attacker can carry cannot move what its gaze call does — while the same six riders must
+// visibly move that attacker's melee call against the same defender, or they are inert for
+// reasons of their own and the equality proves nothing.
+//
+// Corpus-unreachable, measured: forcing the modern gaze to build rider parameters
+// (`modernGazeSkipsRiders = false`, `combat_phases.js`) left all 1,161 fixtures green on all four
+// moments and all ten damage-category moments, and the other 29,664 Node assertions with them.
+//
+// **The exclusion is enforced three times over, and two of the three are not the live one.**
+// Flipping `modernGazeSkipsRiders`, and separately giving the modern gaze the melee touch record,
+// each leave the gaze row's *damage* exactly as it was, so neither the retired spec nor these
+// checks fail on them; the review's qualification is that the first of those does add zero-valued
+// rider entries to the row's published rider output, which is a change in what the phase reports
+// but not in what it deals.  The live mechanism is the modern gaze phase builder's `commonSpec`,
+// which hard-codes every rider probability to zero.  Wiring those to the touch values the DOS
+// gaze wires — with the upstream flag flipped as well — *does* move damage, and is caught here
+// and by the retired spec.  That is what establishes these assertions are not vacuous, and it
+// took four mutations to find; the first two would have retired the claim on false evidence.
+//
+// What F268.4 dropped from the retired spec, having shown it covered elsewhere: the whole F26
+// half — Destruction's flat 150 payload is pinned by nine fixtures (`destructionWholeUnitCoM2`
+// and the eight beside it) and its independent per-surviving-figure attempts by
+// `destructionPerAttackerFigureCoM2`, while the matrix-worker/main-thread parity it asserted is
+// asserted twice more, by `identity-r8.4` on the ranged branch (verified by mutation: a 1.5x
+// divergence fails it at `identity-r8.4.spec.js:390`) and by `chaos-conjunction-f39` on the melee
+// one.  Also dropped: the DOS control, which `runRiderChainChecks`' B7 cases above already make
+// over every DOS channel including both gazes; the Dispel Evil pair, whose claim is that
+// `dispelEvil` is MoM-scoped and is made over the whole key set by `version_scope.js`; and the
+// rider tooltips' "never on Gaze" wording, which no other check makes — see the F268.4 report's
+// coverage-given-up paragraph.
+
+const F25_RIDER_ABILITIES = {
+  poison: 2,
+  stoningTouch: -1,
+  deathTouch: -1,
+  lifeSteal: -1,
+  exorcise: -1,
+  destruction: 0,
+};
+
+// Stoning and Death Gaze carry a *signed resistance modifier*, negative being stronger
+// (`effectiveRes = defRes + modifier`).  Doom Gaze is a positive damage value instead.
+const F25_GAZE_CASES = [
+  ['Stoning Gaze', { stoningGaze: -3 }],
+  ['Death Gaze', { deathGaze: -3 }],
+  ['Doom Gaze', { doomGaze: 3 }],
+];
+
+function f25Unit(ctx, version, prefix, overrides = {}) {
+  return ctx.deriveUnitStats(baseUnitInput({
+    prefix, version, atk: 0, def: 0, res: 0, hp: 10, toBlkMod: 70,
+    ...(version.startsWith('com2') ? { hitChance: 70 } : { toHitMod: 70, toHitRtbMod: 70 }),
+    ...overrides,
+  }));
+}
+
+function runModernRidersF25Checks(ctx) {
+  const samePhase = (x, y) => JSON.stringify(x.defDist) === JSON.stringify(y.defDist)
+    && x.defDestroyPct === y.defDestroyPct;
+
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
+    const target = f25Unit(ctx, version, 'b', {
+      figs: 4, res: 5, hp: 10, unitType: 'fantastic_nature',
+    });
+    for (const [name, gaze] of F25_GAZE_CASES) {
+      const opts = { version, isRanged: false, wallOfFire: false, distance: 1 };
+      const baseline = ctx.resolveCombat(
+        f25Unit(ctx, version, 'a', { abilities: gaze }), target, opts);
+      const actual = ctx.resolveCombat(
+        f25Unit(ctx, version, 'a', { abilities: { ...gaze, ...F25_RIDER_ABILITIES } }),
+        target, opts);
+      const gazeOf = result => result.phases.find(phase => phase.label.includes(name));
+      const meleeOf = result => result.phases.find(phase => phase.label.startsWith('Melee'));
+      const label = `${version} ${name}`;
+
+      // [F25-1] The rule itself, read off the gaze call rather than off the combat total.
+      assert(samePhase(gazeOf(baseline), gazeOf(actual)),
+        `${label}: adding every touch rider does not change what the gaze call does`);
+      // [F25-2] and the two controls without which that equality proves nothing: the gaze must
+      // resolve something, and the same riders must move the melee call against this defender.
+      assert(gazeOf(baseline).defDist[0] < 1 || gazeOf(baseline).defDestroyPct > 0,
+        `${label}: the gaze resolves something, so the equality is not between two empty rows`);
+      assert(!samePhase(meleeOf(baseline), meleeOf(actual)),
+        `${label}: the same six riders do move the melee call against this defender`);
+      // [F25-3] the row is the gaze row it claims to be, the riders that are live heal, and the
+      // published total is a valid distribution (INV-1).
+      assertIs(gazeOf(actual).label, `Attacker ${name}`, `${label}: the phase is named`);
+      assertGreaterThan(actual.aLifeStealExpected, 0,
+        `${label}: Life Steal is live on the melee call it does reach`);
+      assertCloseToPrecision(actual.totalDmgToB.reduce((sum, p) => sum + p, 0), 1, 12,
+        `${label}: the published total is a valid PMF (INV-1)`);
+    }
+  }
+
+  // The non-gaze control: the same flags stay live on an admitted magical ranged call, so the
+  // exclusion is the gaze call's alone and not the riders being inert in the modern engine.
+  const version = 'com2_1.05.11';
+  const rangedTarget = f25Unit(ctx, version, 'b', {
+    figs: 4, def: 1, res: 5, hp: 10, unitType: 'fantastic_nature',
+  });
+  const rangedChannel = {
+    rtb: 1, rtbType: 'magic', modernAttacks: { ranged: { strength: 1, type: 'magic' } },
+  };
+  const rangedOpts = { version, isRanged: true, wallOfFire: false, distance: 1 };
+  const baseRanged = ctx.resolveCombat(
+    f25Unit(ctx, version, 'a', rangedChannel), rangedTarget, rangedOpts);
+  const richRanged = ctx.resolveCombat(
+    f25Unit(ctx, version, 'a', { ...rangedChannel, abilities: F25_RIDER_ABILITIES }),
+    rangedTarget, rangedOpts);
+  // [F25-4]
+  assert(JSON.stringify(richRanged.totalDmgToB) !== JSON.stringify(baseRanged.totalDmgToB),
+    'The same touch riders do move an admitted modern magical ranged call');
+  assertGreaterThan(richRanged.aLifeStealExpected, 0,
+    'Life Steal is live on an admitted modern magical ranged call');
+}
+
+
+// --- haste-gaze-fear-f30-f31, migrated out of Playwright by F268.5 ---
+//
+// Tag: regression.  Anchor: F30, F31, F58.  `TESTS.md` keeps this suite's own section; the command
+// there names this family, not the Playwright file it came from.  (The registry entry said
+// "F30, F31" while two of the retired spec's six tests were F58's; F268.5 corrected it.)
+//
+// **Why so much of this survived, when F268.4 deleted most of what it examined.**  It is not that
+// two moments are too weak to see these claims — F268.3 and F268.7 both predicted the independence
+// claim would survive for that reason, and the measurement says otherwise.  Forcing the two Hasted
+// melee calls to share one Cause Fear sample turns the total into `2 x Binomial(2, 1/2)` where it
+// was `Binomial(4, 1/2)`: same mean 2, but standard deviation 1 -> 1.414, which F268.3's `sdDmgToB`
+// catches outright.  What used to stop it was **corpus composition**, and that is no longer true
+// for half of [HGF-6]: `hasteIndependentFearSampleCoM2` (`presets_ranged_and_haste.js`) is a
+// two-figure CoM2 attacker with Haste against a Cause Fear defender, and it is the only fixture in
+// the corpus that fails when the second call reuses the first call's sample (measured: 1 of 1,162,
+// mean 2.000 standing, spread 1.000 -> 1.414).
+//
+// **What the fixture does not close, and why this test still runs both arms.**  The
+// `firstStrike = true` arm resolves through `applyFsBlockHasteWithHealing`
+// (`combat_state.js`), where the two strikes are separate phase objects each drawing their own
+// fear inside `buildMeleePhase`, not the `statefulDoubleStrike` block in
+// `combat_fear_and_touch.js` — the same mutation leaves it at 1.000 in both modern versions.  So
+// the fixture covers `firstStrike = false` for both, and the First-Strike arm is still carried
+// only here.  The gaze claims ([HGF-1]..[HGF-5]) remain unreached by any fixture.
+//
+// **What F268.5 retired, shown covered elsewhere by mutation:** the DOS arm of both tests.  Making
+// a DOS gaze repeat under Haste fails the corpus (`hasteGazeNotDoubled` and the four
+// `hasteComplex*` fixtures), and so does giving the DOS engines the modern independent sample, so
+// their established one-sample coupling needs no assertion here.  Also retired: the `#breakdownGrid`
+// DOM reads (row headers and column captions), which are the page's and not this family's, and the
+// Black Sleep rows — removing the Black-Sleeping source's early return moved none of the retired
+// spec's own assertions, so those rows asserted nothing that a wrong implementation breaks.
+function runHasteGazeFearF30F31Checks(ctx) {
+  const makeUnit = (version, prefix, overrides = {}) => ctx.deriveUnitStats({
+    prefix,
+    version,
+    abilities: {},
+    level: 'normal',
+    weapon: 'normal',
+    armor: 'normal',
+    rtbType: 'none',
+    unitType: 'normal',
+    figs: 1,
+    atk: 0,
+    rtb: 0,
+    modernAttacks: {},
+    def: 0,
+    res: 5,
+    hp: 10,
+    dmg: 0,
+    hitChance: 70,
+    toBlkMod: -30,
+    cityWalls: 'none',
+    nodeAura: 'none',
+    trueLight: false,
+    darkness: false,
+    rangedCheck: false,
+    rangedDist: 1,
+    ...overrides,
+  });
+  const opts = version => ({ version, isRanged: false, wallOfFire: false, distance: 1 });
+  const MODERN = ['com2_1.05.11', 'com2_warlord_1.5.12.9'];
+  const countLabel = (result, label) =>
+    (result.phases || []).filter(phase => phase.label === label).length;
+  const fearRows = result => (result.phases || [])
+    .filter(phase => phase.mode === 'feared')
+    .map(phase => ({ label: phase.label, atkDist: phase.atkDist, defDist: phase.defDist }));
+
+  for (const version of MODERN) {
+    const target = makeUnit(version, 'b');
+    const gazeResult = gaze => ctx.resolveCombat(
+      makeUnit(version, 'a', { abilities: { haste: true, ...gaze } }), target, opts(version));
+
+    // [HGF-1] F30 — Haste repeats each *initiating* modern gaze.  `combat.js:877` is the site
+    // (`const repeats = aHaste ? 2 : 1`), and pinning it to 1 passes the corpus and every other
+    // Node family: no fixture pairs a modern gaze with Haste.  Both the row count and the
+    // resulting PMF are asserted, because a repeat that emitted two rows while resolving one
+    // call would satisfy the count alone.
+    const stoning = gazeResult({ stoningGaze: 0 });
+    assertIs(countLabel(stoning, 'Attacker Stoning Gaze'), 2,
+      `[HGF-1] F30 ${version} Haste repeats the initiating Stoning Gaze`);
+    assertCloseToPrecision(stoning.totalDmgToB[0], 0.25, 12,
+      `[HGF-1] F30 ${version} two Stoning Gaze calls each fail at 50%`);
+    assertCloseToPrecision(stoning.totalDmgToB[10], 0.75, 12,
+      `[HGF-1] F30 ${version} either Stoning Gaze call kills the one-figure target`);
+
+    const death = gazeResult({ deathGaze: 0 });
+    assertIs(countLabel(death, 'Attacker Death Gaze'), 2,
+      `[HGF-2] F30 ${version} Haste repeats the initiating Death Gaze`);
+    assertCloseToPrecision(death.totalDmgToB[0], 0.25, 12,
+      `[HGF-2] F30 ${version} two Death Gaze calls each fail at 50%`);
+    assertCloseToPrecision(death.totalDmgToB[10], 0.75, 12,
+      `[HGF-2] F30 ${version} either Death Gaze call kills the one-figure target`);
+
+    const doom = gazeResult({ doomGaze: 1 });
+    assertIs(countLabel(doom, 'Attacker Doom Gaze'), 2,
+      `[HGF-3] F30 ${version} Haste repeats the initiating Doom Gaze`);
+    assertCloseToPrecision(doom.totalDmgToB[2], 1, 12,
+      `[HGF-3] F30 ${version} the repeated Doom Gaze delivers its damage twice`);
+
+    // [HGF-4] F30 — the *retaliation* gaze stays single.  `applyDefenderGazePhase` is called once
+    // per defender gaze whatever the attacker's Haste, and repeating it there is caught by
+    // nothing: it moves only the opening row order, which no fixture reads.
+    const retaliation = ctx.resolveCombat(makeUnit(version, 'a', { atk: 1 }),
+      makeUnit(version, 'b', { abilities: { haste: true, doomGaze: 1 } }), opts(version));
+    assertIs(countLabel(retaliation, 'Defender Doom Gaze'), 1,
+      `[HGF-4] F30 ${version} a Hasted defender's retaliation gaze still resolves once`);
+    assertCloseToPrecision(retaliation.totalDmgToA[1], 1, 12,
+      `[HGF-4] F30 ${version} the single retaliation Doom Gaze delivers its damage once`);
+
+    // [HGF-5] F30 — the opening row order: both repeats of every attacker gaze precede every
+    // defender gaze, rather than the two sides interleaving.
+    const ordered = ctx.resolveCombat(
+      makeUnit(version, 'a', {
+        abilities: { haste: true, stoningGaze: 10, deathGaze: 10, doomGaze: 1 },
+      }),
+      makeUnit(version, 'b', { abilities: { stoningGaze: 10, deathGaze: 10, doomGaze: 1 } }),
+      opts(version));
+    assertStrictArrayEqual(ordered.phases.map(phase => phase.label).slice(0, 9), [
+      'Attacker Stoning Gaze', 'Attacker Stoning Gaze',
+      'Attacker Death Gaze', 'Attacker Death Gaze',
+      'Attacker Doom Gaze', 'Attacker Doom Gaze',
+      'Defender Stoning Gaze', 'Defender Death Gaze', 'Defender Doom Gaze',
+    ], `[HGF-5] F30 ${version} both gaze repeats precede the retaliation gazes`);
+
+    // [HGF-6] F31 — Each modern melee ApplyAttack call runs its own Cause Fear loop, so the two
+    // Hasted strikes make *independent* samples and a two-figure attacker's total is
+    // Binomial(4, 1/2).  The DOS-style shared sample gives 2 x Binomial(2, 1/2) —
+    // `[0.25, 0, 0.5, 0, 0.25]`, the same mean, a different spread.  Since
+    // `hasteIndependentFearSampleCoM2` the corpus sees that for `firstStrike = false`; the
+    // `firstStrike = true` arm below is a different code path (see the header) and is carried
+    // only here.
+    const independent = [0.0625, 0.25, 0.375, 0.25, 0.0625];
+    for (const firstStrike of [false, true]) {
+      const result = ctx.resolveCombat(
+        makeUnit(version, 'a', {
+          figs: 2, atk: 1, res: 8,
+          abilities: { haste: true, ...(firstStrike ? { firstStrike: true } : {}) },
+        }),
+        makeUnit(version, 'b', { res: 8, hp: 10, abilities: { fear: true } }),
+        opts(version));
+      independent.forEach((probability, damage) => {
+        assertCloseToPrecision(result.totalDmgToB[damage], probability, 12,
+          `[HGF-6] F31 ${version} firstStrike=${firstStrike} damage=${damage}: the two Hasted `
+          + 'melee calls sample Cause Fear independently');
+      });
+    }
+
+    // [HGF-7] F58 — the second call's sample is published as its own row.  Dropping the Haste
+    // row leaves the totals untouched, so only a row-level assertion sees it.
+    const feared = ctx.resolveCombat(
+      makeUnit(version, 'a', { figs: 2, atk: 1, res: 8, abilities: { fear: true, haste: true } }),
+      makeUnit(version, 'b', { figs: 2, atk: 1, res: 8, abilities: { fear: true } }),
+      opts(version));
+    const rows = fearRows(feared);
+    assertStrictArrayEqual(rows.map(row => row.label),
+      ['Main Cause Fear', 'Haste Cause Fear', 'Counter Cause Fear'],
+      `[HGF-7] F58 ${version} each modern melee ApplyAttack call publishes its own Cause Fear row`);
+    const twoFigures = [0.25, 0.5, 0.25];
+    assertStrictArrayEqual(rows[0].atkDist, twoFigures,
+      `[HGF-7] F58 ${version} the first call's feared-count sample is Binomial(2, 1/2)`);
+    assertStrictArrayEqual(rows[1].atkDist, twoFigures,
+      `[HGF-7] F58 ${version} the Haste call's sample is its own draw of the same shape`);
+    assertStrictArrayEqual(rows[2].defDist, twoFigures,
+      `[HGF-7] F58 ${version} the counter call samples the defender's Cause Fear`);
+  }
+
+  // The remaining three are Warlord-only in the retired spec and stay that way: each turns on the
+  // modern combat-healing path, which both modern builds share.
+  const warlord = 'com2_warlord_1.5.12.9';
+
+  // [HGF-8] F58 — a target the opening gazes already killed does not suppress the melee call's
+  // Cause Fear loop.  `ApplyAttack` returns early on zero *source* figures, not on a dead target,
+  // so `cap = 0` still carries a real feared-count sample; returning `[1]` there instead is caught
+  // by nothing, because a suppressed sample changes no damage.
+  const deadTarget = fearRows(ctx.resolveCombat(
+    makeUnit(warlord, 'a', { figs: 2, atk: 1, res: 8, abilities: { haste: true, doomGaze: 10 } }),
+    makeUnit(warlord, 'b', { figs: 2, atk: 1, res: 8, abilities: { fear: true } }),
+    opts(warlord)));
+  assertStrictArrayEqual(deadTarget.map(row => row.label),
+    ['Main Cause Fear', 'Haste Cause Fear', 'Counter Cause Fear'],
+    '[HGF-8] F58 a dead target still leaves all three modern Cause Fear rows');
+  assertStrictArrayEqual(deadTarget[0].atkDist, [0.25, 0.5, 0.25],
+    '[HGF-8] F58 the melee call against a dead target still samples Cause Fear');
+  assertStrictArrayEqual(deadTarget[1].atkDist, [0.25, 0.5, 0.25],
+    '[HGF-8] F58 so does its Haste repeat');
+
+  // [HGF-9] F31 — the defender snapshot is frozen across the pending pair.  Both Hasted calls
+  // precede all three tail `Dealdamage` calls, so the second one still sees the live one-HP
+  // defender and its positive result still triggers Bloodsucker.  Skipping the second call once
+  // the first call's damage would have killed the target passes the corpus and the whole Node
+  // tree, and halves the healing benefit.
+  const snapshot = ({ firstStrike = false, fear = false } = {}) => ctx.resolveCombat(
+    makeUnit(warlord, 'a', {
+      res: 8, atk: 1, dmg: 9,
+      abilities: { haste: true, bloodSucker: true, ...(firstStrike ? { firstStrike: true } : {}) },
+    }),
+    makeUnit(warlord, 'b', { res: 8, hp: 1, abilities: fear ? { fear: true } : {} }),
+    opts(warlord));
+  assertCloseToPrecision(snapshot().aLifeStealExpected, 4, 12,
+    '[HGF-9] F31 both Hasted calls see the live one-HP defender, so both heal 2');
+  const independentFear = snapshot({ fear: true });
+  assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[0], 0.25, 12,
+    '[HGF-9] F31 neither call triggers when both fear samples fail');
+  assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[2], 0.5, 12,
+    '[HGF-9] F31 exactly one of the two independent fear samples admits a trigger');
+  assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[4], 0.25, 12,
+    '[HGF-9] F31 pending first-call damage does not suppress the two-success outcome');
+  assertCloseToPrecision(snapshot({ firstStrike: true }).aLifeStealExpected, 2, 12,
+    '[HGF-9] F31 an admitted First Strike is dealt at once, so only its own trigger remains');
+
+  // [HGF-10] F31 — Haste healing stays correlated while melee damage is still pending.  Both
+  // initiating calls heal 2 before the counter is computed, so the counter reads the *revised*
+  // source record (five current HP) and lands all three of its deterministic damage, even though
+  // the attacker entered the exchange on one current HP.  `combat_state.js`' counter reads
+  // `outcomeB.state || path.aState`; reading `path.aState` instead — the frozen pre-attack record
+  // — is caught by nothing.
+  for (const firstStrike of [false, true]) {
+    const healed = ctx.resolveCombat(
+      makeUnit(warlord, 'a', {
+        res: 10, atk: 1, dmg: 9,
+        abilities: {
+          haste: true, bloodSucker: true, ...(firstStrike ? { firstStrike: true } : {}),
+        },
+      }),
+      makeUnit(warlord, 'b', { res: 10, atk: 3, hp: 100 }), opts(warlord));
+    assertCloseToPrecision(healed.totalDmgToA[3], 1, 12,
+      `[HGF-10] F31 firstStrike=${firstStrike}: the counter reads the healed record and lands all `
+      + 'three damage');
+    assertCloseToPrecision(healed.aLifeStealExpected, 4, 12,
+      `[HGF-10] F31 firstStrike=${firstStrike}: both initiating calls healed 2 before it`);
+  }
+}
+
+
+// --- life-steal-healing, migrated out of Playwright by F268.5 ---
+//
+// Tag: regression.  Anchor: F27, F28, F57.  `TESTS.md` keeps this suite's own section; the command
+// there names this family, not the Playwright file it came from.  (The registry entry named F28 and
+// F57 while two of the retired spec's eight tests were F27's; F268.5 corrected it.)
+//
+// **This is the largest survivor of the F268 disposition passes, and the reason is measurable.**
+// F268.7 found that the corpus's six non-zero-healing fixtures are all DOS and all heal an
+// *undamaged* attacker, and that the overheal branch is entered 30 times across all 1,161 fixtures
+// with exactly one living figure every time.  F268.5 confirmed the consequence by mutation: the
+// whole of `combatHealTransition` — heal ordering, the irrecoverable exclusion, the 90-point bonus
+// cap, the dead-figure adjustment, the regeneration arm and the overheal divisor — can be broken
+// six different ways with all 1,161 fixtures green on four moments and ten category moments, and
+// the other ~29,900 Node assertions green with them.  Same for the DOS byte arithmetic in
+// `dosLifeStealHealTransition`.  These helpers are reached by fixtures only through their
+// no-op paths.
+//
+// **What F268.5 retired, shown covered elsewhere by mutation:** the non-negative front-figure
+// clamp (corpus, plus `phases.js`' Life Steal rider check); the stateless First Strike suppression
+// (corpus); Bloodsucker's zero-damage gate, its overkill non-clipping and its regeneration-rather-
+// than-overheal call (corpus, over the nine Warlord Bloodsucker fixtures).  Retired as asserting
+// nothing a wrong implementation breaks: the signed-versus-unsigned figure comparison and the
+// 200-point category ceiling, neither of which any probe in the retired spec distinguishes.
+// Retired as belonging elsewhere: the last test's state-restore and rendering claims — retired
+// control ids, `matrixPropertyCandidates`, the `collectState` round-trip and the
+// `#aCombatStateSummary` share text.  Its three "output mean" assertions are subsumed by
+// `runRiderHistogramChecks`' composition sweep above, which asserts the same buckets over more
+// riders and more engines.
+function runLifeStealHealingChecks(ctx) {
+  const heal = (state, amount, overheal, isregen) =>
+    ctx.combatHealTransition(state, amount, overheal, isregen);
+  const dosHeal = (state, amount) => ctx.dosLifeStealHealTransition(state, amount);
+
+  // [LSH-1] F28 — Combatheal removes ordinary damage before undead damage.  Healing 8 of a
+  // 15-damage record carrying 2 irrecoverable and 4 undead leaves the undead 4 untouched.
+  const ordered = heal({ figures: 3, hp: 10, totalDamage: 15,
+    irrecoverableDamage: 2, undeadDamage: 4, bonusHp: 0 }, 8, true, false);
+  assertIs(ordered.healedDamage, 8, '[LSH-1] F28 Combatheal removes the whole requested amount');
+  assertIs(ordered.state.totalDamage, 7, '[LSH-1] F28 and the record drops by it');
+  assertIs(ordered.state.undeadDamage, 4,
+    '[LSH-1] F28 ordinary damage is taken first, so the undead bucket is untouched');
+
+  // [LSH-2] F28 — irrecoverable damage is not healable, so an oversized request stops at it and
+  // the remainder becomes bonus HP.  Treating the whole total as healable passes everything.
+  const irrecoverable = heal({ figures: 3, hp: 10, totalDamage: 15,
+    irrecoverableDamage: 2, undeadDamage: 4, bonusHp: 0 }, 20, true, false);
+  assertIs(irrecoverable.state.totalDamage, 2,
+    '[LSH-2] F28 healing stops at the irrecoverable floor');
+  assertIs(irrecoverable.state.irrecoverableDamage, 2,
+    '[LSH-2] F28 the irrecoverable bucket itself never heals');
+  assertIs(irrecoverable.state.undeadDamage, 0,
+    '[LSH-2] F28 the undead bucket heals once ordinary damage is gone');
+  // [LSH-3] F28 — and the overheal remainder is divided among the *living* figures.  Dropping the
+  // divisor is the one F268.7 measured the corpus cannot express at all: its overheal branch is
+  // entered only with a single living figure, where the divisor is the identity.
+  assertIs(irrecoverable.bonusHpGain, 2,
+    '[LSH-3] F28 the overheal remainder is divided among the living figures');
+
+  // [LSH-4] F28 — the bonus-HP grant is capped at 90 per figure.
+  const capped = heal({ figures: 2, hp: 10, totalDamage: 0,
+    irrecoverableDamage: 0, undeadDamage: 0, bonusHp: 89 }, 5, true, false);
+  assertIs(capped.bonusHpGain, 1, '[LSH-4] F28 the grant stops at the 90-point ceiling');
+  assertIs(capped.state.bonusHp, 90, '[LSH-4] F28 and the record holds exactly 90');
+
+  // [LSH-5] F28 — granting bonus HP to a partly-dead stack raises the record's damage by the
+  // grant times the dead figures, so the dead do not come back as the per-figure capacity rises.
+  // On a No-Healing unit that adjustment is irrecoverable.
+  const deadNoHealing = heal({ figures: 3, hp: 10, totalDamage: 20,
+    irrecoverableDamage: 20, undeadDamage: 0, bonusHp: 0, noHealing: true }, 8, true, false);
+  assertIs(deadNoHealing.state.bonusHp, 8, '[LSH-5] F28 the living figure takes the grant');
+  assertIs(deadNoHealing.state.totalDamage, 36,
+    '[LSH-5] F28 the dead figures\' share is added back as damage');
+  assertIs(deadNoHealing.state.irrecoverableDamage, 36,
+    '[LSH-5] F28 and is irrecoverable on a No-Healing unit');
+
+  // [LSH-6] F28 — regeneration heals a No-Healing unit where ordinary healing cannot, and grants
+  // no bonus HP because it is not an overheal call.
+  const regen = heal({ figures: 1, hp: 10, totalDamage: 5,
+    irrecoverableDamage: 1, undeadDamage: 2, bonusHp: 0, noHealing: true }, 2, false, true);
+  assertIs(regen.healedDamage, 2, '[LSH-6] F28 regeneration heals through the No-Healing flag');
+  assertIs(regen.bonusHpGain, 0, '[LSH-6] F28 and grants no bonus HP');
+
+  // [LSH-7] F57 — the DOS record heals its regular bucket before its undead bucket, and the three
+  // builds agree on the category half of the transition.
+  for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
+    const category = dosHeal({ version, figures: 3, baseHp: 10, totalDamage: 12,
+      irreversibleDamage: 2, undeadDamage: 4, extraHits: 0 }, 8);
+    assertIs(category.state.regularDamage, 0,
+      `[LSH-7] F57 ${version} DOS healing empties the regular bucket first`);
+    assertIs(category.state.undeadDamage, 2,
+      `[LSH-7] F57 ${version} and only then takes from the undead bucket`);
+    assertIs(category.state.irreversibleDamage, 2,
+      `[LSH-7] F57 ${version} the irreversible bucket never heals`);
+    assertIs(category.state.currentFigures, 3,
+      `[LSH-7] F57 ${version} the healed figures are restored`);
+    assertIs(category.state.frontFigureDamage, 4,
+      `[LSH-7] F57 ${version} and the front figure keeps the remainder`);
+  }
+
+  // [LSH-8] F57 — CoM 1 caps Extra Hits at 90 where both MoM builds let the byte wrap.  The 1.31
+  // and 1.60 arms of the same probe are the contrast that makes the cap legible.
+  const comCap = dosHeal({ version: 'com_6.08', figures: 1, baseHp: 10, regularDamage: 0,
+    undeadDamage: 0, irreversibleDamage: 0, currentFigures: 1, frontFigureDamage: 0,
+    extraHits: 88 }, 20);
+  assertIs(comCap.state.extraHits, 90,
+    '[LSH-8] F57 CoM 1 stops Extra Hits at 90 rather than wrapping the byte');
+  assertIs(comCap.bonusHpGain, 2,
+    '[LSH-8] F57 and reports only the gain the cap actually admitted');
+
+  // [LSH-9] F57 — CP 1.60 alone subtracts the figures already lost to irreversible damage from
+  // the restore ceiling, so a stack whose irreversible damage has killed figures cannot restore
+  // them.  MoM 1.31 and CoM 1 restore against the full figure count.
+  const extra = version => dosHeal({ version, figures: 4, baseHp: 10, regularDamage: 0,
+    undeadDamage: 0, irreversibleDamage: 20, currentFigures: 1, frontFigureDamage: 0,
+    extraHits: 0 }, 50);
+  const momExtra = extra('mom_1.31');
+  assertIs(momExtra.state.currentFigures, 4,
+    '[LSH-9] F57 MoM 1.31 restores against the full figure count');
+  assertIs(momExtra.state.extraHits, 5, '[LSH-9] F57 and banks the surplus as Extra Hits');
+  const cpExtra = extra('mom_cp_1.60.00');
+  assertIs(cpExtra.state.currentFigures, 2,
+    '[LSH-9] F57 CP 1.60 restores only to the ceiling irreversible damage leaves');
+  assertIs(cpExtra.state.extraHits, 20,
+    '[LSH-9] F57 and banks the rest against that smaller ceiling');
+  assertIs(cpExtra.state.irreversibleDamage, 60,
+    '[LSH-9] F57 whose Extra Hits raise the irreversible damage with them');
+  const comExtra = extra('com_6.08');
+  assertIs(comExtra.state.currentFigures, 4,
+    '[LSH-9] F57 CoM 1 keeps MoM 1.31\'s full-count restore');
+  assertIs(comExtra.state.extraHits, 5, '[LSH-9] F57 and its surplus with it');
+
+  // [LSH-10] F57 — CoM 1 suppresses First Strike against a front figure above 24 HP and falls
+  // back to one frozen simultaneous exchange, which also drops the Haste second strike.  There
+  // are two sites, the DOS-healing path and the Haste path, and each needs its own probe: moving
+  // one cutoff leaves the other's result standing.
+  const com1Unit = (prefix, overrides = {}) => ctx.deriveUnitStats({
+    prefix, version: 'com_6.08', abilities: {}, level: 'normal', weapon: 'normal',
+    armor: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 0, rtb: 0,
+    def: 0, res: 0, hp: 10, dmg: 0, irrecoverableDamage: 0, undeadDamage: 0, baseBonusHp: 0,
+    toHitMod: 70, toHitRtbMod: 70, toBlkMod: 70, cityWalls: 'none', nodeAura: 'none',
+    wallOfFire: false, trueLight: false, darkness: false, rangedCheck: false, rangedDist: 1,
+    ...overrides,
+  });
+  for (const haste of [false, true]) {
+    const suppressed = ctx.resolveCombat(
+      com1Unit('a', {
+        atk: 60,
+        abilities: { doom: true, firstStrike: true, lifeSteal: -20,
+          ...(haste ? { haste: true } : {}) },
+      }),
+      com1Unit('b', { atk: 10, hp: 30, abilities: { doom: true } }),
+      { version: 'com_6.08', isRanged: false, wallOfFire: false });
+    assertCloseToPrecision(suppressed.totalDmgToA[5], 1, 12,
+      `[LSH-10] F57 CoM 1 haste=${haste}: a 30-HP front figure suppresses First Strike, so the `
+      + 'defender\'s deterministic counter still lands');
+  }
+
+  // [LSH-12] F57 — `BU_ApplyDamage` saturates each stored DOS category independently at 200,
+  // while its front-figure calculation still consumes the full sum.  F268.5 first recorded this
+  // as asserting nothing, having mutated the wrong site: the 200 that its probe reached is the
+  // one inside `dosLifeStealHealTransition`'s Extra Hits arm, while the claim is about the three
+  // incoming-damage clamps in `applyOutcomeDamageToState` (`combat_state.js:137-142`).  Its review
+  // aimed the mutation correctly — all three `Math.min(200, ...)` widened — and it passes the
+  // corpus and the rest of this family, taking the three categories to 205 / 205 / 204.
+  const incomingCaps = ctx.applyOutcomeDamageToState(ctx.normalizeDosCombatHealState({
+    version: 'com_6.08', figures: 10, baseHp: 10,
+    regularDamage: 190, undeadDamage: 195, irreversibleDamage: 199,
+    currentFigures: 10, frontFigureDamage: 0, extraHits: 0,
+  }), { damage: 30, normalDamage: 15, undeadDamage: 10, irrecoverableDamage: 5 });
+  assertIs(incomingCaps.regularDamage, 200,
+    '[LSH-12] F57 incoming regular damage saturates at the 200-point category ceiling');
+  assertIs(incomingCaps.undeadDamage, 200,
+    '[LSH-12] F57 so does incoming undead damage, independently');
+  assertIs(incomingCaps.irreversibleDamage, 200,
+    '[LSH-12] F57 and incoming irreversible damage');
+  assertIs(incomingCaps.currentFigures, 7,
+    '[LSH-12] F57 while the figure calculation still consumes the whole uncapped sum');
+  assertIs(incomingCaps.frontFigureDamage, 0,
+    '[LSH-12] F57 leaving the new front figure undamaged');
+
+  // [LSH-11] F27 — Bloodsucker is Warlord's alone.  Every shipped Bloodsucker fixture is Warlord,
+  // so admitting the effect in base CoM 2 as well passes the whole corpus.
+  const bloodsuckerSpec = version => ({
+    poisonStr: 0, poisonFail: 0, stoningFail: 0, deathTouchFail: 0, dispelEvilFail: 0,
+    exorciseFail: 0, destructionFail: 0, targetHP: 10, lifeStealMod: null, lifeStealRes: 0,
+    immDist: null, bloodsucker: true, version,
+    sourceState: { figures: 4, hp: 10, totalDamage: 5, irrecoverableDamage: 0,
+      undeadDamage: 2, bonusHp: 0 },
+  });
+  const baseCoM2 = ctx.convolveTouchAttacks([0, 1], 4, bloodsuckerSpec('com2_1.05.11'));
+  assertCloseToPrecision(baseCoM2.dist[1], 1, 12,
+    '[LSH-11] F27 Bloodsucker adds nothing in base CoM 2');
+  const warlordOnce = ctx.convolveTouchAttacks([0, 1], 4,
+    bloodsuckerSpec('com2_warlord_1.5.12.9'));
+  assertCloseToPrecision(warlordOnce.dist[3], 1, 12,
+    '[LSH-11] F27 and adds its 2 once per Warlord ApplyAttack call, not once per figure');
+  assertCloseToPrecision(warlordOnce.bloodsuckerHealEV, 2, 12,
+    '[LSH-11] F27 healing the source by the same configured amount');
+}
+
+module.exports = {
+  runPhaseChecks, runRiderHistogramChecks, runRiderChainChecks,
+  runHasteGazeFearF30F31Checks, runLifeStealHealingChecks,
+  runModernRidersF25Checks,
+};

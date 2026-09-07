@@ -956,4 +956,303 @@ function runRecordFieldChecks(ctx) {
     'Heavenly Light still writes the conventional Ranged strength when that channel is magical');
 }
 
-module.exports = { runStatStepChecks, runModifierTraceChecks, runChannelAttributionChecks };
+// --- F20: the execution chain is the source order, and the composer enforces it ---
+//
+// Tag: regression.  Anchor: F20.  Migrated out of `tests/f20-source-order.spec.js` by F268.4 and
+// reduced there under that item's deletion default.  The spec touched no DOM — `deriveUnitStats`,
+// `statChain` and `orderStatStepsBySource` are all `data-scope="core"` — so the browser bought it
+// nothing, and its 56 `expect` calls became the two claims below that nothing else in the tree
+// can make.  It lives beside the rest of the step machinery rather than in a file of its own, and
+// keeps its own `--only source-order-f20` command through `MIGRATED_SUITES`, so folding it here
+// does not fold its anchor into `node-unit-checks`' `scaffolding` claim.
+//
+// **Why these two and not the other fifty-four.**  F268.4 mutation-tested F268's premise that
+// `composeStatSteps` already covers source order, and it does not:
+//
+//   * Swapping two adjacent region-c chain entries moves **no** number.  Swapping `c:lionheart`
+//     with `c:ironSkin` left the whole 1,161-fixture preset corpus green — all four moments and
+//     all ten damage-category moments — and the other 29,664 Node assertions with it.  The anchor
+//     subsequence below was the only thing in the tree that failed.  It is an independent
+//     transcription of the DOS ledgers and the CoM2 region map, so it is a second source for the
+//     chain rather than the chain restated against itself.
+//
+// **A gap F268.4 first recorded here has been withdrawn.**  It claimed that swapping `c:level`
+// with `c:destiny` is numerically meaningful and caught by nothing.  The review checked it and it
+// does not reproduce: Destiny's permanent write resets the calculated level to Normal, whose
+// ladder bonuses are zero, so with Destiny active the two orders give the same result and with
+// Destiny absent its step never runs.  Probed at Normal, Elite and Champion, with and without
+// Destiny: attack, defence, HP and ranged strength are identical under both orders.  The swap is
+// inert, not uncaught.
+//   * Deleting any one of the composer's four rejections is caught by nothing at all.  Every
+//     derivation feeds the composer well-formed input, so its guards are exercised in the passing
+//     direction only.
+//
+// Dropped as redundant or self-referential: the trace-shape assertions (`traceOrder === index`,
+// `executionOrder === index`, `sourceOrder === chain.indexOf(key)`, strictly increasing ranks),
+// which are these guards restated on their own output; the per-phase order comparison, which is
+// that monotonicity again; the atomic multi-field `changes` key lists for Destiny and Rust,
+// covered by the write-declaration check earlier in this file; and the sparse-projection claims.
+// The F268.4 report carries the full table.
+
+// Independent source-order anchors, carried over verbatim from the retired spec.  They come from
+// the checked-in DOS ledgers and the CoM2 region map, NOT from `statChain()`, so a copied or
+// misordered chain cannot make this pass by agreeing with itself.
+const F20_VERSIONS = [
+  'mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11', 'com2_warlord_1.5.12.9',
+];
+
+const F20_PROBE_ABILITIES = {
+  lucky: true, darkForce: true, heavenlyLight: true, endurance: true, discipline: true,
+  animated: true, flameBlade: true, mysticSurge: true, lionheart: true, ironSkin: true,
+  stoneSkin: true, landLinking: true, ccDefense: true, blackChannels: true,
+  giantStrength: true, holyArmor: true, orihalcon: true, highPrayer: true, prayer: true,
+  trueLight: true, blackPrayer: true, darkness: true, warpReality: true, vertigo: true,
+  weakness: true, mindStorm: true, warpAttack: true, warpDefense: true, warpResist: true,
+  shatter: true, guardian: true, survivalInstinct: true, reinforceMagic: true,
+  innerPower: true, blazingEyes: true, blazingMarch: true, charmOfLife: true,
+  badMoon: true, goodMoon: true,
+  natureConjunction: true, tactician: true, spellWard: 'life', metalFires: true,
+  rebuild: true, fieryFury: true,
+  nausea: true, uphillBattle: true, soulFlay: true,
+  eternalNight: true, greatUnbinding: true, plague: true, goblinPox: true, luckyStar: true,
+  disheartenProphecy: true, wallOfFireGarrison: true, godsPlayDices: true,
+  mechanical: true, mechanicalExpert: true, trueSight: true, eyeOfHeaven: true,
+  berserkWarlord: true, rust: true, hurricane: true, favoredTerrain: true,
+  colossalStrength: true, vampirism: true, shadowStrike: true, psychoForce: true,
+  pneumaField: true, energyBeamWeapons: true, blazeOfGlory: true, beatOfSwiftness: true,
+  hierophany: true, channeler: true, militaryWorkshop: true, rocketry: true,
+  insulation: true, divineProtection: true, fortification: true, venom: true,
+};
+
+// An anchor is a write the named build makes, in the order that build makes it.
+const F20_SOURCE_ANCHORS = {
+  'mom_1.31': {
+    // True Sight is the second block of `BU_Apply_Specials` (131:0x8F338); Chaos Surge
+    // (0x8F113) and 1.31's inline Holy Weapon (0x8F1A8) are ahead of the 0x8F2A2 call, and
+    // Black Channels (0x8F3FA) is behind it.
+    c: ['level', 'lucky', 'weapon', 'chaosSurge', 'holyWeapon', 'trueSight',
+      'blackChannels', 'ironSkin', 'flameBlade', 'giantStrength',
+      'chaosChannels:armor', 'lionheart', 'holyArmor',
+      'berserk', 'nodeAura', 'highPrayer', 'trueLight', 'darkness',
+      'warpReality', 'blackPrayer', 'vertigo', 'weakness',
+      'warpAttack', 'warpDefense', 'warpResist', 'shatter'],
+  },
+  'mom_cp_1.60.00': {
+    // CP moved Holy Weapon into the relocated `BU_Apply_Specials` tail; True Sight stays at
+    // the routine's head, 0x8F338.
+    c: ['level', 'lucky', 'weapon', 'chaosSurge', 'trueSight', 'blackChannels', 'ironSkin',
+      'flameBlade', 'giantStrength',
+      'chaosChannels:armor', 'lionheart', 'holyArmor',
+      'berserk', 'holyWeapon', 'nodeAura',
+      'highPrayer', 'trueLight', 'darkness', 'warpReality',
+      'blackPrayer', 'vertigo', 'weakness', 'warpAttack',
+      'warpDefense', 'warpResist', 'shatter'],
+  },
+  'com_6.08': {
+    // CoM 1's BU_Apply_Specials layout: Lionheart com1:0x8F660, Iron Skin 0x8F71F, the
+    // Chaos Channels armor mutation 0x8F735, Land Link 0x8F75C, then Mystic Surge's
+    // stat-writing half 0x8F795, then Holy Armor 0x8F7C1.
+    c: ['level', 'lucky', 'weapon', 'trueSight', 'endurance', 'animated',
+      'flameBlade', 'lionheart',
+      'ironSkin', 'chaosChannels:armor',
+      'landLinking', 'mysticSurge',
+      'holyArmor', 'focusMagic',
+      'orihalcon', 'holyWeapon', 'chaosSurge',
+      'survivalInstinct', 'nodeAura', 'highPrayer',
+      'blazingMarch',
+      'warpReality', 'blackPrayer', 'guardian',
+      'heavenlyLight',
+      'vertigo', 'weakness',
+      'warpAttack', 'warpDefense', 'warpResist', 'shatter',
+      'darkness', 'supremeLight', 'realmWard', 'tactician',
+      'eternalNight:enemyResistance'],
+  },
+  'com2_1.05.11': {
+    c: ['level', 'focusMagic', 'lucky', 'darkForce',
+      'heavenlyLight',
+      'weapon', 'trueSight', 'endurance', 'discipline',
+      'chaosChannels:armor', 'animated', 'flameBlade',
+      'mysticSurge', 'lionheart', 'ironSkin', 'landLinking',
+      'holyArmor', 'orihalcon', 'holyWeapon',
+      'chaosSurge', 'survivalInstinct', 'blazingEyes', 'reinforceMagic',
+      'eternalNight:enemyResistance', 'charmOfLife',
+      'nodeAura', 'badMoon', 'goodMoon', 'natureConjunction', 'highPrayer',
+      'blazingMarch', 'warpReality', 'blackPrayer',
+      'darkness', 'guardian', 'vertigo', 'weakness',
+      'warpAttack', 'warpDefense', 'warpResist', 'shatter', 'spellWard', 'tactician'],
+  },
+  'com2_warlord_1.5.12.9': {
+    b: ['marionette:stats', 'marionette:rangedType',
+      'fieryFury', 'insulation', 'divineProtection', 'natureLink', 'outlanderXenoveterinary',
+      'bombsGrenades', 'upgradedExplosive:ranged', 'upgradedExplosive:fireBreath',
+      'outlanderBallisticsTraining', 'outlanderXenopsychology', 'outlanderRadio',
+      'berserkWarlord', 'nausea', 'uphillBattle', 'soulFlay', 'eternalNight:poorVision',
+      'greatUnbinding', 'prayer', 'trueLight', 'plague', 'goblinPox',
+      'luckyStar', 'disheartenProphecy', 'wallOfFire:garrison', 'godsPlayDices',
+      'eyeOfHeaven'],
+    c: ['level', 'focusMagic', 'lucky', 'darkForce',
+      'heavenlyLight',
+      'weapon', 'trueSight', 'endurance', 'discipline', 'chaosChannels:armor', 'animated',
+      'flameBlade', 'mysticSurge', 'lionheart',
+      'ironSkin', 'landLinking',
+      'holyArmor', 'orihalcon', 'holyWeapon',
+      'chaosSurge', 'survivalInstinct', 'blazingEyes', 'reinforceMagic',
+      'eternalNight:enemyResistance', 'charmOfLife', 'nodeAura', 'badMoon', 'goodMoon',
+      'natureConjunction', 'highPrayer', 'blazingMarch',
+      'warpReality', 'blackPrayer', 'darkness', 'guardian', 'vertigo',
+      'weakness', 'warpAttack', 'warpDefense', 'warpResist',
+      'shatter', 'spellWard', 'tactician'],
+    d: ['venom', 'mechanicalExpert', 'weakness', 'trueSight',
+      'flameBlade', 'rust', 'hurricane',
+      'favoredTerrain', 'fortification', 'colossalStrength', 'vampirism:transfer',
+      'shadowStrike:thrown',
+      'psychoForce', 'pneumaField', 'energyCannonThreshold', 'blazeOfGlory',
+      'beatOfSwiftness', 'hierophany'],
+  },
+};
+
+const F20_WARLORD_NORMAL_ANCHORS = {
+  ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'],
+  b: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'].b
+    .filter(id => id !== 'marionette:stats' && id !== 'marionette:rangedType'),
+  d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'].d.filter(id => id !== 'rust'),
+};
+
+const F20_WARLORD_MARIONETTE_ANCHORS = {
+  ...F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'],
+  d: F20_SOURCE_ANCHORS['com2_warlord_1.5.12.9'].d.filter(id => id !== 'rust'),
+};
+
+function f20Anchors(version, scenario) {
+  if (version !== 'com2_warlord_1.5.12.9') return F20_SOURCE_ANCHORS[version];
+  return scenario === 'marionette' ? F20_WARLORD_MARIONETTE_ANCHORS : F20_WARLORD_NORMAL_ANCHORS;
+}
+
+// The retired spec's `expectSubsequence`, as an assertion: every anchor must appear, in order,
+// among the ids the run actually executed for that region.
+function assertSubsequence(actual, expected, label) {
+  let next = 0;
+  for (const id of actual) {
+    if (id === expected[next]) next += 1;
+  }
+  assert(next === expected.length,
+    `${label}: the executed order does not contain the independent source anchors as a `
+    + `subsequence - matched ${next} of ${expected.length}, stopped at `
+    + `${JSON.stringify(expected[next])}; executed ${JSON.stringify(actual)}`);
+}
+
+function f20Input(ctx, version, scenario) {
+  return {
+    prefix: 'a',
+    version,
+    identity: version === 'com2_warlord_1.5.12.9' && scenario === 'marionette'
+      ? ctx.createUnitIdentity({
+        version, heroTypeId: 48, isHero: true, baseRace: 'High Men',
+        baseFantastic: false, specialUnit: 'none',
+      })
+      : ctx.createCustomUnitIdentity(version, {
+        baseRace: 'High Men', baseFantastic: false, specialUnit: 'chosen',
+      }),
+    figs: 1, atk: 5, rtb: 4, rtbType: 'missile', def: 6, res: 8, hp: 7,
+    // A CoM2/Warlord record states the attack on its own channel; the DOS versions state the
+    // same attack on the shared slot (`SPEC.md`, *Attack channels on the card*).
+    ...(version.startsWith('com2')
+      ? { modernAttacks: { ranged: { strength: 4, type: 'missile' } } } : {}),
+    level: 'normal', weapon: 'normal', armor: 'normal',
+    toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
+    cityWalls: 'none', nodeAura: 'life', chaosSurge: 1,
+    guidingBeaconAura: 2, divineBarrierAura: 2, soulLinkerAura: 2,
+    realmWard: 'life', abilities: { ...F20_PROBE_ABILITIES },
+  };
+}
+
+// [F20-1] Every version's executed b/c/d order contains its independent anchors as a subsequence.
+function runF20AnchorChecks(ctx) {
+  for (const version of F20_VERSIONS) {
+    const scenarios = version === 'com2_warlord_1.5.12.9'
+      ? ['normal', 'marionette'] : ['default'];
+    for (const scenario of scenarios) {
+      const label = scenario === 'default' ? version : `${version}/${scenario}`;
+      const executionTrace = ctx.deriveUnitStats(f20Input(ctx, version, scenario))
+        .statExecutionTrace;
+      assert(Array.isArray(executionTrace) && executionTrace.length > 0,
+        `${label}: the derivation publishes a non-empty execution trace to read the order off`);
+      for (const phase of ['b', 'c', 'd']) {
+        const executed = executionTrace
+          .filter(event => event.phase === phase).map(event => event.id);
+        assertSubsequence(executed, f20Anchors(version, scenario)[phase] || [],
+          `${label} region ${phase}`);
+      }
+    }
+  }
+
+  // The two Warlord identity writes the region anchors do not carry, because their positions are
+  // fixed by the CAS files rather than by the region map.  Spirit Link asserts Fantastic at the
+  // head of the pre-hook and clears it late in the main one, and a Channeler's Marionette
+  // conversion sits one line ahead of the `marionette:stats` attack writes:
+  // UnitCalcPre.CAS!NOSPIRITLINK!-11 "SETSTAT(U,AFantastic,0,1);"
+  // UnitCalcPre.CAS!NOVAMPIRISM!+16 "SETSTAT(U,AFantastic,0,1);"
+  // UnitCalc.CAS!NOTICEAGE!+3 "IF GETENCHANTMENTFLAG(U,EncSpiritLink,1) THEN { SETSTAT(U,AFantastic,0,0); }"
+  // Base CoM2 ships HALT stubs for both hooks, so neither region may appear in its chain at all.
+  const phaseIds = (chain, phase) => chain.filter(entry => entry.phase === phase)
+    .map(entry => entry.id);
+  const warlordChain = ctx.statChain('com2_warlord_1.5.12.9');
+  const b = phaseIds(warlordChain, 'b');
+  const d = phaseIds(warlordChain, 'd');
+  assert(b.indexOf('spiritLink') === 0,
+    'Warlord region b opens with Spirit Link\'s Fantastic assert; it is at index '
+    + `${b.indexOf('spiritLink')}`);
+  assert(b.indexOf('marionetteChanneler') === b.indexOf('marionette:stats') - 1,
+    'The Channeler Marionette conversion sits one entry ahead of the Marionette stat writes: '
+    + `${b.indexOf('marionetteChanneler')} against ${b.indexOf('marionette:stats')}`);
+  assert(d.indexOf('spiritLink') > d.indexOf('shadowStrike:thrown')
+    && d.indexOf('spiritLink') < d.indexOf('psychoForce'),
+    'Spirit Link\'s Fantastic clear sits between Shadow Strike and Psycho Force');
+  const baseChain = ctx.statChain('com2_1.05.11');
+  assert(phaseIds(baseChain, 'b').length === 0 && phaseIds(baseChain, 'd').length === 0,
+    'Base CoM2 ships HALT stubs for both script hooks, so its chain has no b or d entry');
+}
+
+// [F20-2] The four composer rejections.  Nothing else in the tree fails when one is removed:
+// every derivation feeds the composer well-formed input, so only a deliberately malformed one
+// reaches the rejecting branch.
+function runF20ComposerGuardChecks(ctx) {
+  const step = id => ({ id, phase: 'c', writes: ['res'], apply: unit => { unit.res += 1; } });
+  const chain = (...entries) => entries.map(([phase, id, provisional = false]) =>
+    ({ key: `${phase}:${id}`, phase, id, provisional }));
+  const rejects = (label, callback, expected) => {
+    let message = null;
+    try {
+      callback();
+    } catch (err) {
+      message = String(err.message);
+    }
+    assert(message !== null, `${label}: the composer accepted it instead of halting`);
+    assert(message.includes(expected),
+      `${label}: halted, but the message does not name the fault - wanted `
+      + `${JSON.stringify(expected)}, got ${JSON.stringify(message)}`);
+  };
+
+  rejects('a step with no chain entry',
+    () => ctx.orderStatStepsBySource([step('unlisted')], chain(['c', 'listed'])),
+    'missing from its version\'s execution chain');
+  rejects('the same step emitted twice',
+    () => ctx.orderStatStepsBySource([step('same'), step('same')], chain(['c', 'same'])),
+    'is represented twice');
+  rejects('a step with no id',
+    () => ctx.orderStatStepsBySource([{ ...step('x'), id: undefined }], chain(['c', 'x'])),
+    'without an id');
+  rejects('a chain authored out of region order',
+    () => ctx.orderStatStepsBySource([], chain(['c', 'first'], ['b', 'second'])),
+    'declared after a later phase');
+}
+
+function runSourceOrderF20Checks(ctx) {
+  runF20AnchorChecks(ctx);
+  runF20ComposerGuardChecks(ctx);
+}
+
+module.exports = {
+  runStatStepChecks, runModifierTraceChecks, runChannelAttributionChecks,
+  runSourceOrderF20Checks,
+};

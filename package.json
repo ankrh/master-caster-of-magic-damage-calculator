@@ -4,8 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test",
-    "provenance": "node tools/provenance_audit.js && node tools/provenance_audit_tests.js"
+    "test": "npm run citations && node tools/preset_checks.js && node tools/node_unit_checks.js",
+    "test:ui": "playwright test",
+    "test:all": "npm test && npm run test:ui",
+    "citations": "node tools/cas_citation_audit.js && node tools/provenance_audit.js && node tools/provenance_audit_tests.js"
   },
   "repository": {
     "type": "git",

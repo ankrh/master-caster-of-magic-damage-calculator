@@ -28,15 +28,11 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
-const { loadCalculatorContext, repoRoot } = require('./calculator_sources');
+const { loadCalculatorContext } = require('./calculator_sources');
 const { modernRecordForSharedSlot } = require('./unit_checks/assertions');
 
 const ctx = loadCalculatorContext();
-vm.runInContext(fs.readFileSync(path.join(repoRoot, 'Calculator', 'ui_abilities.js'), 'utf8'),
-  ctx, { filename: 'Calculator/ui_abilities.js' });
 const read = expression => vm.runInContext(expression, ctx);
 const VERSIONS = read('ENGINE_VERSIONS');
 const deriveUnitStats = read('deriveUnitStats');

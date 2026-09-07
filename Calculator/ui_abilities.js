@@ -1,42 +1,12 @@
 // --- UI Layer: ability and enchantment controls ---
-// Builds the two ability panels and reads and writes their values, and owns the version
-// gating and show-inactive rules deciding which controls a version may display.
+// Builds the two ability panels and reads and writes their values, and applies the version
+// gating and show-inactive rules deciding which controls a version may display. The gating
+// rules themselves live in `ability_gating.js` (`data-scope="core"`); this file only applies
+// them to the DOM.
 
-
-const SHARED_ABILITY_KEYS = new Set(
-  ABILITY_DEFS
-    .map(abil => abil.key)
-    .filter(key => ENCHANTMENT_DEFS.some(ench => ench.key === key))
-);
-
-function abilityUiDefs() {
-  const abilityDefs = ABILITY_DEFS.map(abil => ({
-    ...abil,
-    calcKey: abil.calcKey || abil.key,
-    uiKey: abil.uiKey || abil.key,
-    source: 'ability',
-  }));
-  const enchantmentDefs = ENCHANTMENT_DEFS.map(abil => ({
-    ...abil,
-    calcKey: abil.calcKey || abil.key,
-    uiKey: abil.uiKey || (SHARED_ABILITY_KEYS.has(abil.key) ? 'enchantment_' + abil.key : abil.key),
-    source: 'enchantment',
-  }));
-  return [...abilityDefs, ...enchantmentDefs];
-}
 
 function abilityControlId(prefix, abil) {
   return prefix + 'Abil_' + (abil.uiKey || abil.key);
-}
-
-function abilityValueIsActive(abil, val) {
-  if (abil.type === 'bool') return !!val;
-  if (abil.type === 'select') {
-    const defaultValue = abil.options && abil.options[0] ? abil.options[0][0] : 'none';
-    return val !== defaultValue;
-  }
-  if (abil.type === 'numcheck') return val != null;
-  return (val || 0) !== 0;
 }
 
 function abilityDisplayLabel(abil) {
@@ -249,37 +219,6 @@ function buildAbilitiesUI(prefix) {
   }
 }
 
-function parseAbilitiesFromUnit(unit) {
-  const result = {};
-  const abilities = unit.abilities || [];
-  // Normalize: strip spaces from ability strings for matching against camelCase match keys
-  const normalized = abilities.map(a => a.replace(/ /g, ''));
-  for (const abil of ABILITY_DEFS) {
-    if (abil.type === 'bool') {
-      result[abil.key] = normalized.some(a => a === abil.match || a.startsWith(abil.match + '='));
-    } else if (abil.type === 'numcheck') {
-      const found = normalized.find(a => a.startsWith(abil.match + '='));
-      if (found) {
-        result[abil.key] = parseInt(found.split('=')[1]) || 0;
-      } else if (normalized.includes(abil.match)) {
-        result[abil.key] = 0;
-      } else {
-        result[abil.key] = null;
-      }
-    } else {
-      const found = normalized.find(a => a.startsWith(abil.match + '='));
-      if (found) {
-        result[abil.key] = parseInt(found.split('=')[1]) || 0;
-      } else if (normalized.includes(abil.match)) {
-        result[abil.key] = 1;
-      } else {
-        result[abil.key] = 0;
-      }
-    }
-  }
-  return result;
-}
-
 function setAbilityControlValue(prefix, abil, val) {
   const el = document.getElementById(abilityControlId(prefix, abil));
   if (!el) return;
@@ -336,82 +275,32 @@ function clearAbilities(prefix, sourceFilter) {
 
 // --- Visibility ---
 
-// True if an ability/enchantment whose def carries `subgroup` is available in the
-// given game-version string. Shared by the main panels and the matrix candidate list
-// so both gate enchantments identically.
-function subgroupAllowedForVersion(subgroup, version) {
-  const isMoM = version === 'mom_1.31' || version === 'mom_cp_1.60.00';
-  const isCoMorCoM2 = version === 'com_6.08' || version.startsWith('com2_');
-  const isCoM2 = version.startsWith('com2_');
-  const isWarlord = version.startsWith('com2_warlord_');
-  const sg = (subgroup || '').replace(/^_/, '');
-  if (sg === 'MoM only') return isMoM;
-  if (sg === 'CoM only') return version === 'com_6.08';
-  if (sg === 'CoM, CoM2 & Warlord') return isCoMorCoM2;
-  if (sg === 'CoM2 & Warlord') return isCoM2;
-  if (sg === 'Warlord only') return isWarlord;
-  if (sg === 'Warlord') return isWarlord;
-  if (sg === 'Renamed in Warlord') return isWarlord;
-  // The unrestricted labels, named rather than defaulted: a subgroup that is only the `_`
-  // marker, and the two headings that mean "every version". A misspelt restriction would
-  // otherwise resolve to "allowed everywhere" and show a control in versions whose engine has
-  // no such effect (`SPEC.md`, *Out-of-range values stop the run*).
-  if (sg === '' || sg === 'All versions' || sg === 'All versions bools') return true;
-  throw new Error(
-    `subgroupAllowedForVersion: subgroup '${subgroup}' is not a known version restriction. `
-    + `Add it here with the versions it names, or use 'All versions'.`);
-}
-
-// The single home for "does this def exist in this version". Both enchantments and ability tags
-// are gated by their subgroup. A leading `_` only suppresses the rendered heading and is stripped
-// before the version test, so `_MoM only` restricts exactly as `MoM only` does. A def with no
-// subgroup, or one that is nothing but the marker (`_`), resolves to "allowed everywhere".
-// `updateTypeVisibility` applies this and tests/version-gating.spec.js asserts against it —
-// re-deriving the rule in either place would let the two drift.
-function abilityVersionGated(abil, version) {
-  const subgroupOk = subgroupAllowedForVersion(abil.subgroup, version);
-  const overrideOk = (abil.alsoVersions || []).some(v => version.startsWith(v));
-  const exceptOk = !(abil.exceptVersions || []).some(v => version.startsWith(v));
-  return !((subgroupOk || overrideOk) && exceptOk);
-}
-
-// Global-enchantment controls in the .combat-enchantments frame are hardcoded HTML (not
-// driven by ABILITY_DEFS), so they need their own version gating. Each entry maps a control
-// element id to the versions in which it's valid; a control valid everywhere still needs a
-// case saying so, because a control this function has never heard of is a wiring mistake, not
-// a universal enchantment (`SPEC.md`, *Out-of-range values stop the run*). When a control is
-// hidden it's also reset (unchecked) so a hidden enchantment can't silently keep affecting the
-// calculation.
-function globalEnchantmentAllowedForVersion(elementId, version) {
-  const isMoM = version === 'mom_1.31' || version === 'mom_cp_1.60.00';
-  const isWarlord = version.startsWith('com2_warlord_');
-  switch (elementId) {
-    case 'trueLight': return isMoM || isWarlord; // removed in CoM 1 & 2
-    case 'chaosConjunction': return version.startsWith('com2_');
-    case 'hurricane': return isWarlord;
-    case 'poxHost':   return isWarlord;
-    case 'darkness':        return true;
-    case 'chaosSurge':      return true;
-    case 'wallOfFire':      return true;
-    case 'warpReality':     return true;
-    case 'rangedCheck':     return true;
-    case 'rangedDist':      return true;
-    case 'nodeAura':        return true;
-    default: throw new Error(
-      `globalEnchantmentAllowedForVersion: control '${elementId}' has no version rule.`);
-  }
-}
-
 // Show/hide (and reset when hidden) the version-restricted controls in the global-enchantment
 // frame. Safe to call repeatedly; invoked on version change, reset, and state restore.
+// The one DOM home for a battlefield enchantment the selected version does not have: the row is
+// hidden, the control is disabled, and its value is cleared. The clearing is not decided here —
+// `applyGlobalVersionGating` (`card_state.js`) is its one implementation, and this writes back only
+// what that pass changed, exactly as the ability loop in `updateTypeVisibility` does.
+//
+// Until F260.7 the rule had three statements: this function cleared four ids, a second block in
+// `updateTypeVisibility` cleared three of them (never `chaosConjunction`) and also disabled them,
+// and `applyGlobalVersionGating` decided the values for a globals object built without the page.
+// Nothing had moved, because every path that could set a disallowed global ran one of the two
+// blocks — but which of the four ids got which half of the treatment was an accident of the two
+// lists, and a fifth enchantment would have had to be added to both. `updateTypeVisibility` now
+// calls this instead of restating it (F260.3's close block, question 2).
 function updateGlobalEnchantmentVisibility(version) {
-  for (const id of ['trueLight', 'chaosConjunction', 'hurricane', 'poxHost']) {
+  const globals = { ...collectGlobals(), version };
+  const gated = applyGlobalVersionGating(globals);
+  for (const id of GLOBAL_ENCHANTMENT_CONTROL_IDS) {
     const el = document.getElementById(id);
     if (!el) continue;
     const wrapper = el.closest('.check-label') || el;
     const allowed = globalEnchantmentAllowedForVersion(id, version);
     wrapper.classList.toggle('version-hidden', !allowed);
-    if (!allowed && el.checked) el.checked = false;
+    wrapper.classList.toggle('disabled-field', !allowed);
+    el.disabled = !allowed;
+    if (gated[id] !== globals[id]) el.checked = gated[id];
   }
 }
 
@@ -419,31 +308,18 @@ function updateGlobalEnchantmentVisibility(version) {
 // (see deriveUnitStats): fantastic units lock all three — except Zombies' weapons and,
 // in Warlord, level while Spirit Link is active — heroes lock level+weapon, and armor
 // additionally doesn't exist in MoM versions.
+// The rule itself is `cardStateLoadoutLocks` (`card_state.js`, `data-scope="core"`), so the page
+// and the preset applier lock the same fields; what stays here is the DOM half — which of the two
+// identity sources speaks, and the Spirit Link tick.
 function loadoutLockState(prefix) {
   const version = document.getElementById('gameVersion').value;
-  const isMoM = version === 'mom_1.31' || version === 'mom_cp_1.60.00';
   const unitSel = document.getElementById(prefix + 'Unit');
-  let isHero, isFantastic, isZombies = false;
-  if (unitSel.value === 'custom') {
-    const identity = readIdentityControls(prefix);
-    isHero = identity.isHero;
-    isFantastic = identity.baseFantastic;
-    isZombies = identity.specialUnit === 'zombies';
-  } else {
-    const unit = (unitDatabases[version] || []).find(u => u.id === parseInt(unitSel.value));
-    const identity = createRosterUnitIdentity(version, unit);
-    isHero = identity.isHero;
-    isFantastic = identity.baseFantastic;
-    isZombies = identity.specialUnit === 'zombies';
-  }
+  const identity = unitSel.value === 'custom'
+    ? readIdentityControls(prefix)
+    : createRosterUnitIdentity(version,
+      (unitDatabases[version] || []).find(u => u.id === parseInt(unitSel.value)));
   const spiritLinkEl = document.getElementById(prefix + 'Abil_spiritLink');
-  const spiritLink = version.startsWith('com2_warlord') && !!(spiritLinkEl && spiritLinkEl.checked);
-  return {
-    level: isHero || (isFantastic && !spiritLink),
-    weapon: (isHero || isFantastic) && !isZombies,
-    armor: isHero || isFantastic || isMoM,
-    isMoM,
-  };
+  return cardStateLoadoutLocks(identity, spiritLinkEl && spiritLinkEl.checked, version);
 }
 
 // Single owner of the disabled + greyed-label styling for the three loadout selects,
@@ -463,9 +339,12 @@ function updateLoadoutLocks(prefix) {
   // a leftover orihalcon never reaches the engine).
   const armorSel = document.getElementById(prefix + 'Armor');
   const armorLabel = document.querySelector(`label[for="${prefix}Armor"]`);
-  armorSel.classList.toggle('version-hidden', locks.isMoM);
-  if (armorLabel) armorLabel.classList.toggle('version-hidden', locks.isMoM);
-  if (locks.isMoM) armorSel.value = 'normal';
+  // `versionHasArmorQuality` (`ability_gating.js`) is the rule's one home, so this reset and the
+  // one `applyVersionGating` performs on a card state cannot drift apart.
+  const noArmor = !versionHasArmorQuality(document.getElementById('gameVersion').value);
+  armorSel.classList.toggle('version-hidden', noArmor);
+  if (armorLabel) armorLabel.classList.toggle('version-hidden', noArmor);
+  if (noArmor) armorSel.value = 'normal';
 }
 
 function updateTypeVisibility() {
@@ -490,37 +369,39 @@ function updateTypeVisibility() {
   updateLoadoutLocks('a');
   updateLoadoutLocks('b');
 
-  // Version restrictions on enchantments.
-  function subgroupAllowed(subgroup) {
-    return subgroupAllowedForVersion(subgroup, version);
-  }
-
-  function applyDisabled(el, disabled) {
-    if (disabled) {
-      if (el.tagName === 'SELECT') el.value = el.options[0].value;
-      else if (el.type === 'checkbox') el.checked = false;
-    }
-    el.disabled = disabled;
-  }
-
+  // Version restrictions on enchantments. The clearing is not done here: `applyVersionGating`
+  // (`card_state.js`, `data-scope="core"`) is its one implementation, and the panel writes back
+  // the values it decided. Anything the pure pass leaves alone is left alone here too, so the
+  // page and a control-free card state are gated by the same code rather than by two rules that
+  // agree until they don't (F260.3). What stays here is the DOM half: the classes and the
+  // disabled attribute, neither of which is state.
   for (const prefix of ['a', 'b']) {
     // A roster (non-custom) unit locks its panel: its innate ability controls become
     // read-only. We disable them so they get the same native disabled styling as the
     // version-gated controls below — but unlike version gating we must NOT clear their
     // value, since those checkboxes carry the unit's innate abilities for the calculation.
     const panelLocked = document.getElementById(prefix + 'Abilities').classList.contains('locked');
+    const cardState = collectCardState(prefix);
+    const gatedState = applyVersionGating(cardState, version, ABILITY_VERSION_GATES.card);
     for (const abil of abilityUiDefs()) {
       const el = document.getElementById(abilityControlId(prefix, abil));
       if (!el) continue;
-      const versionGated = abilityVersionGated(abil, version);
+      const versionGated = ABILITY_VERSION_GATES.card(abil, version);
       // Recorded on the item because updateAbilityVisibility must tell "impossible in this
       // version" (never shown) apart from "locked by a roster unit" (shown when the group's
       // toggle is on) — both of which merely set the control's disabled attribute.
       const gatedItem = el.closest('.abil-item');
       if (gatedItem) gatedItem.classList.toggle('abil-version-gated', versionGated);
       if (versionGated) {
-        // Effect cannot exist in this version: disable and clear the value.
-        applyDisabled(el, true);
+        // Effect cannot exist in this version: disable, and write back whatever the gating pass
+        // cleared. Only a value it actually changed is written, so a control the pass leaves
+        // alone — a `num` input, a `numcheck` pair — keeps the number in its box exactly as the
+        // page left it before F260.3.
+        const uiKey = cardStateAbilityUiKey(abil);
+        if (gatedState.abilities[uiKey] !== cardState.abilities[uiKey]) {
+          setAbilityControlValue(prefix, abil, gatedState.abilities[uiKey]);
+        }
+        el.disabled = true;
       } else if (gatedItem && gatedItem.classList.contains('abil-identity-derived')) {
         // A named special-unit selector owns this derived value; keep it locked even though
         // the underlying enchantment exists in the current version.
@@ -538,21 +419,9 @@ function updateTypeVisibility() {
     }
   }
 
-  // Version restrictions on global combat enchantments. Disable (and clear) toggles
-  // whose effect does not exist in the selected version, so they can't be set to a
-  // no-op state. The allowed-versions rules live in globalEnchantmentAllowedForVersion.
-  for (const id of ['trueLight', 'hurricane', 'poxHost']) {
-    const gEl = document.getElementById(id);
-    if (!gEl) continue;
-    const allowed = globalEnchantmentAllowedForVersion(id, version);
-    if (!allowed) {
-      if (gEl.type === 'checkbox') gEl.checked = false;
-      else gEl.value = 'attacker';
-    }
-    gEl.disabled = !allowed;
-    const gLabel = gEl.closest('.check-label');
-    if (gLabel) gLabel.classList.toggle('disabled-field', !allowed);
-  }
+  // Version restrictions on global combat enchantments, stated once in
+  // `updateGlobalEnchantmentVisibility` above.
+  updateGlobalEnchantmentVisibility(version);
 
   const hasRanged = hasConventionalRangedAttack(readUnitStats('a'));
   const rangedCheckLabel = document.getElementById('rangedCheckLabel');

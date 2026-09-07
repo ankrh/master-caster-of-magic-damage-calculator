@@ -137,6 +137,12 @@ function resolveCombat(a, b, opts) {
       bLifeStealDist: null,
       aPostCombatStateMean: initialCombatHealingStateMeans(a),
       bPostCombatStateMean: initialCombatHealingStateMeans(b),
+      aPostCombatCategoryDists: deterministicCombatCategoryDists(
+        { ...initialCombatHealingStateMeans(a), healedDamage: 0 },
+        'the exchange a Black-Sleeping attacker resolves to, for the attacker,'),
+      bPostCombatCategoryDists: deterministicCombatCategoryDists(
+        { ...initialCombatHealingStateMeans(b), healedDamage: 0 },
+        'the exchange a Black-Sleeping attacker resolves to, for the defender,'),
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };
@@ -1220,6 +1226,10 @@ function resolveCombat(a, b, opts) {
         expectedDamage(totalDmgToA)),
       bPostCombatStateMean: jointCombatHealingStateMeans(joint, 'b', b,
         expectedDamage(totalDmgToB)),
+      // The same record read as four distributions, which is what a second moment needs
+      // (F268.7). `regularDamage` is not among them; `combat_state.js` states why.
+      aPostCombatCategoryDists: jointCombatHealingCategoryDists(joint, 'a', a, totalDmgToA),
+      bPostCombatCategoryDists: jointCombatHealingCategoryDists(joint, 'b', b, totalDmgToB),
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };
@@ -1237,6 +1247,12 @@ function resolveCombat(a, b, opts) {
         totalDmgToA: [1], totalDmgToB: [1],
         aPostCombatStateMean: initialCombatHealingStateMeans(a),
         bPostCombatStateMean: initialCombatHealingStateMeans(b),
+        aPostCombatCategoryDists: deterministicCombatCategoryDists(
+          { ...initialCombatHealingStateMeans(a), healedDamage: 0 },
+          'the volley an unseen defender refuses, for the attacker,'),
+        bPostCombatCategoryDists: deterministicCombatCategoryDists(
+          { ...initialCombatHealingStateMeans(b), healedDamage: 0 },
+          'the volley an unseen defender refuses, for the defender,'),
         aRemHP, aHP: aTotalHP, aAlive,
         bRemHP, bHP: bTotalHP, bAlive,
       };
@@ -1331,6 +1347,7 @@ function resolveCombat(a, b, opts) {
     const aLifeStealDistR = tR.lifeStealDist;
     const aLifeStealExpectedR = tR.lifeStealEV;
     const rangedStateMeans = rangedCombatHealingStateMeans(tR.outcomes, a, b);
+    const rangedCategoryDists = rangedCombatHealingCategoryDists(tR.outcomes, a, b);
 
     return {
       phases: null,
@@ -1357,6 +1374,8 @@ function resolveCombat(a, b, opts) {
       bLifeStealExpected: 0,
       aPostCombatStateMean: rangedStateMeans.sourceMeans,
       bPostCombatStateMean: rangedStateMeans.targetMeans,
+      aPostCombatCategoryDists: rangedCategoryDists.sourceDists,
+      bPostCombatCategoryDists: rangedCategoryDists.targetDists,
       aRemHP, aHP: a.hp, aAlive,
       bRemHP, bHP: b.hp, bAlive,
     };

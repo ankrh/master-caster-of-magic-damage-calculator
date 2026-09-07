@@ -3,7 +3,10 @@
 
 'use strict';
 
-const { assert, assertEqual, assertClose, baseUnitInput, evalInContext } = require('./assertions');
+const {
+  assert, assertEqual, assertClose, assertCloseToPrecision, assertDeepEqual, assertIs,
+  baseUnitInput, evalInContext,
+} = require('./assertions');
 
 function runResolutionStepChecks(ctx) {
   const defenseTarget = {
@@ -497,4 +500,159 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     'The earlier Warlord Wall of Fire EncMagic write also survives material suppression');
 }
 
-module.exports = { runResolutionStepChecks, runModernWeaponImmunityMappingChecks };
+// --- F34: Bless's Defense bonus reaches a spell and no unit attack ---
+//
+// Tag: regression.  Anchor: F34.  All that survives of `defense-cap-bless-f32-f34`, which F268.4
+// reduced from 216 assertions to these.  It keeps its own `--only bless-spell-only-f34` command
+// through `MIGRATED_SUITES`; the file it came from is gone.
+//
+// **F32 was retired outright as corpus-reachable.**  Its claim was the modern defense-dice split:
+// the first 15 dice roll at the uncapped chance and the rest at the capped one.  Three separate
+// wrong implementations - `capDice: 30`, no split at all, and a capped chance equal to the
+// uncapped one - each fail the same two preset fixtures,
+// `weaponImmunityAfterMissileImmunityCoM2` and `lavaSmelterProtectionsStackWarlord`.  **Those two
+// are load-bearing for the whole split and are named for other subjects, so a later pass must not
+// retire them blind.**  Two fixtures is a thin margin, and F268.4 says so in its report rather
+// than papering over it.
+//
+// **Most of F34 went the same way.**  Letting Bless reach any attack at all fails five fixtures
+// (`spiritLinkBlessNoBonusWarlord`, `blessMeleeFromDeathCoM2`, `blessMeleeFromChaosCoM2`,
+// `blessMagicRangedNoDefCoM2`, `blessMagicRangedNoDefWarlord`), and disabling its Resistance half
+// fails four (`destructionBlessCoM2`, `destructionBlessWarlord`, `blessResistBonusCoM2`,
+// `blessResistBonusWarlord`).
+//
+// **The `spellId > 0` term is the one part nothing else reaches.**  Dropping it alone - so the
+// bonus applies to anything `magicImmunityEligible`, which every unit attack channel is - left all
+// 1,161 fixtures green on all four moments and all ten damage-category moments, and the other
+// 29,664 Node assertions with them.  That term is what makes the bonus spell-only, and it is the
+// `EncBless` block's own `spellid > 0` guard at `Caster.exe` `0x5966B8`-`0x596703`.
+
+const F34_MODERN = ['com2_1.05.11', 'com2_warlord_1.5.12.9'];
+
+// [F32-1..F32-5] The modern defense-dice split, at an **ordinary** block probability.
+//
+// F268.4 first deleted F32 whole, on the strength of three mutations that all failed
+// `weaponImmunityAfterMissileImmunityCoM2` and `lavaSmelterProtectionsStackWarlord`.  Its review
+// broke that with a fourth: applying the split only when the chance is already 1 --
+// `if (chance < 1) return binomialPMF(defStr, chance);` at the head of `defenseBlockPMF` -- moves
+// the mean blocks over 20 dice from **10.5 to 12** and is caught by **nothing**: not the corpus,
+// not the rest of the Node checks.  Both of those fixtures roll their first 15 dice at 100%, so
+// neither exercises the split at an ordinary probability, and the whole claim rested on them.
+// Reproduced before restoring.  The lesson recorded in the journal: a fixture that catches three
+// mutations of a rule can still be blind to the rule's ordinary case.
+function runDefenseSplitF32Checks(ctx) {
+  const makeUnit = (version, prefix, overrides = {}) => ctx.deriveUnitStats(baseUnitInput({
+    prefix, version, atk: 0, def: 0, res: 10, hp: 100, toBlkMod: 0,
+    ...(version.startsWith('com2') ? { hitChance: 70 } : { toHitMod: 70, toHitRtbMod: 70 }),
+    ...overrides,
+  }));
+  const mean = dist => dist.reduce((sum, p, value) => sum + p * value, 0);
+
+  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
+    const attacker = makeUnit(version, 'a', {
+      rtb: 20, rtbType: 'missile',
+      modernAttacks: { ranged: { strength: 20, type: 'missile' } },
+    });
+    const defender = makeUnit(version, 'b', { def: 20, toBlkMod: 30 });
+    const profile = ctx.buildToBlockContext(attacker, defender, 0, 0, version)
+      .bToBlockVsARangedEW;
+
+    // The profile the to-block context builds: 60% for the first 15 dice, 30% after.
+    assertDeepEqual(profile, { chance: 0.6, capDice: 15, cappedChance: 0.3 },
+      `${version}: the modern to-block profile splits after die 15`);
+    // 15 x 0.6 + 5 x 0.3.  This is the assertion the review's counter-example needs: it reads the
+    // split at an ordinary chance, where the two surviving fixtures read it only at 100%.
+    assertCloseToPrecision(mean(ctx.defenseBlockPMF(20, profile)), 10.5, 12,
+      `${version}: mean blocks over 20 dice at 60% then 30%`);
+    // Exactly 15 dice never reach the cap, so the same profile means a flat 60% there.
+    assertCloseToPrecision(mean(ctx.defenseBlockPMF(15, profile)), 9, 12,
+      `${version}: mean blocks over 15 dice, none of them capped`);
+    // And the distribution is the convolution of two independent binomials — an independent
+    // statement of the rule, not a restatement of `defenseBlockPMF`'s own arithmetic.
+    const independent = ctx.convolveDists(
+      ctx.binomialPMF(15, 0.60), ctx.binomialPMF(5, 0.30), 20);
+    const actual = ctx.defenseBlockPMF(20, profile);
+    assertIs(actual.length, 21, `${version}: the 20-die block PMF has 21 outcomes`);
+    for (let blocked = 0; blocked < actual.length; blocked += 1) {
+      assertCloseToPrecision(actual[blocked], independent[blocked], 14,
+        `${version}: block PMF at ${blocked} matches the independent convolution`);
+    }
+  }
+
+  // The DOS control: one flat chance and no cap dice, so 20 dice at 60% mean 12 rather than 10.5.
+  // Without it "10.5" could be read as arithmetic rather than as the modern engine's own rule.
+  for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
+    const chance = ctx.buildToBlockContext(
+      makeUnit(version, 'a'), makeUnit(version, 'b', { def: 20, toBlkMod: 30 }), 0, 0, version,
+    ).bToBlockVsAMelee;
+    assertIs(chance, 0.6, `${version}: the DOS block chance is a bare number, not a profile`);
+    assertCloseToPrecision(mean(ctx.defenseBlockPMF(20, chance)), 12, 12,
+      `${version}: mean blocks over 20 dice at a flat 60%`);
+  }
+}
+
+function runBlessSpellOnlyF34Checks(ctx) {
+  const target = blessed => ({
+    def: 4,
+    res: 0,
+    unitType: 'normal',
+    abilities: blessed ? { bless: true } : {},
+    cityWallBonus: 0,
+  });
+  // One attacker per channel the engine can deal an attack on, because `spellid` is 0 for every
+  // one of them and the bonus must reach none.
+  const channels = {
+    melee: { unitType: 'fantastic_chaos', rangedType: 'none', thrownType: 'none', abilities: {} },
+    ranged: { unitType: 'fantastic_chaos', rangedType: 'magic', thrownType: 'none', abilities: {} },
+    breath: { unitType: 'fantastic_chaos', rangedType: 'none', thrownType: 'fire', abilities: {} },
+    gaze: {
+      unitType: 'fantastic_death', rangedType: 'none', thrownType: 'none',
+      abilities: { deathGaze: -2 },
+    },
+  };
+
+  for (const version of F34_MODERN) {
+    const defenseBonus = version.startsWith('com2_warlord') ? 7 : 5;
+
+    // [F34-1..F34-4] no unit attack channel sees the Defense bonus
+    for (const [name, attacker] of Object.entries(channels)) {
+      const attackType = name === 'breath' ? 'thrown' : name;
+      assertIs(
+        ctx.computeCasterDefenseForAttack(target(true), attacker, version, 0, attackType),
+        ctx.computeCasterDefenseForAttack(target(false), attacker, version, 0, attackType),
+        `${version} ${name}: Bless does not change the defense against a unit attack`);
+    }
+    // [F34-5] The control the claim needs: a qualifying spell *does* get the bonus, so "does not
+    // change" above is about the channel and not about Bless being inert on this target.
+    assertIs(ctx.effectiveDefense(target(true), version, {
+      spellId: 99, spellRealm: 'chaos', magicImmunityEligible: true,
+    }), 4 + defenseBonus, `${version}: Bless applies against a chaos spell`);
+    // [F34-6] and spell id 0 is not a spell - the term the corpus cannot reach.
+    assertIs(ctx.effectiveDefense(target(true), version, {
+      spellId: 0, spellRealm: 'chaos', magicImmunityEligible: true,
+    }), 4, `${version}: Bless does not apply at spell id 0`);
+    // [F34-7] The Death realm is the second admitted one and needs a case of its own.  F268.4's
+    // review dropped `|| ctx.spellRealm === 'death'` from the gate and **nothing** failed - not
+    // the corpus, not the rest of the Node checks - because every fixture carrying the realm gate
+    // exercises the Chaos arm.  Reproduced (defense 9 -> 4 in CoM2, 11 -> 4 in Warlord) and
+    // restored on that counter-example.
+    assertIs(ctx.effectiveDefense(target(true), version, {
+      spellId: 1, spellRealm: 'death', magicImmunityEligible: true,
+    }), 4 + defenseBonus, `${version}: Bless applies against a death spell too`);
+    // [F34-8] and a realm neither arm admits still gets nothing.
+    assertIs(ctx.effectiveDefense(target(true), version, {
+      spellId: 1, spellRealm: 'life', magicImmunityEligible: true,
+    }), 4, `${version}: Bless does not apply against a life spell`);
+  }
+}
+
+// One entry point, so `--only defense-cap-bless-f32-f34` runs both halves.
+function runDefenseCapBlessF32F34Checks(ctx) {
+  runDefenseSplitF32Checks(ctx);
+  runBlessSpellOnlyF34Checks(ctx);
+}
+
+module.exports = {
+  runResolutionStepChecks, runModernWeaponImmunityMappingChecks,
+  runDefenseCapBlessF32F34Checks,
+};

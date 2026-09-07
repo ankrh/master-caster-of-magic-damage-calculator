@@ -21,15 +21,12 @@ let _restoring = false;
 // here. Returning an empty roster for an unmapped id used to leave the symptom as an empty
 // unit dropdown with every other control still computing — `SPEC.md`, *Out-of-range values
 // stop the run*.
+// The records themselves are `rosterRecordsForVersion` (`card_state.js`, `data-scope="core"`), so
+// the page and a caller with no controls read one roster for a version; this is the page's cache
+// over it.
 function loadUnitDatabase(version) {
   if (unitDatabases[version]) return unitDatabases[version];
-  const data = VERSION_DATA[version];
-  if (!data) {
-    throw new Error(
-      `loadUnitDatabase: no roster for game version '${version}' `
-      + `(expected one of ${Object.keys(VERSION_DATA).join(', ')}).`);
-  }
-  unitDatabases[version] = Object.values(data);
+  unitDatabases[version] = rosterRecordsForVersion(version);
   return unitDatabases[version];
 }
 
@@ -225,38 +222,21 @@ function initUnitCombobox(prefix) {
 // JS-side records for a roster unit (base stats + intrinsic identity). Shared by
 // applyUnit and updateUnitLock's value-preserving restore path.
 function setRosterUnitRecords(prefix, unit, version) {
-  unitBaseStats[prefix] = {
-    atk: unit.melee, def: unit.defense, res: unit.resist, hp: unit.hp,
-    rtb: predefinedUnitRtb(unit),
-    modernAttacks: predefinedModernAttacks(unit, version),
-    toHitMod: unit.to_hit || 0,
-    generic: unit.category === 'Generic',
-  };
-  // The stored identity is the core roster identity plus a display name. It does not restate the
-  // special-unit answer: `createRosterUnitIdentity` already carries `specialUnitForRoster`'s, and
-  // a second call here was a second map that could — and did — disagree with it (F162).
-  unitIdentity[prefix] = {
-    ...createRosterUnitIdentity(version, unit),
-    name: unit.name,
-  };
+  // `generic` is the whole record now. The stat fields beside it were a second copy of the roster
+  // statement, and since `applyRosterUnit` (`card_state.js`) became that statement's one home
+  // nothing read them: a copy that no longer answers any question is a copy that can only drift
+  // (F260.4 found them dead, F260.6 removed them).
+  assertRosterRecordStatable(unit, version);
+  unitBaseStats[prefix] = { generic: unit.category === 'Generic' };
+  // `rosterStoredIdentity` (`card_state.js`) is the one statement of what a record's stored
+  // identity is, and `rosterCardIdentity` — the `identity` `applyRosterUnit` puts on the card
+  // state — is built from it, so the map and the state cannot disagree about a record.
+  unitIdentity[prefix] = rosterStoredIdentity(unit, version);
 }
 
 function customBaseRaceForUnitType(unitType) {
   const match = /^fantastic_(life|death|chaos|nature|sorcery|arcane)$/.exec(unitType || '');
   return match ? match[1][0].toUpperCase() + match[1].slice(1) : '';
-}
-
-// Two different questions used to share one `false`. A key this build does not define is out of
-// range and halts (`SPEC.md`, *Out-of-range values stop the run*): it can only come from a state
-// blob, share link or fixture written against a vocabulary this build has since changed, and
-// answering `none` restores a unit whose special template the caller did state. That check and
-// the vocabulary it reads are `specialUnitDef` and `SPECIAL_UNIT_DEFS` (`stats_identity.js`), so
-// the page and the core identity boundary share one list. A key that is defined but not allowed
-// in the selected version is version scope, not retirement — the version select really can move a
-// `chosen` card to MoM — so that one still clamps, and that question is the page's own.
-function specialUnitAllowed(version, key, context) {
-  const def = specialUnitDef(key, context);
-  return def ? def.versions.some(prefix => version.startsWith(prefix)) : true;
 }
 
 function identityControl(prefix, name) {
@@ -314,13 +294,11 @@ function setIdentityControlsFromLegacy(prefix, unitType, race, specialUnit) {
   });
 }
 
+// The DOM writer for the identity a record implies. What that identity *is* is
+// `rosterCardIdentity` (`card_state.js`), which is also the `identity` `applyRosterUnit` puts on
+// the card state, so the controls and a control-free state state the same one.
 function setIdentityControlsFromUnit(prefix, unit, version) {
-  setIdentityControls(prefix, {
-    isHero: !!(unit && unit.isHero),
-    baseFantastic: !!(unit && unit.baseFantastic),
-    baseRace: unit && unit.baseRace,
-    specialUnit: specialUnitForRoster(version, unit),
-  });
+  setIdentityControls(prefix, rosterCardIdentity(unit, version));
 }
 
 function setIdentityControlsDisabled(prefix, disabled) {
@@ -362,6 +340,10 @@ function populateSpecialUnitOptions(prefix, version, preferred) {
 // CoM2, and Warlord. The
 // selector owns the derived value, so the user sees the effect in the existing Elements row
 // and cannot accidentally edit it while Golem is selected.
+//
+// The rule is `specialUnitDerivesResistElements` (`card_state.js`), which `applyRosterUnit` also
+// applies, so a roster Golem is the same unit on the page and on the pure path. This function
+// keeps the DOM half — the lock, the styling, and the memory of the value Golem replaced.
 function updateSpecialUnitDerivedEffects(prefix) {
   const version = document.getElementById('gameVersion').value;
   const select = identityControl(prefix, 'SpecialUnit');
@@ -369,7 +351,7 @@ function updateSpecialUnitDerivedEffects(prefix) {
   if (!select || !elem) return;
   const preGolem = document.getElementById(prefix + 'IdentityPreGolemElemArmor');
   const item = elem.closest('.abil-item');
-  const isGolem = (version.startsWith('com2_') || version === 'com_6.08') && select.value === 'golem';
+  const isGolem = specialUnitDerivesResistElements(version, select.value);
   const stored = unitIdentity[prefix] || (unitIdentity[prefix] = {});
   if (isGolem) {
     if (!stored._preGolemElemArmor) {
@@ -390,18 +372,106 @@ function updateSpecialUnitDerivedEffects(prefix) {
   if (item) item.classList.toggle('abil-identity-derived', isGolem);
 }
 
-function unitIdentityForDerivation(prefix, version) {
+// The card's identity, read from the page into the one field the card state carries. Which of
+// the two sources speaks is decided here rather than at derivation time: a stored record naming a
+// template is a roster pick and is authoritative, and without one the unit is custom and the four
+// editable controls state it. That choice is the DOM half of `rosterCardIdentity` and
+// `customCardIdentity` (`card_state.js`), which is what a caller with no controls writes instead.
+//
+// No clamp and no version here, deliberately. The controls cannot hold a key the selected version
+// disallows — `populateSpecialUnitOptions` rebuilds the option set per version and
+// `setIdentityControls` clamps before writing — so re-asking would only bake a version into a card
+// state F260.1 keeps version-free.
+//
+// The page's `_preGolemElemArmor` memory is not copied across: it is the undo buffer for the
+// Elements control Golem's identity derives, not part of the identity (F260.5).
+function cardIdentity(prefix) {
   const stored = unitIdentity[prefix] || {};
+  const named = typeof stored.name === 'string' && stored.name ? { name: stored.name } : {};
   if (Number.isInteger(stored.templateId)) {
-    return createUnitIdentity({ ...stored, version });
+    return {
+      templateId: stored.templateId,
+      heroTypeId: Number.isInteger(stored.heroTypeId) ? stored.heroTypeId : null,
+      isHero: !!stored.isHero,
+      baseFantastic: !!stored.baseFantastic,
+      baseRace: typeof stored.baseRace === 'string' ? stored.baseRace : '',
+      specialUnit: stored.specialUnit || 'none',
+      ...named,
+    };
   }
-  const controls = readIdentityControls(prefix);
-  return createCustomUnitIdentity(version, {
-    isHero: controls.isHero,
-    baseRace: controls.baseRace,
-    baseFantastic: controls.baseFantastic,
-    specialUnit: controls.specialUnit,
-  });
+  return { templateId: null, heroTypeId: null, ...readIdentityControls(prefix), ...named };
+}
+
+function unitIdentityForDerivation(prefix, version) {
+  return cardStateIdentity({ prefix, identity: cardIdentity(prefix) }, version);
+}
+
+// The JS-side half of `writeCardStateToControls` (`ui_card.js`): the `unitIdentity` record
+// `cardIdentity` above reads back. It is a replacement rather than a merge, because the card
+// state's identity is the whole statement — a custom side following a roster one must not keep
+// the roster record's template ids, and a stated card has no `_preGolemElemArmor` memory to carry
+// (F260.5 ruled that buffer page-only; `updateSpecialUnitDerivedEffects` re-establishes it from
+// the controls while a Golem is still selected).
+//
+// The record is **rebuilt** through `createUnitIdentity` rather than copied from the card state,
+// because the map is not the card state: `rosterStoredIdentity` and `setCustomUnitIdentity` both
+// install a record carrying the selected `version`, and that field is read back by the identity
+// specs and by anything asking which version's rules stated this unit. Writing the card state's
+// trimmed identity straight in dropped it — caught by `tests/identity.spec.js` and
+// `tests/identity-r8.4.spec.js`. What `createUnitIdentity` produces from the card identity plus
+// the version is exactly what those two producers produce, so this writes the same record they do
+// and `cardIdentity` reads its own answer back unchanged.
+// The page's undo buffer for the Elements value an identity *derives*, restated whenever a whole
+// card is written. It has two halves — the `_preGolemElemArmor` property on the identity record and
+// the hidden `IdentityPreGolemElemArmor` control that survives a reload — and a writer that
+// replaces one without the other leaves them disagreeing. Both are restated here, from the card
+// about to be overwritten:
+//
+//  - **The new identity derives Resist Elements.** The buffer is the value the derived one is about
+//    to replace, which is what the control still holds at this point, because the writer has not
+//    yet reached the ability rows. `updateSpecialUnitDerivedEffects` runs after the write and finds
+//    the buffer already set, so it captures nothing and simply locks the row.
+//
+//    This is what the roster path used to get for free: `writeRosterCardState` skipped the
+//    enchantment rows, so the user's own Elements value was still in the control when the capture
+//    ran. The writer that replaced it writes `resistElements` first — `applyRosterUnit` states that
+//    value on the card — so the capture would have remembered `resistElements` and selecting a
+//    Golem roster unit would have destroyed the value it is supposed to restore (GPT review of
+//    F260.7, finding 1).
+//
+//  - **The new identity does not derive it.** There is nothing to remember, so both halves are
+//    cleared. Without this the hidden control kept a value belonging to an identity the card no
+//    longer has, and the *next* Golem selection preferred that stale value over the user's current
+//    one — `updateSpecialUnitDerivedEffects` reads the hidden control first and only clears it on
+//    the branch where the property it just deleted was present (finding 2).
+//
+// The buffer stays page state: it is a memory of a previous selection, and a card state built from
+// scratch has none (F260.5). What this function says is that a *whole-card write* is such a
+// previous selection, and therefore has to state the memory too.
+function setCardStateGolemMemory(prefix, identity, version) {
+  const stored = unitIdentity[prefix] || (unitIdentity[prefix] = {});
+  const preGolem = document.getElementById(prefix + 'IdentityPreGolemElemArmor');
+  const elem = document.getElementById(prefix + 'Abil_elemArmor');
+  if (specialUnitDerivesResistElements(version, identity.specialUnit)) {
+    const remembered = (elem && elem.value) || 'none';
+    stored._preGolemElemArmor = remembered;
+    if (preGolem) preGolem.value = remembered;
+  } else {
+    delete stored._preGolemElemArmor;
+    if (preGolem) preGolem.value = '';
+  }
+}
+
+function setCardStateIdentityRecord(prefix, identity, version) {
+  if (Object.prototype.toString.call(identity) !== '[object Object]') {
+    throw new TypeError(
+      `setCardStateIdentityRecord: side '${prefix}' states no identity `
+      + `(got ${Object.prototype.toString.call(identity)}).`);
+  }
+  unitIdentity[prefix] = {
+    ...createUnitIdentity({ ...identity, version }),
+    ...(typeof identity.name === 'string' && identity.name ? { name: identity.name } : {}),
+  };
 }
 
 function setCustomUnitIdentity(prefix, version, unitType, preserveEditableIdentity) {
@@ -421,35 +491,6 @@ function setCustomUnitIdentity(prefix, version, unitType, preserveEditableIdenti
   };
   syncLegacyUnitTypeControl(prefix, unitType || unitTypeFromIdentityControls(prefix));
   updateSpecialUnitDerivedEffects(prefix);
-}
-
-// The one shape every reader of a modern attack record produces. `unitT` holds the four
-// strengths as fixed fields — `ranged` +0x24, `thrown` +0x2C, `firebreath` +0x30,
-// `lightningbreath` +0x34 (`Reference docs/Caster binary/CoM2 binary - unit recalculation.md`,
-// the record layout) — so **every** modern record has all four, and a record that states no
-// attack is four empty fields rather than no record. That distinction is the whole of it: a
-// reader returning `null` for the empty case tells `deriveUnitStats` the caller supplied no
-// modern record at all, and the ungated engine writes that create a channel then have nothing
-// to land on. The card reader and the roster reader below both return this, so the card and the
-// matrix agree by construction rather than by which units the roster happens to ship (F121).
-function modernAttackRecord(fields) {
-  const number = value => Math.max(0, parseInt(value, 10) || 0);
-  const ranged = number(fields.ranged);
-  const thrown = number(fields.thrown);
-  const fireBreath = number(fields.fireBreath);
-  const lightningBreath = number(fields.lightningBreath);
-  // The Ranged record's existence is stated by its projectile type, not by its strength: the
-  // record ships with a type and no strength (Warlord [362] Wanderer), and the engine writes
-  // that read the permanent type land on it regardless. The Thrown and Breath fields have no
-  // type of their own, so for them strength is the only statement of existence
-  // (`SPEC.md`, *Attack channels on the card*).
-  const rangedType = fields.rangedType || 'none';
-  return {
-    ranged: (ranged || rangedType !== 'none') ? { strength: ranged, type: rangedType } : null,
-    thrown: thrown ? { strength: thrown, type: 'thrown' } : null,
-    fireBreath: fireBreath ? { strength: fireBreath, type: 'fire' } : null,
-    lightningBreath: lightningBreath ? { strength: lightningBreath, type: 'lightning' } : null,
-  };
 }
 
 // CoM2/Warlord keep four conventional attack channels.  The card owns the editable
@@ -528,52 +569,23 @@ function applyUnit(prefix, unitIndex) {
   const unit = units.find(u => u.id === unitIndex);
   if (!unit) return;
 
+  // The card's whole roster statement, computed before anything is written: `applyRosterUnit`
+  // (`card_state.js`, `data-scope="core"`) is the pure twin of these writes, so the page and a
+  // caller with no controls (F260.6) cannot state the same record differently. The DOS round trip
+  // the card used to perform — take the magnitude from the record, then write it back over the
+  // ability rows, which parsed the flag-only tokens as 0/1 — is an ordinary computation inside it
+  // rather than two mirrored DOM writes.
+  const state = applyRosterUnit(collectCardState(prefix), unit, version);
+
   setRosterUnitRecords(prefix, unit, version);
-  setIdentityControlsFromUnit(prefix, unit, version);
-  populateSpecialUnitOptions(prefix, version, specialUnitForRoster(version, unit));
-
-  // The card's whole roster statement, in one block. Nothing here applies a level bonus: the
-  // card holds pre-level stats and the level ladder is an ordinary transform step in
-  // deriveUnitStats (`stats_sequence.js`, statStep 'level'), so a level change re-states
-  // nothing (F136).
-  const base = unitBaseStats[prefix];
-  document.getElementById(prefix + 'Atk').value = base.atk;
-  document.getElementById(prefix + 'Rtb').value = base.rtb;
-  document.getElementById(prefix + 'Def').value = base.def;
-  document.getElementById(prefix + 'Res').value = base.res;
-  document.getElementById(prefix + 'HP').value = base.hp;
-  document.getElementById(prefix + 'Figs').value = unit.figures || 1;
-  // `UNITS.INI` defines one `Hit=` per record and no per-channel key. That one value seeds the
-  // DOS melee threshold, the DOS shared secondary threshold and, in the modern engines, the
-  // record's one common `hitchance`; the four modern channel modifiers have no roster source
-  // and reset to 0.
-  document.getElementById(prefix + 'ToHitMod').value = base.toHitMod;
-  document.getElementById(prefix + 'ToHitRtbMod').value = base.toHitMod;
-  document.getElementById(prefix + 'HitChance').value = base.toHitMod;
-  for (const field of ['HitMelee', 'HitRanged', 'HitThrown', 'HitBreath']) {
-    document.getElementById(prefix + field).value = 0;
-  }
-  // Modern roster To Block uses the card's percentage-point delta above 30%.
-  document.getElementById(prefix + 'ToBlkMod').value = unit.to_block || 0;
-  document.getElementById(prefix + 'Dmg').value = 0;
-  setSharedSlotRangedType(prefix, predefinedUnitRtbType(unit),
-    `Roster record ${JSON.stringify(unit.name || unit.id)}`);
-  applyModernAttackFields(prefix, base.modernAttacks,
-    `Roster record ${JSON.stringify(unit.name || unit.id)}`);
-
-  syncLegacyUnitTypeControl(prefix, legacyUnitTypeFromIdentity(unitIdentity[prefix]));
+  // One writer for both statements a card can carry. `applyRosterUnit` spreads the state it was
+  // given, so the fields a roster selection does not decide — the loadout, city walls and the
+  // enchantment rows — are written back at the values the card already held, which is why the
+  // narrower `writeRosterCardState` this replaced could skip them without disagreeing.
+  writeCardStateToControls(prefix, state, rosterRecordLabel(unit));
 
   clearUnitInnateLocks(prefix);
-  const abilValues = parseAbilitiesFromUnit(unit);
-  clearAbilities(prefix, 'ability');
-  applyAbilities(prefix, abilValues, 'ability');
-  syncModernSpecialCard(prefix);
-  // The DOS rosters carry bare consumer flags plus the one `spec_att_attrib` byte, so the
-  // card takes its magnitude from the record and then writes it back over the ability rows,
-  // which parsed the flag-only tokens as 0/1.
-  syncDosSpecialCard(prefix, unit.spec_att_attrib);
-  if (dosSpecialIsActive(version)) syncDosSpecialAbilities(prefix);
-  markUnitInnateLocks(prefix, abilValues);
+  markUnitInnateLocks(prefix, parseAbilitiesFromUnit(unit));
   updateSpecialUnitDerivedEffects(prefix);
 
   refreshAbilityFieldVisibility();
@@ -582,6 +594,29 @@ function applyUnit(prefix, unitIndex) {
 // applyValues=false is the state-restore path: rebuild the JS-side unit records and all
 // lock styling for the current selection WITHOUT writing any field values, which on
 // restore may be hand-edited (applyUnit would clobber them).
+// Everything `updateUnitLock` does that writes no field value: the lock styling, the innate-ability
+// marks the current selection implies, the Golem-derived Elements lock, the legacy compact token
+// and the loadout lock row. A caller that has already stated the whole card
+// (`writeCardStateToControls`, `ui_card.js`) needs this half and must not have the other one, whose
+// custom branch resets a locked Level or Weapon — a reset that on the preset path has already been
+// applied, before the fixture's own level and weapon were written over it.
+function refreshUnitLockDom(prefix) {
+  const sel = document.getElementById(prefix + 'Unit');
+  const isCustom = sel.value === 'custom';
+  const version = document.getElementById('gameVersion').value;
+  sel.closest('.panel').querySelector('.panel-fields').classList.toggle('locked', !isCustom);
+  document.getElementById(prefix + 'Abilities').classList.toggle('locked', !isCustom);
+  setIdentityControlsDisabled(prefix, !isCustom);
+  clearUnitInnateLocks(prefix);
+  if (!isCustom) {
+    const unit = (unitDatabases[version] || []).find(u => u.id === parseInt(sel.value));
+    if (unit) markUnitInnateLocks(prefix, parseAbilitiesFromUnit(unit));
+  }
+  updateSpecialUnitDerivedEffects(prefix);
+  syncLegacyUnitTypeControl(prefix);
+  updateLoadoutLocks(prefix);
+}
+
 function updateUnitLock(prefix, applyValues = true) {
   const sel = document.getElementById(prefix + 'Unit');
   const fields = sel.closest('.panel').querySelector('.panel-fields');
@@ -604,8 +639,6 @@ function updateUnitLock(prefix, applyValues = true) {
       setRosterUnitRecords(prefix, unit, version);
       setIdentityControlsFromUnit(prefix, unit, version);
       populateSpecialUnitOptions(prefix, version, specialUnitForRoster(version, unit));
-      clearUnitInnateLocks(prefix);
-      markUnitInnateLocks(prefix, parseAbilitiesFromUnit(unit));
     }
   } else {
     if (applyValues) {
@@ -616,12 +649,9 @@ function updateUnitLock(prefix, applyValues = true) {
     populateSpecialUnitOptions(prefix, version);
     const preserveCustomIdentity = !applyValues;
     setCustomUnitIdentity(prefix, version, null, preserveCustomIdentity);
-    clearUnitInnateLocks(prefix);
     updateCustomLevelState(prefix);
   }
-  updateSpecialUnitDerivedEffects(prefix);
-  syncLegacyUnitTypeControl(prefix);
-  updateLoadoutLocks(prefix);
+  refreshUnitLockDom(prefix);
 }
 
 // Selection-time value resets for a custom unit whose type disallows a loadout

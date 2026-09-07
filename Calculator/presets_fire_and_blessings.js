@@ -6,7 +6,7 @@ definePresets({
     desc: 'Barbarian Swordsmen vs Barbarian Spearmen: basic normal-vs-normal melee',
     aUnitName: 'Barbarian Swordsmen',
     bUnitName: 'Barbarian Spearmen',
-    expected: { dmgToA: 1.046, dmgToB: 3.760 },
+    expected: { dmgToA: 1.046, sdDmgToA: 0.953, dmgToB: 3.760, sdDmgToB: 1.729 },
     vacuity: {
       'no-ablatable-feature':
         'Keep. A roster-integration fixture: everything under test comes through aUnitName and bUnitName, which candidates() does not reach. Both records are asserted, so it is red if either roster entry drifts.',
@@ -18,7 +18,7 @@ definePresets({
     bUnitName: 'Orc Spearmen',
     rangedCheck: true,
     rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 3.929 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.929, sdDmgToB: 1.671, regDmgToB: 3.937, sdRegDmgToB: 1.693 },
     vacuity: {
       'no-ablatable-feature':
         'Keep. A roster-integration fixture on the ranged path: everything under test comes through aUnitName and bUnitName, which candidates() does not reach.',
@@ -28,7 +28,7 @@ definePresets({
     desc: 'War Bears vs Dwarven Halberdiers: Nature fantastic vs tough normal infantry',
     aUnitName: 'War Bears',
     bUnitName: 'Dwarven Halberdiers',
-    expected: { dmgToA: 3.740, dmgToB: 2.606 },
+    expected: { dmgToA: 3.740, sdDmgToA: 2.044, dmgToB: 2.606, sdDmgToB: 1.640 },
     vacuity: {
       'no-ablatable-feature':
         'Keep. A roster-integration fixture pairing a Nature fantastic record against tough normal infantry; everything under test comes through aUnitName and bUnitName, which candidates() does not reach.',
@@ -38,7 +38,7 @@ definePresets({
     desc: 'Great Drake vs Hydra: fantastic vs fantastic, breath and multi-attack',
     aUnitName: 'Great Drake',
     bUnitName: 'Hydra',
-    expected: { dmgToA: 3.726, dmgToB: 31.170 },
+    expected: { dmgToA: 3.726, sdDmgToA: 2.474, dmgToB: 31.170, sdDmgToB: 4.002 },
     vacuity: {
       'no-ablatable-feature':
         'Keep. A roster-integration fixture on the fantastic-versus-fantastic path, breath and multi-attack included; everything under test comes through aUnitName and bUnitName, which candidates() does not reach.',
@@ -49,7 +49,7 @@ definePresets({
     aUnitName: 'Death Knights',
     bUnitName: 'Paladins',
     b: { level: 'ultra_elite', weapon: 'adamantium' },
-    expected: { dmgToA: 7.649, dmgToB: 14.842 },
+    expected: { dmgToA: 7.649, sdDmgToA: 4.181, dmgToB: 14.842, sdDmgToB: 2.976 },
     vacuity: {
       'name-binds-nothing':
         'Keep. A tokenisation artefact - containsRun looks for \'weapon adamantium\' and \'level ultra elite\' and the key names the two units. Both are live, at delta 5.499 and 6.058, and the rest of the fixture comes through aUnitName and bUnitName.',
@@ -72,7 +72,7 @@ definePresets({
     // the melee's single point landing at 0.1029 in the 93/256 of paths the 24 HP pool has
     // room left in — 22.209 in all. Expected surviving figures fall from 1.0 to 140/256 =
     // 0.546875, and the retaliation is linear in them: 0.929 × 0.546875 = 0.508.
-    expected: { dmgToA: 0.508, dmgToB: 22.209 },
+    expected: { dmgToA: 0.508, sdDmgToA: 1.142, dmgToB: 22.209, sdDmgToB: 3.467, regDmgToB: 16.037, sdRegDmgToB: 5.975, irrDmgToB: 12.000, sdIrrDmgToB: 6.000 },
     vacuity: {
       'no-ablatable-feature':
         'Keep. A roster-integration fixture and F45\'s regression: everything under test comes through aUnitName and bUnitName, which candidates() does not reach. The comment in the fixture records the number the defect produced - unticking the Resistance to All consumer still reproduces the defect arm, 0.051 / 23.814.',
@@ -89,7 +89,7 @@ definePresets({
     desc: 'Phantom Warriors vs Paladins (MoM 1.31): roster Illusion zeroes defense → 6 figs x 3 melee x 30% = 5.400 (1.129 if the roster token fails to match)',
     aUnitName: 'Phantom Warriors',
     bUnitName: 'Paladins',
-    expected: { dmgToB: 5.400 },
+    expected: { dmgToB: 5.400, sdDmgToB: 1.944, regDmgToA: 5.820, sdRegDmgToA: 0.577 },
     vacuity: {
       'no-ablatable-feature':
         'Keep. F47\'s roster-wiring coverage: the claim is that the roster\'s Illusion token reaches the ability, which nothing else tested because a custom-stat preset passes with the token broken. The discriminator is aUnitName, which candidates() does not reach; a failed match gives 1.129 against this 5.400.',
@@ -100,7 +100,7 @@ definePresets({
     version: V_COM,
     aUnitName: 'Phantom Warriors',
     bUnitName: 'Great Drake',
-    expected: { dmgToB: 6.300 },
+    expected: { dmgToB: 6.300, sdDmgToB: 2.100, regDmgToA: 7.000, sdRegDmgToA: 0.001 },
     vacuity: {
       'no-ablatable-feature':
         'Keep. The CoM 1 arm of F47\'s roster-wiring coverage; the discriminator is aUnitName together with the version, neither of which candidates() reaches. A failed token match gives 0.321 against this 6.300.',
@@ -112,32 +112,32 @@ definePresets({
     desc: 'Immolation melee: 1atk 100% hit + immolation(4) 30% hit vs 1fig 0def 10HP → 1 + 1.2 = 2.2',
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:10 },
-    expected: { dmgToB: 2.200 },
+    expected: { dmgToB: 2.200, sdDmgToB: 0.917 },
   },
   immolationMoMStrength: {
     desc: 'Immolation Strength (MoM 1.31): strength 4 — 1atk 100% + imm(4)@30% vs 0def 20HP → 1 + 1.2 = 2.2',
     version: V_MOM_131,
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:20 },
-    expected: { dmgToB: 2.200 },
+    expected: { dmgToB: 2.200, sdDmgToB: 0.917 },
   },
   immolationAreaMultiFig: {
     desc: 'Immolation area vs 4fig 1HP 0def: imm(4)@30% per fig capped at 1HP each + melee 1',
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { figs:4, def:0, hp:1 },
-    expected: { dmgToB: 3.706 },
+    expected: { dmgToB: 3.706, sdDmgToB: 0.558 },
   },
   immolationNoOverflow: {
     desc: 'Immolation no overflow: vs 2fig 2HP 0def, imm(4)@30% per fig capped at 2HP + melee 1',
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { figs:2, def:0, hp:2 },
-    expected: { dmgToB: 3.095 },
+    expected: { dmgToB: 3.095, sdDmgToB: 0.910 },
   },
   immolationMagicImmunity: {
     desc: 'Immolation blocked by Magic Immunity: melee 1 only, immolation does 0',
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:10, abilities: { magicImmunity: true } },
-    expected: { dmgToB: 1.000 },
+    expected: { dmgToB: 1.000, sdDmgToB: 0.001 },
     vacuity: {
       'a.ability.immolation':
         'Keep. Inert as a consequence of the assertion: Magic Immunity blocks the immolation outright, so its strength cannot move a result the immunity has already emptied down to the melee 1. Magic Immunity is the live half at delta 1.2, which is immolationMelee\'s immolation share.',
@@ -147,7 +147,7 @@ definePresets({
     desc: 'Immolation vs Righteousness: def→50, str 4 @30% all blocked → melee 1 only',
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:10, abilities: { righteousness: true } },
-    expected: { dmgToB: 1.000 },
+    expected: { dmgToB: 1.000, sdDmgToB: 0.001 },
     vacuity: {
       'a.ability.immolation':
         'Keep. Inert as a consequence of the assertion: Righteousness raises Defense to 50 and every immolation point is blocked, so its strength cannot move the melee 1 that is left. Righteousness is the live half at delta 1.2.',
@@ -157,7 +157,7 @@ definePresets({
     desc: 'Immolation vs Fire Immunity: def raised to 50, str 4 @ 30% all blocked → melee only',
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:10, abilities: { fireImmunity: true } },
-    expected: { dmgToB: 1.000 },
+    expected: { dmgToB: 1.000, sdDmgToB: 0.001 },
     vacuity: {
       'a.ability.immolation':
         'Keep. Inert as a consequence of the assertion: Fire Immunity raises Defense to 50 against the fire and every immolation point is blocked. Fire Immunity is the live half at delta 1.2.',
@@ -168,7 +168,7 @@ definePresets({
         + 'Melee 1@100% (melee def 0) + imm(4)@30% vs def 2 (LS), 100% block → 1 + 0.0918 = 1.0918',
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true, armorPiercing: true } },
     b: { def:0, toBlkMod:70, hp:20, abilities: { largeShield: true } },
-    expected: { dmgToB: 1.0918 },
+    expected: { dmgToB: 1.0918, sdDmgToB: 0.316 },
     vacuity: {
       'a.ability.armorPiercing':
         'Keep, and the absence is the rule under test: Armor Piercing does not reach the Defense the immolation is scored against, so Large Shield\'s 2 stays 2 rather than halving to 1. Both other features are live - immolation at delta 0.092 and largeShield at delta 1.108.',
@@ -178,7 +178,7 @@ definePresets({
     desc: 'Both have immolation: A(1fig 1atk) + imm@30% vs B(4fig 1atk 0def 2HP) + imm@30%',
     a: { atk:1, toHitMod:70, def:0, hp:10, abilities: { immolation: true } },
     b: { figs:4, atk:1, toHitMod:70, def:0, hp:2, abilities: { immolation: true } },
-    expected: { dmgToA: 5.200, dmgToB: 5.418 },
+    expected: { dmgToA: 5.200, sdDmgToA: 0.917, dmgToB: 5.418, sdDmgToB: 1.489 },
   },
   immolationNotRangedCoM: {
     desc: 'Immolation + Ranged (CoM): does NOT fire with ranged → missile only (5 100% hit, 0 def = 5 dmg)',
@@ -186,7 +186,7 @@ definePresets({
     a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToB: 5.000 },
+    expected: { dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that immolation does not fire on the ranged path in CoM, so the only feature the fixture adds cannot move the missile 5.',
@@ -200,14 +200,14 @@ definePresets({
     a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToB: 6.200 },
+    expected: { dmgToB: 6.200, sdDmgToB: 0.917 },
   },
   immolationWithThrown: {
     desc: 'Immolation + Thrown (MoM 1.31): fires in thrown+melee → thrown 3@100% + imm@30% + melee 1@100% + imm@30% = 6.4',
     version: V_MOM_131,
     a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:3, toHitRtbMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:20 },
-    expected: { dmgToB: 6.400 },
+    expected: { dmgToB: 6.400, sdDmgToB: 1.296 },
   },
   immolationNotThrownCoM2: {
     desc: 'Immolation is melee-only in CoM2: ApplyAttack runs it under `at = ATmelee`, so the Thrown call '
@@ -215,21 +215,21 @@ definePresets({
     version: V_COM2,
     a: { atk:1, hitChance:70, modernAttacks: { thrown: { strength:3, type:'thrown' } }, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:20 },
-    expected: { dmgToA: 0, dmgToB: 7.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 7.000, sdDmgToB: 1.449 },
   },
   immolationCoMStrength10: {
     desc: 'Immolation Strength (CoM): strength 10 — 1atk 100% + imm(10)@30% vs 0def 20HP → 1 + 3 = 4',
     version: V_COM,
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:20 },
-    expected: { dmgToB: 4.000 },
+    expected: { dmgToB: 4.000, sdDmgToB: 1.449 },
   },
   elemArmorImmolationCoM: {
     desc: 'CoM 1 Elemental Armor covers Immolation: melee 1 is blocked by base def 1; immolation str 10 is fully blocked by def 1+12 at 100% To Block → 0',
     version: V_COM,
     a: { atk:1, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { def:1, toBlkMod:70, hp:20, abilities: { elemArmor: 'elementalArmor' } },
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0, sdDmgToB: 0.000 },
     vacuity: {
       'a.ability.immolation':
         'Keep. Inert as a consequence of the assertion: CoM 1\'s Elemental Armor covers immolation, and def 1 + 12 at a 100% To Block blocks all ten points, so the strength cannot move a zero. Elemental Armor is the live half at delta 2.028.',
@@ -239,7 +239,7 @@ definePresets({
     desc: 'Immolation does not fire when melee atk=0 (touchAttackFires check)',
     a: { atk:0, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:10 },
-    expected: { dmgToB: 0 },
+    expected: { dmgToB: 0, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: with no melee attack there is no touch attack to carry the immolation, so the only feature the fixture adds cannot move the zero.',
@@ -253,7 +253,7 @@ definePresets({
     a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:20 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToB: 5.000 },
+    expected: { dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that CP 1.60 patched the ranged firing out, so the only feature the fixture adds cannot move the missile 5.',
@@ -269,21 +269,21 @@ definePresets({
     a: { atk:1, toHitMod:70, def:0, hp:10 },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 1.500, dmgToB: 1.000 },
+    expected: { dmgToA: 1.500, sdDmgToA: 1.025, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   wallOfFireMultiFig: {
     desc: 'Wall of Fire area: 4 figs 1hp — each fig binomial(5,0.3) capped at 1hp → 4×(1-0.7^5) = 3.3277',
     a: { figs:4, atk:1, toHitMod:70, def:0, hp:1 },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 3.3277, dmgToB: 0.6723 },
+    expected: { dmgToA: 3.3277, sdDmgToA: 0.748, dmgToB: 0.6723, sdDmgToB: 0.748 },
   },
   wallOfFireMagicImmunity: {
     desc: 'Wall of Fire blocked by Magic Immunity: melee 1 to B, WoF does 0 to A',
     a: { atk:1, toHitMod:70, def:0, hp:10, abilities: { magicImmunity: true } },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.002, dmgToB: 1.000, sdDmgToB: 0.000 },
     vacuity: {
       'combat.wallOfFire':
         'Keep. Inert as a consequence of the assertion: the attacker\'s Magic Immunity blocks the wall outright, so the wall\'s presence cannot move a dmgToA of zero. Magic Immunity is the live half at delta 1.5, which is wallOfFireBasic\'s number.',
@@ -294,7 +294,7 @@ definePresets({
     a: { atk:1, toHitMod:70, def:0, hp:10, abilities: { righteousness: true } },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.002, dmgToB: 1.000, sdDmgToB: 0.000 },
     vacuity: {
       'combat.wallOfFire':
         'Keep. Inert as a consequence of the assertion: Righteousness raises the attacker\'s Defense to 50 and every wall point is blocked. Righteousness is the live half at delta 1.5.',
@@ -305,7 +305,7 @@ definePresets({
     a: { atk:1, toHitMod:70, def:0, hp:10, abilities: { fireImmunity: true } },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.002, dmgToB: 1.000, sdDmgToB: 0.000 },
     vacuity: {
       'combat.wallOfFire':
         'Keep. Inert as a consequence of the assertion: Fire Immunity raises the attacker\'s Defense to 50 against the fire and every wall point is blocked. Fire Immunity is the live half at delta 1.5.',
@@ -317,7 +317,7 @@ definePresets({
     b: { atk:0, def:0, hp:10 },
     rangedCheck: true, rangedDist: 1,
     wallOfFire: true,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: a ranged attacker does not pass through the wall, so the wall has no effect available for the fixture to remove.',
@@ -331,7 +331,7 @@ definePresets({
     a: { atk:1, hitChance:70, def:0, hp:20 },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 3.000, dmgToB: 1.000 },
+    expected: { dmgToA: 3.000, sdDmgToA: 1.449, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   wallOfFireCoMStrength: {
     desc: 'Wall of Fire CoM 6.08 strength 10: str 10 @ 30% vs 0 def → mean 3.0 dmg to A',
@@ -339,7 +339,7 @@ definePresets({
     a: { atk:1, toHitMod:70, def:0, hp:20 },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 3.000, dmgToB: 1.000 },
+    expected: { dmgToA: 3.000, sdDmgToA: 1.449, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   resistElementsWallOfFireCoM: {
     desc: 'CoM 1 Resist Elements covers Wall of Fire: str 10 is fully blocked by def 6+4 at 100% To Block; melee 1 is blocked by defender def 1 → 0',
@@ -347,7 +347,7 @@ definePresets({
     a: { atk:1, toHitMod:70, def:6, toBlkMod:70, hp:20, abilities: { elemArmor: 'resistElements' } },
     b: { atk:0, def:1, toBlkMod:70, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0, sdDmgToB: 0.000 },
     vacuity: {
       'combat.wallOfFire':
         'Keep. Inert as a consequence of the assertion: CoM 1\'s Resist Elements covers the wall, and def 6 + 4 at a 100% To Block stops all ten points, so the wall\'s presence cannot move a zero. Resist Elements is the live half at delta 0.012, the residue being the melee the defender\'s own def 1 otherwise blocks.',
@@ -359,7 +359,7 @@ definePresets({
     a: { atk:1, hitChance:70, def:0, hp:20 },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 7.200, dmgToB: 1.000 },
+    expected: { dmgToA: 7.200, sdDmgToA: 1.697, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   wallOfFireWarlordSingleFigure: {
     desc: 'Wall of Fire Warlord strikes ONE figure: 4 figs hp20 — str 12 @ 60% on a single fig → 7.2 to A (not 4×). Melee 4×1 to B.',
@@ -367,7 +367,7 @@ definePresets({
     a: { figs:4, atk:1, hitChance:70, def:0, hp:20 },
     b: { atk:0, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 7.200, dmgToB: 4.000 },
+    expected: { dmgToA: 7.200, sdDmgToA: 1.697, dmgToB: 4.000, sdDmgToB: 0.000 },
   },
   wallOfFireWarlordDefenderMetalFires: {
     desc: 'Wall of Fire garrison boost grants defender +1 non-magic attack (Metal Fires): B melee counter 5→6 vs 0 def; WoF fire 7.2 + counter 6 = 13.2 to A',
@@ -375,7 +375,7 @@ definePresets({
     a: { atk:1, hitChance:70, def:0, hp:100 },
     b: { atk:5, hitChance:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
     wallOfFire: true,
-    expected: { dmgToA: 13.200, dmgToB: 1.000 },
+    expected: { dmgToA: 13.200, sdDmgToA: 1.697, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   wallOfFireWarlordDefenderMagicWeapon: {
     desc: 'Wall of Fire garrison boost grants defender magic weapons (Metal Fires): B counter (atk 5+1) bypasses A Weapon Immunity (def 0+10 → 0). WoF fire 7.2 + counter 6 = 13.2 to A (0 without bypass)',
@@ -383,14 +383,14 @@ definePresets({
     a: { atk:1, hitChance:70, def:0, toBlkMod:70, hp:100, abilities: { weaponImmunity: true } },
     b: { atk:5, hitChance:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
     wallOfFire: true,
-    expected: { dmgToA: 13.200, dmgToB: 1.000 },
+    expected: { dmgToA: 13.200, sdDmgToA: 1.697, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   wallOfFireWarlordBoostOnAttacker: {
     desc: 'Garrison boost is per-unit and side-independent: boost on attacker A (no fire line). A melee 5→6 vs B def 0 → 6.0 to B (5.0 without the boost)',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
     b: { atk:0, toBlkMod:70, def:0, hp:20 },
-    expected: { dmgToA: 0.000, dmgToB: 6.000 },
+    expected: { dmgToA: 0.000, sdDmgToA: 0.000, dmgToB: 6.000, sdDmgToB: 0.000 },
     vacuity: {
       'name-binds-nothing':
         'Keep. A pure tokenisation artefact - containsRun looks for \'wall of fire boost\' and the key says \'wall of fire warlord boost\'. The feature is live at delta 1, and the claim is that the garrison bonus is per-unit and side-independent, so it lands on an attacker with no fire line at all.',
@@ -402,7 +402,7 @@ definePresets({
     a: { atk:5, hitChance:70, def:0, hp:10,
       abilities: { wallOfFireBoost: true, raiseDead: true } },
     b: { atk:0, toBlkMod:70, def:0, hp:20 },
-    expected: { dmgToA: 0.000, dmgToB: 6.000 },
+    expected: { dmgToA: 0.000, sdDmgToA: 0.000, dmgToB: 6.000, sdDmgToB: 0.000 },
     vacuity: {
       'name-binds-nothing':
         'Keep. The same tokenisation artefact; the boost is live at delta 1. a.abilities.raiseDead is inert on purpose and is the fixture\'s claim: the block skips on BASEFANTASTIC(U) (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), the permanent record, so a combat conversion cannot withdraw the bonus and the total stays at wallOfFireWarlordBoostOnAttacker\'s 6.0. Gating on the converted identity instead dropped it to 5.0.',
@@ -414,7 +414,7 @@ definePresets({
     a: { atk:5, hitChance:70, def:0, hp:10,
       abilities: { wallOfFireBoost: true, apotheosis: true } },
     b: { atk:0, toBlkMod:70, def:0, hp:30 },
-    expected: { dmgToA: 0.000, dmgToB: 10.000 },
+    expected: { dmgToA: 0.000, sdDmgToA: 0.000, dmgToB: 10.000, sdDmgToB: 0.000 },
     vacuity: {
       'a.ability.wallOfFireBoost':
         'Keep, and the absence is the rule under test: Apotheosis writes B.Fantastic into the permanent record the garrison gate at UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO" reads, so the unit is Fantastic to that gate and takes no bonus. Apotheosis is the live half at delta 4; reading the training-time flag instead added the +1 before the doubling, for 12.0, and wallOfFireWarlordBoostOnAttacker measures the +1 without Apotheosis at 6.0.',
@@ -426,7 +426,7 @@ definePresets({
     a: { atk:5, hitChance:70, def:0, hp:10, unitType:'hero',
       abilities: { wallOfFireBoost: true } },
     b: { atk:0, toBlkMod:70, def:0, hp:20 },
-    expected: { dmgToA: 0.000, dmgToB: 6.000 },
+    expected: { dmgToA: 0.000, sdDmgToA: 0.000, dmgToB: 6.000, sdDmgToB: 0.000 },
     vacuity: {
       'a.unitType=hero':
         'Keep, and the inertness is the claim: the sweep ablates unitType to \'normal\' (UNIT_FIELD_DEFAULTS, tools/preset_vacuity_sweep.js:204), and \'normal\' is precisely the identity a hero is asserted to answer alike. The block\'s only eligibility test is BASEFANTASTIC(U) (UnitCalcPre.CAS!NOLUCKYSTAR!+15 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"), so the gate is `!runCtx.base.fantastic` (`wofDefenderBonusActiveAt`, stats.js) and admits both; no ablation between the two can move a number. a.ability.wallOfFireBoost is the live half at delta 1, and wallOfFireWarlordBoostOnAttacker pins the same 6.000 on the normal identity.',
@@ -438,7 +438,7 @@ definePresets({
     rangedCheck: true, rangedDist: 1,
     a: { modernAttacks: { ranged: { strength:5, type:'boulder' } }, hitRanged:70, hitThrown:70, hitBreath:70, def:0, hp:10, abilities: { wallOfFireBoost: true } },
     b: { atk:0, toBlkMod:70, def:0, hp:20 },
-    expected: { dmgToA: 0.000, dmgToB: 6.000 },
+    expected: { dmgToA: 0.000, sdDmgToA: 0.000, dmgToB: 6.000, sdDmgToB: 0.000 },
     vacuity: {
       'name-binds-nothing':
         'Keep. The same tokenisation artefact; the feature is live at delta 1. The claim is the boulder coverage, and the discriminator for that is the modernAttacks ranged type, which candidates() does not enumerate.',
@@ -450,7 +450,7 @@ definePresets({
     a: { atk:1, hitChance:70, def:0, hp:100 },
     b: { atk:5, hitChance:70, def:0, hp:10 },
     wallOfFire: true,
-    expected: { dmgToA: 12.200, dmgToB: 1.000 },
+    expected: { dmgToA: 12.200, sdDmgToA: 1.697, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   // --- Magic Immunity vs Breath (version difference) ---
   magicImmunityFireBreathMoM: {
@@ -458,14 +458,14 @@ definePresets({
     version: V_MOM_131,
     a: { atk:1, toHitMod:70, rtbType:'fire', rtb:4, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { magicImmunity: true } },
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   magicImmunityFireBreathCoM: {
     desc: 'Magic Immunity vs Fire Breath (CoM): MI no longer blocks breath (CoM v2.3) — fire breath 4 + melee 1 = 5 dmg',
     version: V_COM,
     a: { atk:1, toHitMod:70, rtbType:'fire', rtb:4, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { magicImmunity: true } },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that CoM v2.3 stopped Magic Immunity blocking breath, so the only feature the fixture adds cannot move the 5.',
@@ -479,28 +479,28 @@ definePresets({
     a: { figs:4, atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, def:0, hp:1 },
     b: { atk:0, def:0, hp:20 },
     wallOfFire: true,
-    expected: { dmgToA: 3.328, dmgToB: 4.672 },
+    expected: { dmgToA: 3.328, sdDmgToA: 0.748, dmgToB: 4.672, sdDmgToB: 0.748 },
   },
   wallOfFireAfterGazeCounter: {
     desc: 'WoF sequence: B gaze 3 overflow kills 1 of 2 A figs (2hp each), WoF targets 1 survivor (1hp) → 3.832 to A, 0.168 to B',
     a: { figs:2, atk:1, toHitMod:70, def:0, hp:2, abilities: { stoningImmunity: true } },
     b: { rtbType:'gaze_stoning', rtb:3, atk:0, def:0, hp:20, toHitRtbMod:70, abilities: {  } },
     wallOfFire: true,
-    expected: { dmgToA: 3.832, dmgToB: 0.168 },
+    expected: { dmgToA: 3.832, sdDmgToA: 0.374, dmgToB: 0.168, sdDmgToB: 0.374 },
   },
   wallOfFireAfterThrownAndGaze: {
     desc: 'WoF sequence: thrown (2×1=2 to B), B gaze overflow (3 kills 1 A fig), WoF on 1 survivor, melee → 3.832 to A, 2.168 to B',
     a: { figs:2, atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, def:0, hp:2, abilities: { stoningImmunity: true } },
     b: { rtbType:'gaze_stoning', rtb:3, atk:0, def:0, hp:20, toHitRtbMod:70, abilities: {  } },
     wallOfFire: true,
-    expected: { dmgToA: 3.832, dmgToB: 2.168 },
+    expected: { dmgToA: 3.832, sdDmgToA: 0.374, dmgToB: 2.168, sdDmgToB: 0.374 },
   },
   wallOfFireBilateralGaze: {
     desc: 'WoF with bilateral gaze: A gaze (2 to B) → B gaze (2 to A) → WoF (1.5 to A) → melee 1 + counter 1',
     a: { rtbType:'gaze_stoning', rtb:2, atk:1, toHitMod:70, def:0, hp:10, toHitRtbMod:70, abilities: { stoningImmunity: true } },
     b: { rtbType:'gaze_stoning', rtb:2, atk:1, toHitMod:70, def:0, hp:10, toHitRtbMod:70, abilities: { stoningImmunity: true } },
     wallOfFire: true,
-    expected: { dmgToA: 4.500, dmgToB: 3.000 },
+    expected: { dmgToA: 4.500, sdDmgToA: 1.025, dmgToB: 3.000, sdDmgToB: 0.000 },
   },
 
   // --- Warp Reality ---
@@ -509,14 +509,14 @@ definePresets({
     a: { atk:1, hp:10 },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.100 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.100, sdDmgToB: 0.300 },
   },
   warpRealityChaosExempt: {
     desc: 'Warp Reality: Chaos Fantastic A is exempt (30% to hit unchanged), 1 atk vs 0 def → 0.3 dmg',
     a: { atk:1, hp:10, unitType:'fantastic_chaos' },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.300 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.300, sdDmgToB: 0.458 },
     vacuity: {
       'combat.warpReality':
         'Keep, and the absence is the rule under test: a Chaos Fantastic attacker is exempt, so the -20% is never charged and the 30% To Hit stands. The realm is the live half at delta 0.2 - ablating it drops the attacker out of the exemption and the total falls to 0.100.',
@@ -527,7 +527,7 @@ definePresets({
     a: { atk:1, hp:10, abilities: { ccDefense: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.300 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.300, sdDmgToB: 0.458 },
     vacuity: {
       'combat.warpReality':
         'Keep, and the absence is the rule under test: Chaos Channels counts as Chaos for the exemption, so the -20% is never charged. Chaos Channels is the live half at delta 0.2, and warpRealityChaosExempt is the base-realm arm of the same claim.',
@@ -539,7 +539,7 @@ definePresets({
     a: { atk:1, hp:10, abilities: { ccDefense: true, undead: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.300 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.300, sdDmgToB: 0.458 },
     vacuity: {
       'combat.warpReality':
         'Keep, and the absence is the rule under test: the exemption holds, so the -20% is never charged and the 30% To Hit stands. a.ability.ccDefense is the live half at delta 0.2 - ablating it leaves a plain Death unit no arm of the helper names, and the total falls to 0.100.',
@@ -552,7 +552,7 @@ definePresets({
     a: { atk:1, hp:10, abilities: { magicImmunity: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.100 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.100, sdDmgToB: 0.300 },
     vacuity: {
       'a.ability.magicImmunity':
         'Keep, and the absence is the rule under test: the exemption is realm-based, not immunity-based, so Magic Immunity does not buy out of the -20%. Warp Reality is the live half at delta 0.2, and warpRealityChaosExempt is the same card with a realm that does exempt, at 0.300.',
@@ -563,14 +563,14 @@ definePresets({
     a: { atk:1, hp:10 },
     b: { atk:1, hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0.100, dmgToB: 0.100 },
+    expected: { dmgToA: 0.100, sdDmgToA: 0.300, dmgToB: 0.100, sdDmgToB: 0.300 },
   },
   warpRealityFloorAt10: {
     desc: 'Warp Reality floors at 10%: A starts at 10% (toHitMod -20), WR -20% → still 10% → 0.1 dmg',
     a: { atk:1, toHitMod:-20, hp:10 },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.100 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.100, sdDmgToB: 0.300 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the attacker already stands at the 10% floor, so the -20% has nowhere to take it and nothing the fixture configures can move the number.',
@@ -584,7 +584,7 @@ definePresets({
     a: { atk:1, hp:10, unitType:'fantastic_chaos', abilities: { spiritLink: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.300 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.300, sdDmgToB: 0.458 },
     vacuity: {
       'combat.warpReality':
         'Keep, and the absence is the rule under test: the exemption holds, so the -20% is never charged. The claim is positional - c:warpReality is #111 of the Warlord chain against d:spiritLink #135, so the block reads a still-Chaos record even though the recalculation later leaves normal_chaos. The realm is the live half at delta 0.2, and a.abilities.spiritLink is inert exactly because its clearing of Fantastic comes too late to be seen. Reading the record the recalculation leaves gives 0.100. version-dead holds across Warlord - the two Warlord presets configuring warpReality are this one and warpRealityDoesNotReachImmolationWarlord, and both deliberately make the key inert: this one because the Chaos exemption holds, that one because Immolation does not read a unit To Hit field. The Immolation fixture this one used to be paired with went with F190, which deleted the unsourced Immolation To Hit arm the pair shared.',
@@ -603,7 +603,7 @@ definePresets({
     a: { atk:0, hp:10, abilities: { immolation: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 1.449 },
     vacuity: {
       'combat.warpReality':
         'Keep, and the absence is the rule under test: Warp Reality is charged against this attacker (it is not Chaos and takes no exemption) and still moves nothing, because Immolation reads SpellTable[99].hitchance rather than U.hitchance. Ablation-inert is the assertion. Charging it would give 1.000, which is what the deleted F190 arm did. a.ability.immolation is the live half at delta 3.',
@@ -615,7 +615,7 @@ definePresets({
     a: { atk:1, hp:10, abilities: { immolation: true } },
     b: { def:0, hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 1.300 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.300, sdDmgToB: 0.964 },
   },
   warpRealityRanged: {
     desc: 'Warp Reality vs ranged: missile 1 atk, 30%→10% to hit vs 0 def → 0.1 dmg',
@@ -623,7 +623,7 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.100 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.100, sdDmgToB: 0.300 },
   },
 
   hurricaneRanged: {
@@ -633,7 +633,7 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     hurricane: true,
-    expected: { dmgToA: 0, dmgToB: 0.100 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.100, sdDmgToB: 0.300 },
   },
   hurricaneBreath: {
     desc: 'Hurricane: fire breath 1 atk gets -30% to hit (30%→10%, floored) vs 0 def → 0.1 dmg. Without Hurricane breath would hit at 30% → 0.3, so the breath-specific penalty is exercised.',
@@ -642,7 +642,7 @@ definePresets({
     b: { hp:10 },
     rangedCheck: false,
     hurricane: true,
-    expected: { dmgToA: 0, dmgToB: 0.400 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.400, sdDmgToB: 0.548 },
   },
   hurricaneMeleeUnaffected: {
     desc: 'Hurricane does not touch melee: 1 atk stays at 30% to hit vs 0 def → 0.3 dmg',
@@ -650,7 +650,7 @@ definePresets({
     a: { atk:1, hp:10 },
     b: { hp:10 },
     hurricane: true,
-    expected: { dmgToA: 0, dmgToB: 0.300 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.300, sdDmgToB: 0.458 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that Hurricane does not reach melee, so the only feature the fixture adds cannot move the 0.300.',
@@ -665,7 +665,7 @@ definePresets({
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
     hurricane: true,
-    expected: { dmgToA: 0, dmgToB: 1.600 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.600, sdDmgToB: 0.566 },
   },
   hurricanePenaltySizeBreath: {
     desc: 'Hurricane’s breath penalty is 30 points: fire breath 2 at 100% to hit drops to 70% → 1.4, plus 1 melee at an untouched 30% → 1.7 dmg. Paired with hurricanePenaltySizeRanged: same base, 10 points further down because Fire and Lightning Breath read the separate breath modifier. Without Hurricane this is 2.3.',
@@ -674,7 +674,7 @@ definePresets({
     b: { hp:10 },
     rangedCheck: false,
     hurricane: true,
-    expected: { dmgToA: 0, dmgToB: 1.700 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.700, sdDmgToB: 0.794 },
   },
 
   ccFireBreathOverridesDestinyCoM2: {
@@ -683,7 +683,7 @@ definePresets({
     a: { atk:1, hp:10, abilities: { destiny: true, ccFireBreath: true } },
     b: { hp:10, abilities: { fireImmunity: true } },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 1.403 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.403, sdDmgToB: 0.833 },
   },
   ccDefenseOverridesDestinyCoM2: {
     desc: 'Type precedence (CoM2): Chaos Channels Defense is applied after Destiny, so final type is Chaos. Destiny still doubles melee to 2, and Warp Reality is ignored → 0.6 dmg',
@@ -691,7 +691,7 @@ definePresets({
     a: { atk:1, hp:10, abilities: { destiny: true, ccDefense: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.600 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.600, sdDmgToB: 0.648 },
   },
   ccFlightOverridesDestinyCoM2: {
     desc: 'Type precedence (CoM2): Chaos Channels Flight is applied after Destiny, so final type is Chaos. Destiny still doubles melee to 2, and Warp Reality is ignored → 0.6 dmg',
@@ -699,7 +699,7 @@ definePresets({
     a: { atk:1, hp:10, abilities: { destiny: true, ccFlight: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.600 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.600, sdDmgToB: 0.648 },
   },
   bloodLustUndeadFlagRecoversChaosCoM2: {
     desc: 'Blood Lust sets `EncUndead` and only then writes `RCDeath` ($0059F600, the flag first and the race at $0059F68A; Q31 ladder block 4), so the Chaos realm it overwrites on a Chaos-Channelled unit is exactly what `IsChaosUnit` recovers through its `ChaosChannel(u) and EncUndead` arm ($00594FE4). Warp Reality therefore exempts this attacker: Blood Lust doubles melee 1 to 2 against the normal target, the To Hit stays the unmodified 30%, and the pair deal 0.600. Reading the scalar realm sees Death, charges the -20%, and gives 0.200. The type precedence this fixture was named for still holds - Chaos Channels Armor writes Chaos at $0059F5A5 and Blood Lust overwrites it at $0059F68A - but it is no longer observable through Warp Reality, because a unit carrying both flags answers True to the helper whichever write landed last.',
@@ -707,7 +707,7 @@ definePresets({
     a: { atk:1, hp:10, abilities: { bloodLust: true, ccDefense: true } },
     b: { hp:10 },
     warpReality: true,
-    expected: { dmgToA: 0, dmgToB: 0.600 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.600, sdDmgToB: 0.648 },
     vacuity: {
       'combat.warpReality':
         'Keep, and the absence is the rule under test: the exemption holds, so the -20% is never charged and the 30% To Hit stands. Both unit features are live - a.ability.ccDefense at delta 0.4, because without a Chaos Channels flag the helper has no recovery arm and the penalty lands for 0.200, and a.ability.bloodLust at delta 0.3, because without it the unit is plainly Chaos and only the undoubled 1 melee swings, for 0.300.',
@@ -719,7 +719,7 @@ definePresets({
     darkness: true,
     a: { atk:12, toHitMod:70, hp:10 },
     b: { atk:0, def:2, res:5, toBlkMod:70, hp:10, abilities: { blackChannels: true, ccDefense: true } },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
   },
   ccDefenseOverridesUndeadCoM1: {
     desc: 'Type precedence (CoM 1): the same two blocks are reordered — Undead\'s Death realm at com1:0x8F4BC, demon-skin armor\'s Chaos realm at com1:0x8F757 — so Chaos still wins and Darkness gives nothing. Defence 2 + armor 3 = 5; 12 certain hits against 5 certain blocks deal 7 (Death would take Darkness\' +1 and leave 6).',
@@ -727,7 +727,7 @@ definePresets({
     darkness: true,
     a: { atk:12, toHitMod:70, hp:10 },
     b: { atk:0, def:2, res:5, toBlkMod:70, hp:10, abilities: { undead: true, ccDefense: true } },
-    expected: { dmgToA: 0, dmgToB: 7.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 7.000, sdDmgToB: 0.000 },
     vacuity: {
       'b.ability.undead':
         'Keep, and the absence is the rule under test: CoM 1 orders Undead\'s Death realm at com1:0x8F4BC before demon-skin armor\'s Chaos realm at com1:0x8F757, so Chaos wins and the unit is not Death. combat.darkness is inert for the same reason and by the same claim - a Death unit would take its +1 and leave 6 instead of 7. Chaos Channels is the live half at delta 2.',
@@ -738,7 +738,7 @@ definePresets({
     version: V_COM2,
     a: { atk:1, hitChance:70, hp:10, abilities: { exorcise: -4 } },
     b: { figs:2, def:0, res:7, hp:10, abilities: { undead: true, raiseDead: true } },
-    expected: { dmgToA: 0, dmgToB: 8.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 8.000, sdDmgToB: 4.583, regDmgToB: 1.000, sdRegDmgToB: 0.000, irrDmgToB: 7.000, sdIrrDmgToB: 4.583 },
     vacuity: {
       'b.ability.undead':
         'Keep, and the absence is the rule under test: Raise Dead makes the unit unaligned fantastic, overriding Undead, so Exorcise loses the created-undead -3 and the Undead status contributes nothing. Both other features are live - exorcise at delta 7 and raiseDead at delta 3, the latter being the 11.0 the same card reaches without the override.',
@@ -749,7 +749,7 @@ definePresets({
     version: V_MOM_CP,
     a: { atk:1, toHitMod:70, hp:10, abilities: { dispelEvil: true } },
     b: { figs:2, def:0, res:7, hp:10, abilities: { undead: true, raiseDead: true } },
-    expected: { dmgToA: 0, dmgToB: 11.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 11.000, sdDmgToB: 0.000, regDmgToB: 1.000, sdRegDmgToB: 0.000, irrDmgToB: 10.000, sdIrrDmgToB: 0.000 },
     vacuity: {
       'b.ability.raiseDead':
         'Keep, and the absence is the rule under test: MoM\'s Raise Dead does not make the unit unaligned fantastic, so Undead survives and still gives Dispel Evil its -9. Both other features are live at delta 10, and raiseDeadOverridesUndeadCoM2 is the CoM2 arm where the override does happen.',
@@ -760,7 +760,7 @@ definePresets({
     version: V_COM2,
     a: { atk:1, hitChance:70, hp:10, abilities: { exorcise: -4 } },
     b: { figs:2, def:0, res:7, hp:10, abilities: { undead: true, mysticSurge: true } },
-    expected: { dmgToA: 0, dmgToB: 9.490 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 9.490, sdDmgToB: 3.041, regDmgToB: 0.490, sdRegDmgToB: 0.500, irrDmgToB: 9.000, sdIrrDmgToB: 3.000 },
     vacuity: {
       'b.ability.undead':
         'Keep, and the absence is the rule under test: Mystic Surge makes the unit unaligned fantastic, overriding Undead, so Exorcise loses the created-undead -3. Both other features are live - exorcise at delta 9 and mysticSurge at delta 1.51, the latter being the 11.0 the same card reaches without the override.',
@@ -772,20 +772,20 @@ definePresets({
     desc: 'Bless +3 def vs Death Fantastic melee: 5 atk 100% hit, def 0+3=3, 100% block → 5−3=2 dmg',
     a: { atk:5, toHitMod:70, hp:10, unitType:'fantastic_death' },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
   },
   blessMeleeFromChaos: {
     desc: 'Bless +3 def vs Chaos Fantastic melee: 5 atk 100% hit, def 0+3=3, 100% block → 5−3=2 dmg',
     a: { atk:5, toHitMod:70, hp:10, unitType:'fantastic_chaos' },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
   },
   blessMeleeFromDeathCoM2: {
     desc: 'CoM2 Bless does NOT apply vs Death Fantastic melee: 5 atk 100% hit, def 0, 100% block → 5 dmg',
     version: V_COM2,
     a: { atk:5, hitChance:70, hp:10, unitType:'fantastic_death' },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that CoM2\'s Bless does not reach a melee attack whatever the attacker\'s realm, so neither the realm nor the Bless can move the 5.',
@@ -798,7 +798,7 @@ definePresets({
     version: V_COM2,
     a: { atk:5, hitChance:70, hp:10, unitType:'fantastic_chaos' },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that CoM2\'s Bless does not reach a melee attack whatever the attacker\'s realm, so neither the realm nor the Bless can move the 5.',
@@ -810,7 +810,7 @@ definePresets({
     desc: 'Bless does NOT apply vs Normal unit melee: 5 atk 100% hit, def 0, 100% block → 5 dmg',
     a: { atk:5, toHitMod:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that Bless does not reach a melee attack, so the only feature the fixture adds cannot move the 5.',
@@ -822,27 +822,27 @@ definePresets({
     desc: 'Bless +3 def vs Fire Breath (always Chaos) even from Normal unit: breath 5−3=2, melee 1−0=1 (bless n/a) → 3 dmg',
     a: { atk:1, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
   },
   blessLightningBreathAlwaysChaos: {
     desc: 'Bless +3 def vs Lightning Breath (always Chaos) — intrinsic AP halves bless: breath def floor((0+3)/2)=1, 5−1=4, melee 1−0=1 → 5 dmg',
     a: { atk:1, rtbType:'lightning', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
   },
   blessMagicChaosRanged: {
     desc: 'Bless +3 def vs Chaos Magic ranged (always Chaos): 5 hits vs def 0+3=3 → 2 dmg',
     a: { rtbType:'magic_c', rtb:5, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
   },
   blessMissileFromDeathNoBonus: {
     desc: 'Bless does NOT apply vs Missile from a Death Fantastic: a missile is realm-less (ranged_type 20−29), so it never inherits the attacker\'s Death realm. 5 hits vs def 0 → 5 dmg (would be 2 if the realm carried over)',
     a: { rtbType:'missile', rtb:5, toHitRtbMod:70, hp:10, unitType:'fantastic_death' },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that the missile never inherits the attacker\'s realm, so neither the realm nor the Bless can move the 5.',
@@ -854,25 +854,25 @@ definePresets({
     desc: 'Bless does NOT apply vs plain Thrown from a Chaos Fantastic: Thrown is realm-less (ranged_type 100), unlike the attacker\'s melee. Thrown 5 − 0 = 5; melee 1 vs def 0+3=3 → 0. Total 5 dmg (would be 2 if the realm carried over)',
     a: { atk:1, rtbType:'thrown', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10, unitType:'fantastic_chaos' },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
   },
   blessArmorPiercingHalves: {
     desc: 'Bless + Armor Piercing: pre-AP def 3+3=6, AP halves to 3, 7 atk → 7−3=4 dmg (without bless would be 6)',
     a: { atk:7, toHitMod:70, hp:10, unitType:'fantastic_chaos', abilities: { armorPiercing: true } },
     b: { atk:0, def:3, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.000, sdDmgToB: 0.000 },
   },
   blessCauseFear: {
     desc: 'Bless +3 res vs Cause Fear (v1.31 self-fear bug fires even for immune A): B res 5+3=8, pFear=0.2; bug: E[A self-feared]=0.2 → E[A figs]=3.8 → dmgToB=11.4; E[B unfeared]=0.8 → dmgToA=2.4',
     a: { figs:4, atk:3, toHitMod:70, hp:10, abilities: { fear: true, deathImmunity: true } },
     b: { atk:3, toHitMod:70, hp:100, def:0, res:5, abilities: { bless: true } },
-    expected: { dmgToA: 2.400, dmgToB: 11.400 },
+    expected: { dmgToA: 2.400, sdDmgToA: 1.200, dmgToB: 11.400, sdDmgToB: 1.200 },
   },
   blessCauseFearImmune: {
     desc: 'Bless +3 res → effective res 10 immune to Fear (no self-fear bug: bPFear=0): B res 7+3=10, not feared, full counter 1×3=3',
     a: { figs:4, atk:3, toHitMod:70, hp:10, abilities: { fear: true, deathImmunity: true } },
     b: { atk:3, toHitMod:70, hp:100, def:0, res:7, abilities: { bless: true } },
-    expected: { dmgToA: 3.000, dmgToB: 12.000 },
+    expected: { dmgToA: 3.000, sdDmgToA: 0.000, dmgToB: 12.000, sdDmgToB: 0.000 },
     vacuity: {
       'a.ability.fear':
         'Keep. Inert as a consequence of the assertion: Bless takes B\'s Resistance from 7 to an effective 10, which no fear roll can beat, so the attacker\'s Cause Fear has no effect left to remove. a.abilities.deathImmunity is inert for the same reason. Bless is the live half at delta 0.9, and the fixture\'s second claim is dmgToA 3.000 - the full counter, so there is no self-fear.',
@@ -882,13 +882,13 @@ definePresets({
     desc: 'Bless +3 res vs Life Steal −3: effRes=5+3−3=5, E[dmg]=sum(1..5)/10=1.5',
     a: { atk:1, toHitMod:70, hp:10, abilities: { lifeSteal: -3 } },
     b: { atk:0, def:1, toBlkMod:70, res:5, hp:20, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 1.500 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.500, sdDmgToB: 1.803, bonusHpToA: 1.500, sdBonusHpToA: 1.803, healToA: 1.500, sdHealToA: 1.803, regDmgToB: 0.000, sdRegDmgToB: 0.000, undDmgToB: 1.500, sdUndDmgToB: 1.803 },
   },
   blessDeathGaze: {
     desc: 'Bless vs Death Gaze −3 (hidden ranged 1 so gaze fires in v1.31): +3 res → effRes=5+3−3=5, fail=0.5 → 5.0 death. Bless also grants +3 def against the gaze itself, since a Death Gaze is Death-realm regardless of the attacker\'s unit type, so the hidden 1 adds 0.5×0.3×0.7³=0.051',
     a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { atk:0, def:0, res:5, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 5.051 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.051, sdDmgToB: 4.953 },
   },
   blessMagicRangedDefMoM: {
     desc: 'MoM Bless +3 def vs Chaos magic ranged: 7 hits − 3 bless = 4 dmg',
@@ -896,7 +896,7 @@ definePresets({
     a: { rtbType:'magic_c', rtb:7, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.000, sdDmgToB: 0.000 },
   },
   blessMagicRangedNoDefCoM: {
     desc: 'CoM 1 Bless gives NO def bonus vs Chaos magical ranged: its defense half needs ranged_type > 39, which excludes every conventional ranged type. 7 hits − 0 = 7 dmg (4 in MoM)',
@@ -904,7 +904,7 @@ definePresets({
     a: { rtbType:'magic_c', rtb:7, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 7.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 7.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that CoM 1\'s Bless defense half cannot see a conventional ranged type, so the only feature the fixture adds cannot move the 7.',
@@ -918,7 +918,7 @@ definePresets({
     a: { modernAttacks: { ranged: { strength:7, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 7.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 7.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that CoM2\'s Bless defense half is closed for every unit attack channel, so the only feature the fixture adds cannot move the 7.',
@@ -931,14 +931,14 @@ definePresets({
     version: V_MOM_131,
     a: { rtbType:'gaze_death', rtb:1, hp:10, abilities: { deathGaze: -3 } },
     b: { atk:0, def:0, res:5, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 5.051 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.051, sdDmgToB: 4.953 },
   },
   blessResistBonusCoM2: {
     desc: 'CoM2 Bless +5 res vs Death Gaze −3: effRes=5+5−3=7, pFail=0.3 → 3.0. No hidden gaze strength: CoM2 stores stoning/death/doom gaze as three independent stats with no attack-strength slot, and the gaze fires without one.',
     version: V_COM2,
     a: { hp:10, abilities: { deathGaze: -3 } },
     b: { atk:0, def:0, res:5, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 4.583 },
   },
   blessMagicRangedNoDefWarlord: {
     desc: 'Warlord Bless gives NO def bonus vs a magical ranged unit attack: the same positive-spell-ID gate excludes every ApplyAttack unit channel. 7 hits − 0 = 7 dmg (a +7 here would leave 0)',
@@ -946,7 +946,7 @@ definePresets({
     a: { modernAttacks: { ranged: { strength:7, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 7.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 7.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that Warlord\'s Bless defense half is closed for every unit attack channel, so the only feature the fixture adds cannot move the 7.',
@@ -959,21 +959,21 @@ definePresets({
     version: V_MOM_131,
     a: { atk:1, rtbType:'fire', rtb:7, toHitMod:70, toHitRtbMod:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
   },
   blessFireBreathDefCoM: {
     desc: 'CoM 1 Bless +5 def vs Fire Breath: breath is ranged_type 101, the one attack class its defense half still covers. Breath 7 − 5 = 2, melee 1 − 0 = 1 → 3 dmg (5 in MoM)',
     version: V_COM,
     a: { atk:1, rtbType:'fire', rtb:7, toHitMod:70, toHitRtbMod:70, hp:10 },
     b: { atk:0, def:0, toBlkMod:70, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
   },
   blessImmolationDefMoM: {
     desc: 'MoM Bless +3 def vs Immolation: the spell path enters the defense routine as ranged_type 38 and MoM puts no type gate on the Bless arm, so immolation def 1+3=4 blocks all 4 strength at 100% block. Melee 3 − 1 = 2 → 2 dmg (2.440 without Bless)',
     version: V_MOM_131,
     a: { atk:3, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:20, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
     vacuity: {
       'a.ability.immolation':
         'Keep. Inert as a consequence of the assertion: Bless takes the immolation Defense to 1 + 3 = 4, which blocks all four points of strength at a 100% To Block, so the immolation\'s own presence cannot move the melee 2 that is left. Bless is the live half at delta 0.44, and blessImmolationDefCoM is the CoM 1 arm where the bonus is not made at all.',
@@ -984,7 +984,7 @@ definePresets({
     version: V_COM,
     a: { atk:3, toHitMod:70, hp:10, abilities: { immolation: true } },
     b: { atk:0, def:1, toBlkMod:70, hp:20, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 4.028 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.028, sdDmgToB: 1.399 },
     vacuity: {
       'b.ability.bless':
         'Keep, and the absence is the rule under test - a channel exclusion, not an inert fixture: CoM 1 gates the Bless arm on ranged_type > 39 and the spell-damage helper passes exactly 39. Immolation is the live half at delta 2.028, and blessImmolationDefMoM is the MoM arm where the +3 does land, at 2.000 against this 4.028.',
@@ -995,7 +995,7 @@ definePresets({
     version: V_WARLORD,
     a: { hp:10, abilities: { deathGaze: -3 } },
     b: { atk:0, def:0, res:5, hp:10, abilities: { bless: true } },
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.000, sdDmgToB: 4.899 },
   },
 
   // --- Elemental Armor / Resist Elements ---
@@ -1004,21 +1004,21 @@ definePresets({
     a: { rtbType:'magic_c', rtb:10, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0, sdDmgToB: 0.000 },
   },
   elemArmorMagicNRanged: {
     desc: 'Elemental Armor +10 def vs Nature magic ranged: 10 hits vs def 0+10=10, 100% block → 0 dmg',
     a: { rtbType:'magic_n', rtb:10, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0, sdDmgToB: 0.000 },
   },
   elemArmorNotVsMagicS: {
     desc: 'Elemental Armor does NOT apply to Sorcery ranged: 5 hits vs def 0, 0 blocks → 5 dmg',
     a: { rtbType:'magic_s', rtb:5, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that Elemental Armor does not cover the Sorcery realm, so the only feature the fixture adds cannot move the 5.',
@@ -1030,7 +1030,7 @@ definePresets({
     desc: 'Elemental Armor does NOT apply to melee: 10 hits vs def 0, no bonus → 10 dmg',
     a: { atk:10, toHitMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
-    expected: { dmgToA: 0, dmgToB: 10.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 10.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that Elemental Armor does not reach melee at all, so the only feature the fixture adds cannot move the 10.',
@@ -1042,34 +1042,34 @@ definePresets({
     desc: 'Elemental Armor +10 def vs Fire Breath: 5 breath hits vs 10 def 100% block = 0; melee 1 hit vs 0 def = 1 total',
     a: { atk:1, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   elemArmorLightningBreath: {
     desc: 'Elemental Armor +10 def vs Lightning Breath (intrinsic AP halves): floor((0+10)/2)=5 def, 10 hits − 5 blocks = 5 breath; melee 1 = 6 total',
     a: { atk:1, rtbType:'lightning', rtb:10, toHitMod:70, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:20, abilities: { elemArmor: 'elementalArmor' } },
-    expected: { dmgToA: 0, dmgToB: 6.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 6.000, sdDmgToB: 0.000 },
   },
   resistElementsMagicC: {
     desc: 'Resist Elements +3 def vs Chaos magic ranged: 5 hits vs def 0+3=3, 100% block → 2 dmg',
     a: { rtbType:'magic_c', rtb:5, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
   },
   elemArmorNotCumulative: {
     desc: 'Elemental Armor supersedes Resist Elements: 15 hits vs def max(10,3)=10 → 5 dmg (not 2 if they stacked to 13)',
     a: { rtbType:'magic_c', rtb:15, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:20, abilities: { elemArmor: 'elementalArmor' } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
   },
   resistElementsNotVsMagicSMoM: {
     desc: 'MoM Resist Elements does NOT apply to Sorcery ranged: 5 hits vs def 0 → 5 dmg',
     a: { rtbType:'magic_s', rtb:5, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that Resist Elements does not cover the Sorcery realm, so the only feature the fixture adds cannot move the 5.',
@@ -1081,14 +1081,14 @@ definePresets({
     desc: 'MoM Resist Elements +3 def vs Fire Breath: 5 breath vs def 3 → 2 dmg + 1 melee = 3 total',
     a: { atk:1, rtbType:'fire', rtb:5, toHitMod:70, toHitRtbMod:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
   },
   resistElementsFireBreathCoM2: {
     desc: 'CoM2 Resist Elements +4 def vs Fire Breath: 5 breath vs def 4 → 1 dmg + 1 melee = 2 total',
     version: V_COM2,
     a: { atk:1, modernAttacks: { fireBreath: { strength:5, type:'fire' } }, hitChance:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
   },
   resistElementsMagicRangedCoM2: {
     desc: 'CoM2 Resist Elements +4 def vs magic ranged: 5 hits vs def 4 → 1 dmg. The modern engine attaches no realm to a projectile, so this one case is the CoM2 endpoint of both MoM contrasts beside it: +4 against `resistElementsMagicC`\'s +3, and applying at all where `resistElementsNotVsMagicSMoM`\'s Sorcery arm is excluded.',
@@ -1096,7 +1096,7 @@ definePresets({
     a: { modernAttacks: { ranged: { strength:5, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'resistElements' } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   elemArmorMagicRangedCoM2: {
     desc: 'CoM2 Elemental Armor +12 def vs magic ranged: 5 hits vs def 12 → 0 dmg, where MoM\'s `elemArmorNotVsMagicS` takes nothing on the Sorcery realm its table has and the modern engine does not.',
@@ -1104,7 +1104,7 @@ definePresets({
     a: { modernAttacks: { ranged: { strength:5, type:'magic' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
     b: { def:0, toBlkMod:70, hp:10, abilities: { elemArmor: 'elementalArmor' } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0, sdDmgToB: 0.000 },
   },
   // --- Eldritch Weapon ---
   eldritchWeaponMelee: {
@@ -1112,7 +1112,7 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { eldritchWeapon: true } },
     b: { def:1, hp:10 },
     version: V_MOM_131,
-    expected: { dmgToA: 0, dmgToB: 0.800 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.800, sdDmgToB: 0.400 },
   },
   eldritchWeaponRangedMissile: {
     desc: 'Eldritch Weapon missile ranged: toBlock 30% → 20% (1 shield, 20% block) → E[dmg]=0.800',
@@ -1120,14 +1120,14 @@ definePresets({
     b: { def:1, hp:10 },
     version: V_MOM_131,
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.800 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.800, sdDmgToB: 0.400 },
   },
   eldritchWeaponWeaponUpgrade: {
     desc: 'Eldritch Weapon upgrades normal→magic: bypasses WI (def stays 5 not 10) + toBlock 20% → E[dmg]=4.000',
     a: { atk:5, toHitMod:70, hp:10, abilities: { eldritchWeapon: true } },
     b: { def:5, hp:10, abilities: { weaponImmunity: true } },
     version: V_MOM_131,
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.000, sdDmgToB: 0.894 },
   },
   eldritchWeaponRangedKeepsWI: {
     // Eldritch's magic-weapon upgrade is melee-only (MoM Eldritch Weapon page), so a bow
@@ -1140,7 +1140,7 @@ definePresets({
     b: { def:5, hp:10, abilities: { weaponImmunity: true } },
     version: V_MOM_131,
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 3.007 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.007, sdDmgToB: 1.244 },
   },
 
   // --- Giant Strength ---
@@ -1149,14 +1149,14 @@ definePresets({
     a: { atk:1, toHitMod:70, hp:10, abilities: { giantStrength: true } },
     b: { hp:10 },
     version: V_MOM_131,
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
   },
   giantStrengthThrown: {
     desc: 'Giant Strength +1 thrown: atk 1+1=2, thrown 1+1=2, 100% hit vs 0 def → E[dmg]=4.0 (thrown+melee)',
     a: { atk:1, toHitMod:70, rtbType:'thrown', rtb:1, toHitRtbMod:70, hp:10, abilities: { giantStrength: true } },
     b: { hp:10 },
     version: V_MOM_131,
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.000, sdDmgToB: 0.000 },
   },
   giantStrengthNotMissile: {
     desc: 'Giant Strength does NOT boost missile ranged: base 1 + GS → still 1 rtb → E[dmg]=1.0',
@@ -1164,7 +1164,7 @@ definePresets({
     b: { hp:10 },
     version: V_MOM_131,
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that Giant Strength does not reach the missile slot, so the only feature the fixture adds cannot move the 1.',
@@ -1178,33 +1178,33 @@ definePresets({
     desc: 'Prayer To Hit: 1 atk, base 30% + Prayer +10% = 40% hit vs 0 def → 0.4',
     a: { atk:1, hp:10, abilities: { prayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 0.400 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.400, sdDmgToB: 0.490 },
   },
   prayerToHitRanged: {
     desc: 'Prayer To Hit Ranged: missile 1 atk, base 30% + Prayer +10% = 40% hit vs 0 def → 0.4',
     a: { rtbType:'missile', rtb:1, hp:10, abilities: { prayer: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.400 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.400, sdDmgToB: 0.490 },
   },
   prayerToBlock: {
     desc: 'Prayer To Block: 1 atk 90% hit (v1.31 Prayer penalty) vs def 1, 40% block → 0.9×0.6 = 0.54',
     a: { atk:1, toHitMod:70, hp:10 },
     b: { def:1, hp:10, abilities: { prayer: true } },
-    expected: { dmgToA: 0, dmgToB: 0.540 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.540, sdDmgToB: 0.498 },
   },
   prayerResistance: {
     desc: 'Prayer Resistance: Poison 4 vs base res 5 + Prayer +1 = res 6, pFail 40%, E[dmg] = 1.6',
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { prayer: true } },
-    expected: { dmgToA: 0, dmgToB: 1.600 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.600, sdDmgToB: 0.980 },
   },
   prayerEnemyMeleePenalty131: {
     desc: 'Prayer Enemy Melee Penalty (MoM 1.31): bug — B Prayer, A melee 30% → 20%. 1 atk vs 0 def → 0.2',
     version: V_MOM_131,
     a: { atk:1, hp:10 },
     b: { hp:10, abilities: { prayer: true } },
-    expected: { dmgToA: 0, dmgToB: 0.200 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.200, sdDmgToB: 0.400 },
   },
   prayerEnemyPenaltyNotRanged131: {
     desc: 'Prayer Enemy Ranged Penalty (MoM 1.31): enemy penalty does NOT apply to ranged. Missile 1 atk 30% → still 0.3',
@@ -1212,7 +1212,7 @@ definePresets({
     a: { rtbType:'missile', rtb:1, hp:10 },
     b: { hp:10, abilities: { prayer: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.300 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.300, sdDmgToB: 0.458 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that 1.31\'s enemy penalty does not reach a ranged attack, so the only feature the fixture adds cannot move the 0.300.',
@@ -1225,7 +1225,7 @@ definePresets({
     version: V_MOM_CP,
     a: { atk:1, hp:10 },
     b: { hp:10, abilities: { prayer: true } },
-    expected: { dmgToA: 0, dmgToB: 0.300 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.300, sdDmgToB: 0.458 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that CP 1.60 removed the enemy penalty entirely, so the only feature the fixture adds cannot move the 0.300.',
@@ -1239,41 +1239,41 @@ definePresets({
     desc: 'High Prayer Melee Atk: base 1 atk + HP +2 = 3 atk, 100% hit vs 0 def → 3 dmg',
     a: { atk:1, toHitMod:70, hp:10, abilities: { highPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
   },
   highPrayerDefense: {
     desc: 'High Prayer Defense: missile 4 100% hit vs base def 1 + HP +2 = 3, 100% block → 4−3 = 1 (def 2 would give 2)',
     a: { rtbType:'missile', rtb:4, toHitRtbMod:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:10, abilities: { highPrayer: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   highPrayerResistance: {
     desc: 'High Prayer Resistance: Poison 4 vs base res 5 + HP +3 = res 8, pFail 20%, E[dmg] = 0.8',
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:1, toBlkMod:70, res:5, hp:10, abilities: { highPrayer: true } },
-    expected: { dmgToA: 0, dmgToB: 0.800 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.800, sdDmgToB: 0.800 },
   },
   highPrayerToHit: {
     desc: 'High Prayer To Hit: missile 1, base 30% + HP +10% = 40% hit vs 0 def → 0.4 (ranged isolates from +2 melee)',
     a: { rtbType:'missile', rtb:1, hp:10, abilities: { highPrayer: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 0.400 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 0.400, sdDmgToB: 0.490 },
   },
   highPrayerToBlock: {
     desc: 'High Prayer To Block: missile 10 100% hit vs def 8 + HP +2 = 10, 40% block → 10−4 = 6.0 (30% would give 7.0)',
     a: { rtbType:'missile', rtb:10, toHitRtbMod:70, hp:10 },
     b: { def:8, hp:20, abilities: { highPrayer: true } },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 6.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 6.000, sdDmgToB: 1.549 },
   },
   highPrayerMeleeNotRanged: {
     desc: 'High Prayer +2 melee does NOT boost ranged: missile 3, 100% hit, HP → still 3 (not 5)',
     a: { rtbType:'missile', rtb:3, toHitRtbMod:70, hp:10, abilities: { highPrayer: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
     vacuity: {
       'every-feature-inert':
         'Inert by construction: the claim is that High Prayer\'s +2 melee does not reach the ranged slot, so the only feature the fixture adds cannot move the 3.',
@@ -1285,7 +1285,7 @@ definePresets({
     desc: 'High Prayer combined: atk 3+2=5 at 40% (30+10) vs 0 def → 5×0.4 = 2.0',
     a: { atk:3, hp:10, abilities: { highPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 1.095 },
   },
 
   // --- Warlord: Prayer + High Prayer stacking ---
@@ -1294,42 +1294,42 @@ definePresets({
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { prayer: true, highPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.000, sdDmgToB: 0.000 },
   },
   warlordPrayerStackDef: {
     desc: 'Warlord Prayer+HP stack: atk 5 100% hit vs def 1 + HP +2 + Prayer +1 = 4, 100% block → 5−4 = 1.0 (CoM2 def 3 → 2.0). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS!NORAGE!+7 "SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));") is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10 },
     b: { def:1, toBlkMod:70, hp:20, abilities: { prayer: true, highPrayer: true } },
-    expected: { dmgToA: 0.400, dmgToB: 1.000 },
+    expected: { dmgToA: 0.400, sdDmgToA: 0.490, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   warlordPrayerStackRes: {
     desc: 'Warlord Prayer+HP stack: Poison 5 vs base res 5 + HP +3 + Prayer +1 = res 9 (CoM2 −1 mod → eff 8), pFail 20%, poison E[dmg] = 1.0. Melee dmg = 0 (atk 1 vs def 10, all blocked). (CoM2 no stack: res 8 → eff 7 → pFail 30% → 1.5). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS!NORAGE!+7 "SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));") is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { poison: 5 } },
     b: { def:10, toBlkMod:70, res:5, hp:10, abilities: { prayer: true, highPrayer: true } },
-    expected: { dmgToA: 0.400, dmgToB: 1.000 },
+    expected: { dmgToA: 0.400, sdDmgToA: 0.490, dmgToB: 1.000, sdDmgToB: 0.894 },
   },
   warlordPrayerStackToHitNoStack: {
     desc: 'Warlord Prayer+HP stack: To Hit does NOT stack. atk 1 + HP+2 + Prayer+1 = 4, base 30% + 10% (single bonus) = 40% vs 0 def → 4×0.4 = 1.6 (stacked 50% would give 2.0)',
     version: V_WARLORD,
     a: { atk:1, hp:10, abilities: { prayer: true, highPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 1.600 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.600, sdDmgToB: 0.980 },
   },
   warlordPrayerStackToBlockNoStack: {
     desc: 'Warlord Prayer+HP stack: To Block does NOT stack. atk 10 100% hit vs def 0 + HP +2 + Prayer +1 = 3, base 30% + 10% (single bonus) = 40% block → 10 − 3×0.4 = 8.80 (stacked 50% would be 8.50). the 0.4 counterattack is the F142 rule: the High Prayer +2 melee is the compiled region-c block and keeps its `B.attack > 0` gate, so it is skipped, while the Prayer Warlord top-up (UnitCalcPre.CAS!NORAGE!+7 "SETSTAT(U,SAttack,0,((GetStat(U,SAttack,0))+1));") is ungated and lands — permanent melee 0 becomes 1, at 30+10 = 40%',
     version: V_WARLORD,
     a: { atk:10, hitChance:70, hp:10 },
     b: { def:0, hp:20, abilities: { prayer: true, highPrayer: true } },
-    expected: { dmgToA: 0.400, dmgToB: 8.800 },
+    expected: { dmgToA: 0.400, sdDmgToA: 0.490, dmgToB: 8.800, sdDmgToB: 0.849 },
   },
   com2PrayerHpSupersedes: {
     desc: 'CoM2 Prayer+HP: HP supersedes (no stack). atk 1 + HP +2 = 3 (Prayer adds nothing), 40% hit vs 0 def → 1.2',
     version: V_COM2,
     a: { atk:1, hp:10, abilities: { prayer: true, highPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 1.200 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.200, sdDmgToB: 0.849 },
     vacuity: {
       'a.ability.prayer':
         'Keep, and the absence is the rule under test: High Prayer supersedes Prayer rather than stacking with it, so removing Prayer leaves the same 1.2. High Prayer is the live half at delta 0.8 - ablating it drops both the +2 attack and the To Hit step, to 0.4. This card measures the To Hit arm; prayerHpStackPairCoM2 measures the attack arm at a 100% hit.',
@@ -1340,7 +1340,7 @@ definePresets({
     version: V_COM2,
     a: { atk:1, hitChance:70, hp:10, abilities: { prayer: true, highPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 3.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
     vacuity: {
       'a.ability.prayer':
         'Keep, and the absence is the rule under test: the attack arm of the same supersession com2PrayerHpSupersedes states, measured at a 100% To Hit so the attack value is the whole of it. High Prayer is the live half at delta 2, taking atk 1 to 3 rather than the 5 a stacking pair would give.',
@@ -1351,7 +1351,7 @@ definePresets({
     version: V_WARLORD,
     a: { atk:1, hitChance:70, hp:10, abilities: { prayer: true, highPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 4.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.000, sdDmgToB: 0.000 },
   },
 
   // --- Black Prayer ---
@@ -1359,39 +1359,39 @@ definePresets({
     desc: 'Black Prayer Atk: base 2 atk − 1 = 1, 100% hit vs 0 def → 1 dmg',
     a: { atk:2, toHitMod:70, hp:10, abilities: { blackPrayer: true } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   blackPrayerDefPenalty: {
     desc: 'Black Prayer Def: 2 atk 100% hit vs base def 2 − 1 = 1, 100% block → 1 dmg',
     a: { atk:2, toHitMod:70, hp:10 },
     b: { def:2, toBlkMod:70, hp:10, abilities: { blackPrayer: true } },
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   blackPrayerResPenalty: {
     desc: 'Black Prayer Res: 1 atk (100% blocked: def 2−1=1 at 100%) + Poison 4 vs res 5−2=3, pFail 70%, E[dmg] = 2.8',
     a: { atk:1, toHitMod:70, hp:10, abilities: { poison: 4 } },
     b: { def:2, toBlkMod:70, res:5, hp:10, abilities: { blackPrayer: true } },
-    expected: { dmgToA: 0, dmgToB: 2.800 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.800, sdDmgToB: 0.917 },
   },
   blackPrayerRangedAtk: {
     desc: 'Black Prayer Ranged Atk: base 2 missile − 1 = 1, 100% hit vs 0 def → 1 dmg',
     a: { rtbType:'missile', rtb:2, toHitRtbMod:70, hp:10, abilities: { blackPrayer: true } },
     b: { hp:10 },
     rangedCheck: true, rangedDist: 1,
-    expected: { dmgToA: 0, dmgToB: 1.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
   },
   blackPrayerThrownAtk: {
     desc: 'Black Prayer Thrown Atk: base thrown 2 − 1 = 1, 100% hit vs 0 def → 1 thrown + base melee 2 − 1 = 1 at 100% hit → 2 total',
     a: { atk:2, rtbType:'thrown', rtb:2, toHitMod:70, toHitRtbMod:70, hp:10, abilities: { blackPrayer: true } },
     b: { atk:0, hp:10 },
-    expected: { dmgToA: 0, dmgToB: 2.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
   },
   blackPrayerDoomGazeUnchangedCoM2: {
     desc: 'Black Prayer (CoM2) does not write the independent Doom Gaze field: Doom Gaze 5 still deals 5 damage.',
     version: V_COM2,
     a: { atk:0, hp:10, abilities: { blackPrayer: true, doomGaze: 5 } },
     b: { hp:10 },
-    expected: { dmgToA: 0, dmgToB: 5.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
     vacuity: {
       'a.ability.blackPrayer':
         'Keep, and the absence is the rule under test: CoM2 carries Doom Gaze in an independent field, which Black Prayer does not write, so the gaze is untouched. The gaze half is live at delta 5.',
@@ -1402,13 +1402,13 @@ definePresets({
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10, abilities: { fieryFury: true, apotheosis: true } },
     b: { atk:5, hitChance:70, def:0, hp:8 },
-    expected: { dmgToA: 0, dmgToB: 8.000 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 8.000, sdDmgToB: 0.000 },
   },
   fieryFuryUsesBaseFantasticForFirstStrikeWarlord: {
     desc: 'Fiery Fury uses BASEFANTASTIC: a base regular Combat Summoned unit receives the +3 regular-unit melee package but not First Strike, so B still counters for 5. A live-Fantastic gate would incorrectly prevent the counter.',
     version: V_WARLORD,
     a: { atk:5, hitChance:70, hp:10, abilities: { fieryFury: true, combatSummoned: true } },
     b: { atk:5, hitChance:70, def:0, hp:8 },
-    expected: { dmgToA: 5.000, dmgToB: 8.000 },
+    expected: { dmgToA: 5.000, sdDmgToA: 0.000, dmgToB: 8.000, sdDmgToB: 0.000 },
   },
 });

@@ -14,10 +14,7 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
-const { repoRoot } = require('../calculator_sources');
 const { assert, assertSameKeyList, modernRecordForSharedSlot } = require('./assertions');
 
 // Derived-stat leaks that exist today, each with the read that causes it. This list is the
@@ -100,14 +97,9 @@ function valuesFor(def) {
 }
 
 function runHiddenControlGatingChecks(ctx) {
-  // `abilityVersionGated` (ui_abilities.js) is the single home for "does this control exist in
-  // this version". That source is data-scope="page", but its top level is declarations only, so
-  // it loads without a DOM — the same reason `loadPresetContext` can read the page fixtures.
-  // Re-deriving the rule here would let the two drift.
-  vm.runInContext(
-    fs.readFileSync(path.join(repoRoot, 'Calculator', 'ui_abilities.js'), 'utf8'),
-    ctx, { filename: 'Calculator/ui_abilities.js' });
-
+  // `abilityVersionGated` (`ability_gating.js`, data-scope="core") is the single home for "does
+  // this control exist in this version", and the context already carries it. Re-deriving the rule
+  // here would let the two drift.
   const read = expression => vm.runInContext(expression, ctx);
   const versions = read('ENGINE_VERSIONS');
   const deriveUnitStats = read('deriveUnitStats');

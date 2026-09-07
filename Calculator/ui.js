@@ -23,6 +23,13 @@ function renderDistPanel(container, title, dist, hp, numFigs, opts) {
   let expected = 0;
   for (let d = 0; d < dist.length; d++) expected += d * dist[d];
 
+  // The second moment, carried on the same element as the first and rounded the same way, so the
+  // page publishes a spread wherever it publishes a mean. It is not drawn: `data-sd` adds no text
+  // and no layout. `runTests` reads it off `panels[i]` — the very element it reads the mean's text
+  // from — which is what makes the two numbers provably describe one panel of one render, and
+  // `tools/preset_checks.js` computes it from the same `distributionStdDev` (F268.3).
+  const stdDev = distributionStdDev(dist);
+
   let peakProb = 0;
   for (let d = 0; d <= maxD; d++) {
     if ((dist[d] || 0) > peakProb) peakProb = dist[d];
@@ -62,7 +69,7 @@ function renderDistPanel(container, title, dist, hp, numFigs, opts) {
     hpPct = ` <span class="hp-pct">(${(expected / totalRemHP * 100).toFixed(1)}% HP)</span>`;
   }
 
-  let html = `<div class="dist-header">${title}:<br><span class="avg">${expected.toFixed(3)}</span>${hpPct}${destroyPct}</div>`;
+  let html = `<div class="dist-header">${title}:<br><span class="avg" data-sd="${stdDev.toFixed(3)}">${expected.toFixed(3)}</span>${hpPct}${destroyPct}</div>`;
   html += '<div class="dist-scroll"><table class="dist-table">';
   html += `<thead><tr><th>${colHeader}</th><th style="text-align:right">Chance</th></tr></thead><tbody>`;
 
@@ -480,7 +487,34 @@ function combatDamageShares(values) {
   return rounded;
 }
 
-function renderCombatStateSummary(container, prefix, mean, version) {
+// The panel also carries the four category quantities as *numbers*, in data attributes, because
+// the preset corpus asserts them (F268.7) and the visible rows state shares rather than magnitudes.
+// Same reasoning as F268.3's `data-sd`: the numbers a runner compares come off the element the
+// render wrote, so a mean and a spread provably describe one panel of one recalculation rather
+// than a value left over from whatever the page last held. Nothing visible changes.
+const COMBAT_CATEGORY_PANEL_ATTRIBUTES = [
+  { metric: 'regularDamage', mean: 'reg', sd: 'sdReg' },
+  { metric: 'undeadDamage', mean: 'und', sd: 'sdUnd' },
+  { metric: 'irreversibleDamage', mean: 'irr', sd: 'sdIrr' },
+  { metric: 'extraHits', mean: 'bonus', sd: 'sdBonus' },
+  { metric: 'healedDamage', mean: 'heal', sd: 'sdHeal' },
+];
+
+function writeCombatCategoryAttributes(summary, prefix, dists) {
+  if (!dists) {
+    throw new Error(`writeCombatCategoryAttributes: the combat result carries no `
+      + `\`${prefix}PostCombatCategoryDists\`. Every \`resolveCombat\` return publishes it `
+      + '(`Calculator/combat.js`); without it the corpus would compare four category '
+      + 'expectations against NaN and pass.');
+  }
+  for (const attribute of COMBAT_CATEGORY_PANEL_ATTRIBUTES) {
+    const dist = dists[attribute.metric];
+    summary.dataset[attribute.mean] = expectedDamage(dist).toFixed(3);
+    summary.dataset[attribute.sd] = distributionStdDev(dist).toFixed(3);
+  }
+}
+
+function renderCombatStateSummary(container, prefix, mean, dists, version) {
   const values = { irreversibleDamage: 0, undeadDamage: 0, regularDamage: 0, extraHits: 0,
     ...(mean || {}) };
   const modern = version.startsWith('com2');
@@ -507,6 +541,7 @@ function renderCombatStateSummary(container, prefix, mean, version) {
   summary.innerHTML = `
     <div class="combat-state-heading">Post-combat damage by type</div>${rows}
     <div><span>${bonusLabel}</span><strong data-metric="extraHits">${values.extraHits.toFixed(3)}</strong></div>`;
+  writeCombatCategoryAttributes(summary, prefix, dists);
   container.appendChild(summary);
 }
 
@@ -575,8 +610,10 @@ function recalculate() {
     { showSkulls: true, firstFigRem: aFirstFigRem, pDestroy: result.aDestroyPct });
   renderDistPanel(document.getElementById('distB'), 'Mean damage to defender', result.totalDmgToB, result.bHP, result.bAlive,
     { showSkulls: true, firstFigRem: bFirstFigRem, pDestroy: result.bDestroyPct });
-  renderCombatStateSummary(document.getElementById('distA'), 'a', result.aPostCombatStateMean, version);
-  renderCombatStateSummary(document.getElementById('distB'), 'b', result.bPostCombatStateMean, version);
+  renderCombatStateSummary(document.getElementById('distA'), 'a', result.aPostCombatStateMean,
+    result.aPostCombatCategoryDists, version);
+  renderCombatStateSummary(document.getElementById('distB'), 'b', result.bPostCombatStateMean,
+    result.bPostCombatCategoryDists, version);
   renderLifeStealSummary(result, version);
 
   // Persist the live page state, unless we're mid-restore (applyState calls recalculate
@@ -794,10 +831,13 @@ document.querySelectorAll('.abil-item').forEach(item => {
   // Flat index of every preset reachable from TEST_TREE.
   const presetIndex = [];
 
+  // `presetVersionsFromTestTree` (`card_state.js`) is the rule; folding it in here keeps
+  // `PRESET_VERSIONS` the map every caller already reads.
+  Object.assign(PRESET_VERSIONS, presetVersionsFromTestTree(TEST_TREE));
+
   for (const group of TEST_TREE) {
     for (const sub of group.subs) {
       for (const key of sub.keys) {
-        if (group.version) PRESET_VERSIONS[key] = group.version;
         const preset = PRESETS[key];
         if (!preset) continue;
         const btn = makeButton(key);

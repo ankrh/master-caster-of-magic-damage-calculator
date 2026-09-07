@@ -689,3 +689,65 @@ function calcIrrecoverableRiderOutcomes(atkFigs, keys, probs, destructionFail, t
   }
   return out;
 }
+
+// The spread of a distribution about its own mean, in the units the distribution is indexed in.
+// `expectedDamage` (`combat_fear_and_touch.js`) is the first moment of the same array; this is the
+// second, and it is what the preset corpus asserts beside the mean (F268.3) so that a change of
+// *shape* which leaves the mean where it was still fails. Both preset runners — the page's
+// `runTests` through `renderDistPanel`, and `tools/preset_checks.js` through the realm — call this
+// function rather than restating it, because a second moment computed two ways is a divergence
+// waiting to be discovered by a fixture rather than by a test.
+//
+// Two passes rather than the one-pass E[X^2] - E[X]^2: the one-pass form subtracts two large and
+// nearly equal numbers, and a narrow distribution about a large mean loses most of its significant
+// digits to that cancellation. The corpus has such fixtures (a certain 30-damage kill has mean 30
+// and variance 0), so the stable form is not a precaution here, it is required.
+function distributionStdDev(dist) {
+  if (!Array.isArray(dist)) {
+    throw new Error('distributionStdDev: the distribution is ' + JSON.stringify(dist)
+      + ', which is not the array a combat result publishes.');
+  }
+  let mass = 0;
+  let mean = 0;
+  for (let d = 0; d < dist.length; d++) {
+    // The raw element, not `dist[d] || 0`: `NaN` is falsy, so the coerced form would quietly read
+    // a `NaN` cell as zero and hand back a plausible number for a broken distribution.
+    const raw = dist[d];
+    const p = (raw === undefined || raw === null) ? 0 : raw;
+    if (typeof p !== 'number' || !Number.isFinite(p)) {
+      throw new Error(`distributionStdDev: the probability at index ${d} is `
+        + `${String(raw)}, which is not a finite number.`);
+    }
+    // INV-1's other half, and it is not implied by the mass check: [0.875, 0.375, -0.375, 0.125]
+    // has mass 1, mean 0 and variance 0, so a distribution carrying a negative probability is
+    // otherwise indistinguishable from a deterministic zero (GPT review of F268.3, finding 2). The
+    // slack absorbs cancellation only - the largest mass error measured over 7,336 shipped
+    // distributions is 4.1e-12.
+    if (p < -1e-9 || p > 1 + 1e-9) {
+      throw new Error(`distributionStdDev: the probability at index ${d} is ${p}, and INV-1 `
+        + 'requires every cell in [0,1].');
+    }
+    mass += p;
+    mean += d * p;
+  }
+  // INV-1. A distribution whose mass is not 1 has a mean and a spread that mean nothing, and the
+  // caller is the one place that still knows which distribution it is.
+  if (Math.abs(mass - 1) > 1e-9) {
+    throw new Error(`distributionStdDev: the distribution carries mass ${mass}, and INV-1 requires `
+      + '1 within 1e-9. A phase that cannot fire folds its mass in at 0 rather than dropping it.');
+  }
+  let variance = 0;
+  for (let d = 0; d < dist.length; d++) {
+    const deviation = d - mean;
+    variance += (dist[d] || 0) * deviation * deviation;
+  }
+  // Squares of reals, so a negative sum is rounding and nothing else — but only just below zero.
+  if (variance < 0) {
+    if (variance < -1e-9) {
+      throw new Error(`distributionStdDev: the variance came out ${variance}, which is negative by `
+        + 'more than rounding can account for.');
+    }
+    variance = 0;
+  }
+  return Math.sqrt(variance);
+}

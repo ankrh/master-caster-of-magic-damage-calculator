@@ -1,15 +1,99 @@
-// Persistence invariants: localStorage round-trip across a real page reload,
-// and that Reset restores the same state a truly-fresh page has.
+// The calculator's global invariants, asserted once over the whole page rather
+// than restated inside each feature's suite.
 //
-// Suite philosophy (see tests/share-link.spec.js): assert INVARIANTS
-// (round-trip fixpoints, DOM reflects state), never hand-computed damage.
+// INV-1 valid PMF, INV-3 swap involution, INV-5 no console errors, INV-6 state
+// round-trip. A feature that could break one of these in a way these checks
+// cannot see is a gap here, to be widened here.
 const { test, expect } = require('@playwright/test');
-const { openCalculator, expectNoConsoleErrors, setValue } = require('./helpers');
+const { expectNoConsoleErrors, openCalculator, setValue } = require('./helpers');
 
-// A variant opener that does NOT clear localStorage on navigation, so a reload
-// exercises the app's real persistence path. Still stubs analytics and tracks
-// console errors exactly like helpers.openCalculator. A fresh Playwright context
-// starts with empty localStorage, so the first goto is still a clean slate.
+// --- from result-invariants.spec.js ---
+async function selectCustom(page) {
+  await page.evaluate(() => {
+    for (const p of ['a', 'b']) {
+      const el = document.getElementById(p + 'Unit');
+      el.value = 'custom';
+      el.dispatchEvent(new Event('change'));
+    }
+  });
+}
+
+async function midMatchup(page) {
+  await setValue(page, 'gameVersion', 'com2_1.05.11');
+  await selectCustom(page);
+  await setValue(page, 'aFigs', '6');
+  await setValue(page, 'aAtk', '7');
+  await setValue(page, 'aHP', '4');
+  await setValue(page, 'aDmg', '0');
+  await setValue(page, 'bFigs', '6');
+  await setValue(page, 'bDef', '4');
+  await setValue(page, 'bHP', '8');
+  await setValue(page, 'bDmg', '0');
+}
+
+// Parse the chance percentages rendered in a result panel into fractions.
+async function distProbs(page, panelId) {
+  return page.evaluate((panelId) => {
+    const cells = document.querySelectorAll('#' + panelId + ' .dist-table tbody tr .chance-text');
+    return [...cells].map(c => parseFloat(c.textContent) / 100);
+  }, panelId);
+}
+
+test('rendered distribution is a valid probability distribution', async ({ page }) => {
+  const errors = await openCalculator(page);
+  await midMatchup(page);
+
+  for (const panelId of ['distA', 'distB']) {
+    const probs = await distProbs(page, panelId);
+    expect(probs.length, `${panelId} renders rows`).toBeGreaterThan(1);
+    for (const p of probs) {
+      expect(p).toBeGreaterThanOrEqual(0);
+      expect(p).toBeLessThanOrEqual(1);
+    }
+    const sum = probs.reduce((a, b) => a + b, 0);
+    // One-decimal percentage rounding across many rows -> loose tolerance.
+    expect(sum, `${panelId} probabilities sum to ~1`).toBeGreaterThan(0.95);
+    expect(sum, `${panelId} probabilities sum to ~1`).toBeLessThan(1.05);
+  }
+  expectNoConsoleErrors(errors);
+});
+
+test('swap button is involutive and exchanges the two sides', async ({ page }) => {
+  const errors = await openCalculator(page);
+
+  // Asymmetric configuration.
+  await setValue(page, 'gameVersion', 'com2_1.05.11');
+  await selectCustom(page);
+  await setValue(page, 'aAtk', '9');
+  await setValue(page, 'aFigs', '4');
+  await setValue(page, 'bDef', '6');
+  await setValue(page, 'bHP', '12');
+  await setValue(page, 'aAbil_firstStrike', true);
+
+  const before = await page.evaluate(() => collectState());
+  const aAtk0 = await page.locator('#aAtk').inputValue();
+  const bDef0 = await page.locator('#bDef').inputValue();
+
+  await page.click('#swapBtn');
+
+  // One swap actually exchanges sides: firstStrike moved to defender, stats swapped.
+  await expect(page.locator('#bAbil_firstStrike')).toBeChecked();
+  await expect(page.locator('#aAbil_firstStrike')).not.toBeChecked();
+  expect(await page.locator('#bAtk').inputValue()).toBe(aAtk0);
+  expect(await page.locator('#aDef').inputValue()).toBe(bDef0);
+
+  const once = await page.evaluate(() => collectState());
+  expect(once, 'a single swap changes state').not.toEqual(before);
+
+  // Involution: swapping again returns to the original state.
+  await page.click('#swapBtn');
+  const twice = await page.evaluate(() => collectState());
+  expect(twice).toEqual(before);
+
+  expectNoConsoleErrors(errors);
+});
+
+// --- from persistence.spec.js ---
 async function openPersistent(page, path = '/') {
   const errors = [];
   page.on('console', (msg) => { if (msg.type() === 'error') errors.push(msg.text()); });
@@ -280,4 +364,43 @@ test('an undefined special-unit key throws while a version-disallowed one still 
   expect(result.threw).toContain('juggernaut');
   expect(result.identityThrew).toContain('juggernaut');
   expectNoConsoleErrors(errors);
+});
+
+// --- from share-link.spec.js ---
+test('share link restores the full calculator state', async ({ page, context }) => {
+  const errors = await openCalculator(page);
+
+  // Build a state that differs from the defaults across several control
+  // kinds: version select, stat inputs, ability checkbox, a global toggle.
+  await setValue(page, 'gameVersion', 'com2_1.05.11');
+  await setValue(page, 'aAtk', '9');
+  await setValue(page, 'bDef', '7');
+  await setValue(page, 'aAbil_firstStrike', true);
+  // rangedCheck is only enabled when the attacker has a ranged attack.
+  await setValue(page, 'aModernRangedType', 'missile');
+  await setValue(page, 'aModernRanged', '4');
+  await setValue(page, 'rangedCheck', true);
+
+  const state = await page.evaluate(() => collectState());
+  const shareUrl = await page.evaluate(
+    () => '/#s=' + LZString.compressToEncodedURIComponent(JSON.stringify(collectState())));
+
+  // Load the link in a fresh page (fresh localStorage via openCalculator).
+  const page2 = await context.newPage();
+  const errors2 = await openCalculator(page2, shareUrl);
+
+  // Fixpoint: re-serializing the restored state must reproduce the original.
+  const state2 = await page2.evaluate(() => collectState());
+  expect(state2).toEqual(state);
+
+  // And the DOM actually reflects it (guards against collectState/applyState
+  // agreeing with each other while both ignoring a control).
+  await expect(page2.locator('#gameVersion')).toHaveValue('com2_1.05.11');
+  await expect(page2.locator('#aAtk')).toHaveValue('9');
+  await expect(page2.locator('#bDef')).toHaveValue('7');
+  await expect(page2.locator('#aAbil_firstStrike')).toBeChecked();
+  await expect(page2.locator('#rangedCheck')).toBeChecked();
+
+  expectNoConsoleErrors(errors);
+  expectNoConsoleErrors(errors2);
 });

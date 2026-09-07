@@ -1,38 +1,137 @@
 // --- UI Layer: the stat card ---
-// Reads the panel controls into derivation input, renders the modern and DOS special-value
-// blocks beside them, and writes the derived stats back onto the card.
+// Reads the panel controls into a card state, renders the modern and DOS special-value blocks
+// beside them, and writes the derived stats back onto the card. Turning a card state into
+// derivation input is `card_state.js`, which is `data-scope="core"` and touches no DOM.
 
 
-// Read ability checkboxes/inputs from DOM for a given prefix.
-// Returns a plain object keyed by ability key.
-function readAbilitiesFromDOM(prefix) {
-  const result = {};
+// --- The card's DOM read ---
+// Everything below reads controls and nothing else: what the projection then does with the
+// values lives in `card_state.js`, which holds no DOM reference and is `data-scope="core"`.
+
+// Read one side's controls into a card state — one entry per control, nothing merged, both
+// engine families' fields present. What the controls hold, not what the derivation wants.
+function collectCardState(prefix) {
+  const el = id => document.getElementById(id);
+  // A card stat the derivation always needs: a card missing one is a broken page, not a default.
+  const required = suffix => {
+    const node = el(prefix + suffix);
+    if (!node) {
+      throw new Error(`collectCardState: the card for side '${prefix}' has no control `
+        + `'${prefix + suffix}'.`);
+    }
+    return node.value;
+  };
+  const optional = suffix => (el(prefix + suffix) || {}).value;
+
+  const abilities = {};
   for (const abil of abilityUiDefs()) {
     const val = getAbilityControlValue(prefix, abil);
     if (val === undefined) continue;
-    const calcKey = abil.calcKey || abil.key;
-    result[calcKey] = mergeAbilityCalcValue(abil, result[calcKey], val);
+    abilities[cardStateAbilityUiKey(abil)] = val;
   }
-  return result;
+
+  // The modern card's nine-value block. `on` is `null` for the entries whose def is not a
+  // numcheck: they carry no tick box, so their value always counts.
+  const modernSpecial = {};
+  for (const [key] of MODERN_SPECIAL_FIELDS) {
+    const input = el(prefix + 'Modern_' + key);
+    if (!input) continue;
+    const chk = el(prefix + 'Modern_' + key + '_on');
+    modernSpecial[key] = { on: chk ? chk.checked : null, value: parseInt(input.value, 10) || 0 };
+  }
+
+  // The DOS shared special byte and the flags naming which effects read it.
+  const magEl = el(prefix + 'DosSpecial');
+  const dosFlags = {};
+  for (const [key] of DOS_SPECIAL_CONSUMERS) {
+    const chk = el(prefix + 'DosFlag_' + key);
+    if (chk) dosFlags[key] = chk.checked;
+  }
+
+  return {
+    prefix,
+    abilities,
+    modernSpecial,
+    dosSpecial: {
+      magnitude: magEl ? (parseInt(magEl.value, 10) || 0) : undefined,
+      flags: dosFlags,
+    },
+    level: required('Level'),
+    weapon: required('Weapon'),
+    armor: required('Armor'),
+    figs: required('Figs'),
+    atk: required('Atk'),
+    rtb: required('Rtb'),
+    def: required('Def'),
+    res: required('Res'),
+    hp: required('HP'),
+    dmg: required('Dmg'),
+    toBlkMod: required('ToBlkMod'),
+    cityWalls: required('CityWalls'),
+    // The DOS shared slot's type select. Absent on a card that has none, which is what
+    // `cardStateSharedSlotRangedType` treats as no type stated.
+    rtbType: optional('RtbType'),
+    // The modern card's four channels, raw. The projection nulls the whole record for a DOS
+    // version and halts there on a field a modern version needs and the card does not carry.
+    modernAttacks: {
+      ranged: optional('ModernRanged'),
+      rangedType: optional('ModernRangedType'),
+      thrown: optional('ModernThrown'),
+      fireBreath: optional('ModernFireBreath'),
+      lightningBreath: optional('ModernLightningBreath'),
+    },
+    // Both To-Hit records; the projection states the version's.
+    toHitMod: optional('ToHitMod'),
+    toHitRtbMod: optional('ToHitRtbMod'),
+    hitChance: optional('HitChance'),
+    hitMelee: optional('HitMelee'),
+    hitRanged: optional('HitRanged'),
+    hitThrown: optional('HitThrown'),
+    hitBreath: optional('HitBreath'),
+    // One identity, already resolved between the roster record and the editable controls
+    // (`cardIdentity`, `ui_units.js`). A caller with no controls states the same field through
+    // `rosterCardIdentity`, `customCardIdentity` or `presetIdentity` (`card_state.js`).
+    identity: cardIdentity(prefix),
+    generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
+  };
 }
 
-// The DOS-shaped shared slot's type, as the derivation input wants it.
-//
-// In the DOS versions the `#*RtbType` select *is* that slot, and its value is the answer. In the
-// modern versions it is not a control at all: it is hidden, and the card's real projectile
-// statement is the Ranged record's own selector. Since the two engine families' vocabularies
-// diverged (`SPEC.md`, *Deliberate deviations*) the shared-slot select cannot even hold the modern
-// tokens, so a modern Ranged record typed `magic` or `magic_lightning` would reach the derivation
-// as the empty string — and the record-level reads that ask what projectile the unit carries,
-// Alumni of Academy among them, would see no type. Where the modern selector names a projectile
-// the shared slot cannot, that is the projection; a Thrown or Breath statement, which only the
-// shared-slot select carries on a modern card, still comes from it.
+// The battlefield-wide controls, plus the two per-side enchantments the opposing card reads.
+// `overrides` is the ranged-mode pair the ranged matrix and the ranged-check probes supply in
+// place of the page's own controls; both are globals, so this is where they land.
+function collectGlobals(overrides) {
+  const el = id => document.getElementById(id);
+  const overrideValues = overrides || {};
+  const perSide = { a: {}, b: {} };
+  for (const def of crossSideEnchantmentDefs()) {
+    for (const side of ['a', 'b']) {
+      perSide[side][def.key] = !!getAbilityControlValue(side, def);
+    }
+  }
+  return {
+    version: el('gameVersion').value,
+    nodeAura: el('nodeAura').value,
+    wallOfFire: !!el('wallOfFire').checked,
+    trueLight: !!el('trueLight').checked,
+    darkness: !!el('darkness').checked,
+    chaosSurge: el('chaosSurge').value,
+    rangedCheck: overrideValues.rangedCheck !== undefined
+      ? overrideValues.rangedCheck : !!el('rangedCheck').checked,
+    rangedDist: overrideValues.rangedDist !== undefined
+      ? overrideValues.rangedDist : el('rangedDist').value,
+    warpReality: !!el('warpReality').checked,
+    chaosConjunction: !!el('chaosConjunction').checked,
+    hurricane: !!el('hurricane').checked,
+    poxHost: !!el('poxHost').checked,
+    perSide,
+  };
+}
+
+// The shared slot's type for a side's live controls. The rule itself is
+// `cardStateSharedSlotRangedType`; this is the DOM caller the matrix still uses.
 function sharedSlotRangedType(prefix) {
-  const dosValue = (document.getElementById(prefix + 'RtbType') || {}).value;
-  if (!document.getElementById('gameVersion').value.startsWith('com2')) return dosValue;
-  const modernValue = (document.getElementById(prefix + 'ModernRangedType') || {}).value;
-  return (MODERN_RANGED_TYPES.includes(modernValue) && !DOS_RANGED_TYPES.includes(modernValue))
-    ? modernValue : dosValue;
+  return cardStateSharedSlotRangedType(
+    collectCardState(prefix), document.getElementById('gameVersion').value);
 }
 
 // The writer counterpart. A modern-only projectile token has no spelling in the shared-slot
@@ -40,111 +139,187 @@ function sharedSlotRangedType(prefix) {
 // restore boundary now rejects (`ui_state.js`, `assertRestoredValuesAreOffered`). The modern card
 // states those through its own selector, which the reader above prefers over this slot anyway. A
 // token neither family has is a caller error rather than something to write blank.
+//
+// Which token the slot ends up holding is `sharedSlotTypeForToken` (`card_state.js`), so this
+// writer and the pure roster statement resolve a projectile identically. What stays here is the
+// check that the rendered control really offers what the rule produced: the rule reads the
+// vocabulary constants `index.html`'s `<option>` list is built from, and a drift between the two
+// must be loud rather than leave a select holding a value it does not offer.
 function setSharedSlotRangedType(prefix, token, source) {
   const slot = document.getElementById(prefix + 'RtbType');
+  const resolved = sharedSlotTypeForToken(
+    token, document.getElementById('gameVersion').value, source);
   const offered = Array.from(slot.options).map(opt => opt.value);
-  if (offered.includes(token)) { slot.value = token; return; }
-  const modern = document.getElementById('gameVersion').value.startsWith('com2');
-  if (modern && MODERN_RANGED_TYPES.includes(token)) { slot.value = 'none'; return; }
-  throw new Error(
-    `${source}: attack type '${token}' names no type the shared slot offers (${offered.join(', ')})`
-    + (modern ? ` and none the modern selector offers (${MODERN_RANGED_TYPES.join(', ')}).` : '.'));
+  if (!offered.includes(resolved)) {
+    throw new Error(
+      `${source}: the shared slot resolves attack type '${token}' to '${resolved}', which #${prefix}`
+      + `RtbType does not offer (${offered.join(', ')}).`);
+  }
+  slot.value = resolved;
+}
+
+// The control each card-state scalar is held in. The card state's field names and the control ids
+// were spelled apart long before there was a card state, so the two vocabularies are related by
+// this table and nowhere else — which is what lets the writer below walk the *reader's* field lists
+// and halt on a field it has no control for.
+const CARD_CONTROL_SUFFIX = {
+  level: 'Level', weapon: 'Weapon', armor: 'Armor', figs: 'Figs', atk: 'Atk', rtb: 'Rtb',
+  def: 'Def', res: 'Res', hp: 'HP', dmg: 'Dmg', toBlkMod: 'ToBlkMod', cityWalls: 'CityWalls',
+  toHitMod: 'ToHitMod', toHitRtbMod: 'ToHitRtbMod', hitChance: 'HitChance', hitMelee: 'HitMelee',
+  hitRanged: 'HitRanged', hitThrown: 'HitThrown', hitBreath: 'HitBreath',
+};
+
+function cardControlSuffix(field) {
+  const suffix = CARD_CONTROL_SUFFIX[field];
+  if (!suffix) {
+    throw new Error(`cardControlSuffix: the card state field '${field}' names no card control. `
+      + 'A field the card state carries is a field the card writes, so either the control is '
+      + 'missing from CARD_CONTROL_SUFFIX or the field does not belong on the state.');
+  }
+  return suffix;
+}
+
+// The card's writer: the deliberate inverse of `collectCardState` above. Every control that read
+// states one field, and this writes that field back to it — so `collectCardState` after this is a
+// fixpoint over any state whose scalars are strings, which is what `applyRosterUnit` and
+// `presetToCardState` (`card_state.js`) both produce. Value decisions do not live here; this
+// function only moves them onto the page, which is what keeps the DOM path and the pure path from
+// computing different units.
+//
+// The two JS-side facts the reader takes from the page's own maps are written too, because
+// otherwise the round trip is lossy on exactly the fields F260.5 put on the state: the identity
+// (`unitIdentity`, which carries the template ids and the display name a `<select>` cannot hold)
+// and the roster `generic` flag (`unitBaseStats`). Writing the identity record from the state is
+// what drops `_preGolemElemArmor`, the page's undo buffer for the Elements control — see the
+// note in `card_state.js` at `presetToCardState`; the buffer is a memory of a previous selection
+// and a stated card has none.
+//
+// What does **not** round-trip, and why:
+//
+//  - **A non-string scalar.** `el.value = 5` reads back `'5'`. The fixpoint is over string-valued
+//    states by construction, not over every object shaped like one.
+//  - **A special-unit key the selected version disallows.** `setIdentityControls` clamps it to
+//    `none`, exactly as the selector does. `customCardIdentity` (`card_state.js`) applies the same
+//    clamp when a state is stated, so a state built by either producer is already clamped.
+//  - **An ability value whose control this build does not render.** The reader skips a missing
+//    control and so does the writer; the state keeps the key and the card never carries it.
+//  - **A `num` def holding `true`.** The writer stores `1`, which the reader returns as `1`.
+//    `presetAbilityValues` normalises fixture booleans, so no stated card state carries one.
+function writeCardStateToControls(prefix, state, source) {
+  const version = document.getElementById('gameVersion').value;
+  const set = (suffix, value) => {
+    const el = document.getElementById(prefix + suffix);
+    if (!el) {
+      throw new Error(`writeCardStateToControls: the card for side '${prefix}' has no control `
+        + `'${prefix + suffix}' (${source}).`);
+    }
+    el.value = value;
+  };
+  // A control the card may not carry at all — the reader reads it with `optional`, so the writer
+  // skips it rather than halting.
+  const setOptional = (suffix, value) => {
+    const el = document.getElementById(prefix + suffix);
+    if (el) el.value = value;
+  };
+
+  // Identity first: the option list the special-unit selector offers is version-scoped and has to
+  // exist before the value is written, and the legacy compact token is derived from the record.
+  setCardStateIdentityRecord(prefix, state.identity, version);
+  // Before any ability row is written, because what it remembers is the Elements value this write
+  // is about to replace.
+  setCardStateGolemMemory(prefix, state.identity, version);
+  populateSpecialUnitOptions(prefix, version, state.identity.specialUnit);
+  setIdentityControls(prefix, state.identity);
+  syncLegacyUnitTypeControl(prefix, legacyUnitTypeFromIdentity(unitIdentity[prefix]));
+  unitBaseStats[prefix] = { generic: !!state.generic };
+
+  // Driven by the reader's own field lists (`card_state.js`) rather than by a second list of the
+  // same fields: a field added to `REQUIRED_CARD_STATE_FIELDS` that this writer has no control for
+  // halts here, instead of round-tripping to whatever the control happened to hold.
+  for (const field of REQUIRED_CARD_STATE_FIELDS) set(cardControlSuffix(field), state[field]);
+  for (const field of [...DOS_TO_HIT_FIELDS, ...MODERN_TO_HIT_FIELDS]) {
+    setOptional(cardControlSuffix(field), state[field]);
+  }
+
+  setSharedSlotRangedType(prefix, state.rtbType, source);
+  const attacks = state.modernAttacks || {};
+  set('ModernRanged', attacks.ranged);
+  set('ModernThrown', attacks.thrown);
+  set('ModernFireBreath', attacks.fireBreath);
+  set('ModernLightningBreath', attacks.lightningBreath);
+  const type = document.getElementById(prefix + 'ModernRangedType');
+  const offered = Array.from(type.options).map(opt => opt.value);
+  if (!offered.includes(attacks.rangedType)) {
+    throw new TypeError(
+      `${source}: the modern Ranged channel states projectile type `
+      + `${JSON.stringify(attacks.rangedType)}, which names no type #${prefix}ModernRangedType `
+      + `offers (${offered.join(', ')}).`);
+  }
+  type.value = attacks.rangedType;
+
+  // Every ability row the state carries, innate and enchantment alike. `applyRosterUnit` carries
+  // the enchantment rows through from the state it was given, so a roster statement writes them
+  // back unchanged; a preset states them itself.
+  for (const abil of abilityUiDefs()) {
+    setAbilityControlValue(prefix, abil, state.abilities[cardStateAbilityUiKey(abil)]);
+  }
+  // Both blocks are written from the state rather than re-derived off the controls. The modern
+  // one is a mirror of the ability rows, but of the rows **before** the DOS write-back: the card
+  // performs the mirror between the two DOS steps, so in a DOS version the modern block holds the
+  // record's parsed consumer values and not the shared magnitude the ability rows end up with.
+  // That is what `applyRosterUnit` states, and the difference is invisible to the derivation
+  // because `cardStateModernSpecialValues` reads the block only in the modern versions, where
+  // there is no write-back at all.
+  writeModernSpecialCard(prefix, state.modernSpecial);
+  writeDosSpecialCard(prefix, state.dosSpecial);
+}
+
+// The battlefield-wide writer: the inverse of `collectGlobals`, minus the two fields no control of
+// its own holds. `version` is the version selector, which a caller writes before anything else
+// because the whole page is rebuilt around it; `perSide` is Eternal Night and Eye of Heaven, which
+// are ability rows on the owning side's panel and are therefore written by
+// `writeCardStateToControls`.
+function writeGlobalsToControls(globals) {
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (!el) throw new Error(`writeGlobalsToControls: the page has no control '${id}'.`);
+    if (el.type === 'checkbox') el.checked = !!value; else el.value = value;
+  };
+  // The reader's own list, so a global added to `REQUIRED_GLOBAL_FIELDS` reaches its control
+  // without a second list being updated in step. Every id there is the control's id.
+  for (const field of REQUIRED_GLOBAL_FIELDS) {
+    if (field === 'version') continue;
+    set(field, globals[field]);
+  }
 }
 
 // Read DOM inputs and compute all effective stats for a unit.
 // Returns a stat object suitable for both display and resolveCombat.
-function readUnitStats(prefix, overrides) {
-  const el = id => document.getElementById(id);
-  const enemyPrefix = prefix === 'a' ? 'b' : 'a';
-  const enemyEternalNightEl = el(enemyPrefix + 'Abil_eternalNight');
-  const enemyEyeOfHeavenEl = el(enemyPrefix + 'Abil_eyeOfHeaven');
-  const overrideValues = overrides || {};
-  const identity = unitIdentityForDerivation(prefix, el('gameVersion').value);
-  return deriveUnitStats({
-    prefix,
-    version: el('gameVersion').value,
-    abilities: { ...readAbilitiesFromDOM(prefix), ...modernSpecialValues(prefix), ...dosSpecialValues(prefix) },
-    identity,
-    name: (unitIdentity[prefix] || {}).name,
-    level: el(prefix + 'Level').value,
-    weapon: el(prefix + 'Weapon').value,
-    armor: el(prefix + 'Armor').value,
-    rtbType: sharedSlotRangedType(prefix),
-    figs: el(prefix + 'Figs').value,
-    atk: el(prefix + 'Atk').value,
-    rtb: el(prefix + 'Rtb').value,
-    modernAttacks: modernCardAttacks(prefix),
-    def: el(prefix + 'Def').value,
-    res: el(prefix + 'Res').value,
-    hp: el(prefix + 'HP').value,
-    dmg: el(prefix + 'Dmg').value,
-    // The card exposes only aggregate starting damage. Category/bonus state starts at
-    // zero, remains exact internally during combat, and is reported as output.
-    irrecoverableDamage: 0,
-    undeadDamage: 0,
-    baseBonusHp: 0,
-    noHealing: false,
-    // The card states the To Hit record its version has, and only that one: the DOS melee /
-    // shared-secondary pair, or the modern common `hitchance` plus its four channel modifiers.
-    ...(el('gameVersion').value.startsWith('com2') ? {
-      hitChance: el(prefix + 'HitChance').value,
-      hitMelee: el(prefix + 'HitMelee').value,
-      hitRanged: el(prefix + 'HitRanged').value,
-      hitThrown: el(prefix + 'HitThrown').value,
-      hitBreath: el(prefix + 'HitBreath').value,
-    } : {
-      toHitMod: el(prefix + 'ToHitMod').value,
-      toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
-    }),
-    toBlkMod: el(prefix + 'ToBlkMod').value,
-    cityWalls: el(prefix + 'CityWalls').value,
-    nodeAura: el('nodeAura').value,
-    wallOfFire: !!el('wallOfFire').checked,
-    trueLight: !!el('trueLight').checked,
-    darkness: !!el('darkness').checked,
-    enemyEternalNight: !!(enemyEternalNightEl && enemyEternalNightEl.checked),
-    enemyEyeOfHeaven: !!(enemyEyeOfHeavenEl && enemyEyeOfHeavenEl.checked),
-    chaosSurge: el('chaosSurge').value,
-    rangedCheck: overrideValues.rangedCheck !== undefined ? overrideValues.rangedCheck : !!el('rangedCheck').checked,
-    rangedDist: overrideValues.rangedDist !== undefined ? overrideValues.rangedDist : el('rangedDist').value,
-    warpReality: !!el('warpReality').checked,
-    hurricane: !!el('hurricane').checked,
-    poxHost: !!el('poxHost').checked,
-    generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
-  });
-}
-
-// Does this derived record carry a conventional ranged attack? One question with three askers —
-// the ranged-mode control, the ranged matrix's attacker filter and the guard at resolution
-// (`SPEC.md`, UI contract) — so it is derived once, here, beside the record's other card-level
-// reads.
 //
-// The two engine families keep the answer in different fields, and which family a record belongs
-// to is readable off the record itself: `deriveUnitStats` halts on a modern input that supplies no
-// `modernAttacks`, so a derived record carries the four channels exactly when its version is a
-// modern one. Modern reads the Ranged channel; DOS reads the shared slot, which is a conventional
-// ranged attack only while its type says so, because the same byte also carries the gazes.
-function hasConventionalRangedAttack(stats) {
-  return stats.modernAttacks
-    ? !!(stats.modernAttacks.ranged && stats.modernAttacks.ranged.strength > 0)
-    : stats.rangedType !== 'none' && stats.rtb > 0;
+// Two steps with one home each: `collectCardState`/`collectGlobals` read the controls, and
+// `cardStateToDerivationInput` (`card_state.js`, `data-scope="core"`) turns what they hold into
+// the derivation's input. Production runs that projection, so a caller that builds a card state
+// without controls reaches the same one rather than a second translation beside it.
+function readUnitStats(prefix, overrides) {
+  return deriveUnitStats(
+    cardStateToDerivationInput(collectCardState(prefix), collectGlobals(overrides)));
 }
 
-const MODERN_SPECIAL_FIELDS = [
-  ['stoningGaze', 'Stoning Gaze'], ['deathGaze', 'Death Gaze'], ['doomGaze', 'Doom Gaze'],
-  ['stoningTouch', 'Stoning Touch'], ['deathTouch', 'Death Touch'], ['lifeSteal', 'Life Steal'],
-  ['poison', 'Poison Touch'], ['exorcise', 'Exorcise'], ['destruction', 'Destruction'],
-];
+// `hasConventionalRangedAttack` moved to `card_state.js` (`data-scope="core"`) with the preset
+// applier, which is a fourth asker and may not reach a page symbol.
 
-// null (absent) and 0 (present, save modifier −0) are different states for the numcheck
-// entries — the engine tests `!= null` — so an unchecked box must read back as null, not 0.
-function modernSpecialValues(prefix) {
-  if (!document.getElementById('gameVersion').value.startsWith('com2')) return {};
-  return Object.fromEntries(MODERN_SPECIAL_FIELDS.map(([key]) => {
-    const chk = document.getElementById(prefix + 'Modern_' + key + '_on');
-    if (chk && !chk.checked) return [key, null];
-    return [key, parseInt(document.getElementById(prefix + 'Modern_' + key).value, 10) || 0];
-  }));
+// The writer for a modern block a caller already decided — the roster path's, computed by
+// `applyRosterUnit`. `syncModernSpecialCard` below is the same write with the block taken off the
+// ability rows instead.
+function writeModernSpecialCard(prefix, block) {
+  for (const [key] of MODERN_SPECIAL_FIELDS) {
+    const entry = (block || {})[key];
+    if (!entry) continue;
+    const target = document.getElementById(prefix + 'Modern_' + key);
+    if (target) target.value = entry.value;
+    const targetChk = document.getElementById(prefix + 'Modern_' + key + '_on');
+    if (targetChk && entry.on !== null) targetChk.checked = entry.on;
+  }
 }
 
 // The ability control stays the stored state (unit rosters, presets and state restore all
@@ -229,97 +404,79 @@ function buildModernSpecialCard(prefix) {
 // Card -> ability controls. Each ticked consumer takes the shared magnitude with its own
 // sign; an unticked one reverts to the def's absent value, which for a numcheck is null
 // rather than 0 because the engine distinguishes the two.
+// The rule is `dosSpecialAbilityWriteback` (`card_state.js`); this reads the block off the card's
+// own controls and writes the result onto the ability rows.
 function syncDosSpecialAbilities(prefix) {
-  const magEl = document.getElementById(prefix + 'DosSpecial');
-  if (!magEl) return;
-  const magnitude = Math.abs(parseInt(magEl.value, 10) || 0);
-  for (const [key, , sign] of DOS_SPECIAL_CONSUMERS) {
+  const block = dosSpecialCardBlock(prefix);
+  if (!block) return;
+  const values = dosSpecialAbilityWriteback({}, block, `#${prefix}DosSpecial`);
+  for (const [key] of DOS_SPECIAL_CONSUMERS) {
     const def = abilityDefByKey(key);
-    const chk = document.getElementById(prefix + 'DosFlag_' + key);
-    if (!def || !chk) continue;
-    setAbilityControlValue(prefix, def,
-      chk.checked ? sign * magnitude : (def.type === 'numcheck' ? null : 0));
+    if (!def || !document.getElementById(prefix + 'DosFlag_' + key)) continue;
+    setAbilityControlValue(prefix, def, values[key]);
   }
+}
+
+// The DOS block as the card's own controls hold it: the shared magnitude and the consumer flags.
+// `null` where the card has no such block at all.
+function dosSpecialCardBlock(prefix) {
+  const magEl = document.getElementById(prefix + 'DosSpecial');
+  if (!magEl) return null;
+  const flags = {};
+  for (const [key] of DOS_SPECIAL_CONSUMERS) {
+    const chk = document.getElementById(prefix + 'DosFlag_' + key);
+    if (chk) flags[key] = chk.checked;
+  }
+  return { magnitude: Math.abs(parseInt(magEl.value, 10) || 0), flags };
+}
+
+// The writer for a DOS block a caller already decided — the roster path's, computed by
+// `applyRosterUnit`. `syncDosSpecialCard` below is the same write with the block read off the
+// ability rows instead.
+function writeDosSpecialCard(prefix, block) {
+  const magEl = document.getElementById(prefix + 'DosSpecial');
+  if (!magEl || !block) return;
+  for (const [key] of DOS_SPECIAL_CONSUMERS) {
+    const chk = document.getElementById(prefix + 'DosFlag_' + key);
+    if (chk && block.flags[key] !== undefined) chk.checked = block.flags[key];
+  }
+  magEl.value = block.magnitude;
 }
 
 // Ability controls -> card, for presets and state restore, which describe the DOS special
 // values by ability key and so are the only remaining places a magnitude has to be recovered
 // from them. `byte` is the roster path: the record states `Spec_Att_Attrib` directly, so the
 // flags come from the tokens but the magnitude never does.
+// The rule — which flags are ticked, and where the magnitude comes from when the caller states no
+// byte — is `cardStateDosSpecialBlock` (`card_state.js`); this reads the ability rows it works
+// from and writes the block it produces.
 function syncDosSpecialCard(prefix, byte) {
-  const magEl = document.getElementById(prefix + 'DosSpecial');
-  if (!magEl) return;
-  let magnitude = byte == null ? null : Math.abs(byte);
-  for (const [key] of DOS_SPECIAL_CONSUMERS) {
+  if (!document.getElementById(prefix + 'DosSpecial')) return;
+  const values = {};
+  for (const key of [...DOS_SPECIAL_CONSUMERS.map(([consumer]) => consumer), ...DOS_GAZE_KEYS]) {
     const def = abilityDefByKey(key);
-    const chk = document.getElementById(prefix + 'DosFlag_' + key);
-    if (!def || !chk) continue;
+    if (!def) continue;
     const val = getAbilityControlValue(prefix, def);
-    const active = abilityValueIsActive(def, val);
-    chk.checked = active;
-    if (active && magnitude === null) magnitude = Math.abs(val || 0);
+    if (val !== undefined) values[key] = val;
   }
-  // The gazes carry no flag but do carry the byte, so a gaze-only unit — Basilisk, and every
-  // gaze preset — must still seed the magnitude from them.
-  if (magnitude === null) {
-    for (const key of DOS_GAZE_KEYS) {
-      const def = abilityDefByKey(key);
-      if (!def) continue;
-      const val = getAbilityControlValue(prefix, def);
-      if (abilityValueIsActive(def, val)) { magnitude = Math.abs(val || 0); break; }
-    }
-  }
-  // Nothing sourced it: reset rather than keep the previous unit's byte. Leaving it would let
-  // one roster pick or preset leak a save modifier into the next.
-  magEl.value = magnitude === null ? 0 : magnitude;
+  writeDosSpecialCard(prefix, cardStateDosSpecialBlock(values, byte));
 }
 
-// What the enchantment section supplies for a calc key. The block above is what this unit
-// *provides*, this is what it *receives*; which controls count is a UI fact, and how the two
-// combine is `mergeAbilityCalcValue`'s cited rule.
-function dosReceivedValue(prefix, calcKey) {
-  let out;
-  for (const def of abilityUiDefs()) {
-    if (def.source !== 'enchantment' || def.calcKey !== calcKey) continue;
-    out = mergeAbilityCalcValue(def, out, getAbilityControlValue(prefix, def));
-  }
-  return out;
-}
-
-// The DOS read side, marshalled only: control state in, `dosSpecialAbilityValues` decides.
-// Consumer values come from the one byte and its flags rather than from the per-effect ability
-// controls, so the record's contention holds however the state was reached — roster, preset,
-// share link or hand edit. The DOS rosters no longer carry a per-effect magnitude at all; the
-// ability controls survive only as the presets' and share links' way of naming these values,
-// and the card overwrites them on load.
+// The DOS read side for a side's live controls. Consumer values come from the one byte and its
+// flags rather than from the per-effect ability controls, so the record's contention holds
+// however the state was reached — roster, preset, share link or hand edit. The DOS rosters no
+// longer carry a per-effect magnitude at all; the ability controls survive only as the presets'
+// and share links' way of naming these values, and the card overwrites them on load.
 // `withReceived` is false on the matrix path, where the received side comes from matrix state
 // and is overlaid after this, not from the enchantment controls.
 // Dispel Evil, CoM 1 Exorcise, and Destruction are deliberately absent from the consumer list:
-// their modifiers are literals, so they stay ordinary ability rows that
-// `readAbilitiesFromDOM` supplies.
+// their modifiers are literals, so they stay ordinary ability rows that the card state's
+// `calcKey` merge supplies.
+// The marshalling rule itself is `cardStateDosSpecialValues` (`card_state.js`); this is the DOM
+// caller the matrix still uses.
 function dosSpecialValues(prefix, withReceived = true) {
-  const version = document.getElementById('gameVersion').value;
-  if (!dosSpecialIsActive(version)) return {};
-  const magEl = document.getElementById(prefix + 'DosSpecial');
-  if (!magEl) return {};
-  const consumers = [];
-  for (const [key, , sign] of DOS_SPECIAL_CONSUMERS) {
-    const def = abilityDefByKey(key);
-    const chk = document.getElementById(prefix + 'DosFlag_' + key);
-    if (!def || !chk) continue;
-    consumers.push({
-      def,
-      sign,
-      checked: chk.checked,
-      received: withReceived ? dosReceivedValue(prefix, def.calcKey || def.key) : undefined,
-    });
-  }
-  return dosSpecialAbilityValues({
-    version,
-    magnitude: parseInt(magEl.value, 10) || 0,
-    rangedType: sharedSlotRangedType(prefix),
-    consumers,
-  });
+  return cardStateDosSpecialValues(
+    collectCardState(prefix), document.getElementById('gameVersion').value, withReceived);
 }
 
 // Mirror of updateModernSpecialDuplicates: in the DOS versions these values are on the card,

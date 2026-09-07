@@ -235,8 +235,6 @@ function run() {
       : fs.readFileSync(path.join(repoRoot, ...file.split('/')), 'utf8');
     vm.runInContext(source, context, { filename: file });
   }
-  vm.runInContext(fs.readFileSync(path.join(repoRoot, 'Calculator', 'ui_abilities.js'), 'utf8'),
-    context, { filename: 'Calculator/ui_abilities.js' });
   const read = expression => vm.runInContext(expression, context);
   const deriveUnitStats = read('deriveUnitStats');
   const resolveCombat = read('resolveCombat');

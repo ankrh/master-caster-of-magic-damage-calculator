@@ -81,5 +81,9 @@
       "Bash(node -e ' *)",
       "Read(//tmp/**)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "playwright"
+  ],
+  "enableAllProjectMcpServers": true
 }

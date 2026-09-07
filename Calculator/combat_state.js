@@ -238,6 +238,185 @@ function jointCombatHealingStateMeans(joint, side, unit, meanDamageTaken = 0) {
   return means;
 }
 
+// --- The categories as distributions ----------------------------------------------------------
+//
+// `jointCombatHealingStateMeans` above publishes the *means* the card's composition panel renders.
+// The preset corpus asserts four of those quantities as well (F268.7), and an assertion wants a
+// second moment, which a mean cannot supply — so the same per-path record is also read here as a
+// distribution. The two readings are separate walks of one joint, and the preset runners pin them
+// equal on every fixture (`tools/preset_evaluation.js`) rather than trusting that they agree.
+//
+// **`regularDamage` is one of them, and the first version of this list left it out.** The reasoning
+// for leaving it out was that it is the residue of the other two against the record's total, so a
+// change to it would move `undeadDamage` or `irreversibleDamage` in the same cell. That reasoning
+// was checked by mutating the *other two* and never by mutating regular damage itself, and it is
+// false: the DOS record **stores** its regular byte rather than deriving it, and the front-figure
+// and current-figure arithmetic below consumes the full damage sum regardless — so dropping the
+// regular booking in `applyOutcomeDamageToState` moves 161 fixture-sides while leaving remaining HP,
+// both totals and both spreads exactly where they were (F268.7 GPT review, finding 1, reproduced).
+// The four other quantities are certainly zero in an exchange that books nothing to them; regular
+// damage is the bucket everything else falls into, so its default is the total rather than zero,
+// and `jointCombatHealingCategoryDists` supplies that default explicitly.
+const COMBAT_CATEGORY_KEYS = ['regularDamage', 'undeadDamage', 'irreversibleDamage',
+  'extraHits', 'healedDamage'];
+
+// The four whose value is certainly zero when nothing books to them. `regularDamage` is not among
+// them and never takes the deterministic default alone.
+const COMBAT_CATEGORY_ZERO_DEFAULT_KEYS = COMBAT_CATEGORY_KEYS.filter(
+  key => key !== 'regularDamage');
+
+// The same distribution with every outcome moved up by a fixed whole number of points. Used for the
+// one quantity whose untracked default is not zero.
+function shiftDistBy(dist, offset, where) {
+  if (!Array.isArray(dist)) {
+    throw new Error(`shiftDistBy: ${where} was handed ${JSON.stringify(dist)}, which is not the `
+      + 'array a damage distribution is.');
+  }
+  if (!Number.isInteger(offset) || offset < 0) {
+    throw new Error(`shiftDistBy: ${where} was handed an offset of ${String(offset)}, which is not `
+      + 'a whole number at or above zero.');
+  }
+  if (offset === 0) return dist.slice();
+  const shifted = new Array(dist.length + offset).fill(0);
+  for (let value = 0; value < dist.length; value++) shifted[value + offset] = dist[value];
+  return shifted;
+}
+
+// Healing accumulated along a path or an outcome, validated *before* anything defaults or clamps
+// it. `Math.max(0, value || 0)` was the first version and it is not a read, it is a repair: a
+// negative healing amount, a `NaN` from an arithmetic slip upstream, or a string all became a
+// clean 0, which the corpus then compared against an absent pair and passed (F268.7 GPT review,
+// finding 3). Only a genuinely missing value defaults; anything else present and wrong halts.
+function healedDamageOf(carrier, key, where) {
+  const value = carrier[key];
+  if (value === undefined || value === null) return 0;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    throw new Error(`healedDamageOf: ${where} carries ${key} = ${String(value)}, which is not a `
+      + 'whole number of hit points at or above zero. Healing is accumulated in whole points, so '
+      + 'a fractional, negative or non-numeric one is an upstream arithmetic fault and is not '
+      + 'quietly read as "healed nothing".');
+  }
+  return value;
+}
+
+// A quantity that is certain: the record stands where the unit entered, with probability 1. The
+// values come off a normalized combat-healing record, so they are whole points; a fractional one
+// means a *mean* has been handed to a function whose whole job is to say "this value is certain",
+// and the run stops rather than publish a distribution over a number nobody computed.
+function deterministicCombatCategoryDists(values, where) {
+  const dists = {};
+  for (const key of COMBAT_CATEGORY_KEYS) {
+    const value = values[key] === undefined ? 0 : values[key];
+    if (!Number.isInteger(value) || value < 0) {
+      throw new Error(`deterministicCombatCategoryDists: ${where} states ${key} = ${String(value)}`
+        + ', which is not a whole number at or above zero. A combat-healing record holds whole '
+        + 'points, so a fractional one is a mean that has been mistaken for a certainty.');
+    }
+    const dist = new Array(value + 1).fill(0);
+    dist[value] = 1;
+    dists[key] = dist;
+  }
+  return dists;
+}
+
+function combatCategoryDistsFromWeights(weights, where) {
+  const dists = {};
+  for (const key of COMBAT_CATEGORY_KEYS) {
+    const buckets = weights[key];
+    let max = 0;
+    for (const value of buckets.keys()) {
+      if (!Number.isInteger(value) || value < 0) {
+        throw new Error(`combatCategoryDistsFromWeights: ${where} reached ${key} = `
+          + `${String(value)}, which is not a whole number at or above zero.`);
+      }
+      if (value > max) max = value;
+    }
+    const dist = new Array(max + 1).fill(0);
+    for (const [value, probability] of buckets) dist[value] += probability;
+    dists[key] = dist;
+  }
+  return dists;
+}
+
+// The four quantities over the joint, for one side. Mirrors `jointCombatHealingStateMeans`'
+// traversal exactly, including its fallback: an exchange whose riders can write no non-regular
+// category and do no healing carries no per-path record at all, and in that case all four stand
+// certainly at the values the unit entered with — which is zero for every one of them on a card
+// that exposes no non-regular starting damage (`CLAUDE.md`, *Deliberate deviations*).
+// `totalDist` is the exchange's published damage distribution for this side, and it is only read
+// when the joint carries no per-path record: with no rider able to book a non-regular category,
+// every point of damage the side took is regular damage, standing on top of whatever regular damage
+// it entered with. That is the same quantity `jointCombatHealingStateMeans` reports in the same
+// case (`initial.regularDamage + meanDamageTaken`), here as a distribution rather than as its mean.
+function jointCombatHealingCategoryDists(joint, side, unit, totalDist) {
+  if (!joint.healingPaths) {
+    const initial = initialCombatHealingStateMeans(unit);
+    const dists = deterministicCombatCategoryDists(
+      { ...initial, regularDamage: 0, healedDamage: 0 },
+      `the exchange for side '${side}', which tracks no per-path healing record,`);
+    dists.regularDamage = shiftDistBy(totalDist, initial.regularDamage,
+      `the untracked regular damage for side '${side}'`);
+    return dists;
+  }
+  const weights = {};
+  for (const key of COMBAT_CATEGORY_KEYS) weights[key] = new Map();
+  const add = (key, value, probability) => {
+    weights[key].set(value, (weights[key].get(value) || 0) + probability);
+  };
+  for (const row of joint) {
+    for (const cell of row) {
+      for (const path of cell.values()) {
+        const metrics = combatHealingStateMetrics(path[side + 'State']);
+        add('regularDamage', metrics.regularDamage, path.probability);
+        add('undeadDamage', metrics.undeadDamage, path.probability);
+        add('irreversibleDamage', metrics.irreversibleDamage, path.probability);
+        add('extraHits', metrics.extraHits, path.probability);
+        add('healedDamage', healedDamageOf(path, side + 'HealedDamage',
+          `a joint path for side '${side}'`), path.probability);
+      }
+    }
+  }
+  return combatCategoryDistsFromWeights(weights, `the joint for side '${side}'`);
+}
+
+// The volley's twin of the above, over the outcome list a ranged exchange resolves through instead
+// of a joint. The target heals nothing here — an outcome carries the *source*'s healing — so its
+// `healedDamage` is a certain zero rather than an omission.
+function rangedCombatHealingCategoryDists(outcomes, sourceUnit, targetUnit) {
+  const sourceWeights = {};
+  const targetWeights = {};
+  for (const key of COMBAT_CATEGORY_KEYS) {
+    sourceWeights[key] = new Map();
+    targetWeights[key] = new Map();
+  }
+  const sourceInitial = combatHealStateFromUnit(sourceUnit);
+  const targetInitial = combatHealStateFromUnit(targetUnit);
+  const add = (bucketSet, key, value, probability) => {
+    bucketSet[key].set(value, (bucketSet[key].get(value) || 0) + probability);
+  };
+  for (const outcome of outcomes || []) {
+    const probability = outcome.probability || 0;
+    const sourceMetrics = combatHealingStateMetrics(outcome.state || sourceInitial);
+    const targetMetrics = combatHealingStateMetrics(
+      applyOutcomeDamageToState(targetInitial, outcome));
+    add(sourceWeights, 'regularDamage', sourceMetrics.regularDamage, probability);
+    add(sourceWeights, 'undeadDamage', sourceMetrics.undeadDamage, probability);
+    add(sourceWeights, 'irreversibleDamage', sourceMetrics.irreversibleDamage, probability);
+    add(sourceWeights, 'extraHits', sourceMetrics.extraHits, probability);
+    add(sourceWeights, 'healedDamage',
+      healedDamageOf(outcome, 'healedDamage', "a ranged volley's source outcome"), probability);
+    add(targetWeights, 'regularDamage', targetMetrics.regularDamage, probability);
+    add(targetWeights, 'undeadDamage', targetMetrics.undeadDamage, probability);
+    add(targetWeights, 'irreversibleDamage', targetMetrics.irreversibleDamage, probability);
+    add(targetWeights, 'extraHits', targetMetrics.extraHits, probability);
+    add(targetWeights, 'healedDamage', 0, probability);
+  }
+  return {
+    sourceDists: combatCategoryDistsFromWeights(sourceWeights, 'the ranged volley\'s source'),
+    targetDists: combatCategoryDistsFromWeights(targetWeights, 'the ranged volley\'s target'),
+  };
+}
+
 function rangedCombatHealingStateMeans(outcomes, sourceUnit, targetUnit) {
   const sourceMeans = { irreversibleDamage: 0, undeadDamage: 0, regularDamage: 0,
     extraHits: 0 };

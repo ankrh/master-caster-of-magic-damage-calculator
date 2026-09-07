@@ -8,7 +8,7 @@
 |---|---|---|
 | `CLAUDE.md` | CONTRACT | Agents propose changes via `PROPOSALS.md`; they do not edit it. |
 | `TASKS.md` | TASKS | Items are added only on explicit approval in conversation. Deleted freely. |
-| `TESTS.md` | registry | Agents maintain it. Adding or deleting a `scaffolding` suite is free; promoting one to `spec` or `regression` requires a proposal. |
+| `TESTS.md` | CONTRACT | The list of permanent suites. Agents propose changes via `PROPOSALS.md`; they do not add, delete or rename entries. The rules are in the global CLAUDE.md and are not restated here. |
 | `JOURNAL.md` | JOURNAL | Written and pruned freely. Never authoritative, and never cited as justification for a decision. |
 | `PROPOSALS.md` | channel | Agents append entries. Only the user merges, edits or deletes them. |
 | `Reference docs/**` | reference | Agents write freely. Evidence files, source transcriptions and the style guides. Not binding: a claim here is re-verified against the binaries or scripts rather than cited as authority. |
@@ -45,13 +45,13 @@ constants, and Warlord scripts may add to or overwrite the result.
 
 Every `TASKS.md` item is executed under this protocol, including items that move no numbers.
 
-By default, task items should be executed in a collaboration between a Claude agent and a GPT agent. The preferred agents are Claude Opus 5 on High effort and GPT 5.6 Sol on High reasoning.
+By default, task items should be executed in a collaboration between a Claude agent and a GPT agent. The preferred agents are Claude Opus 5 on High effort and GPT-6 Astra on medium reasoning.
 
 A Claude agent launches a GPT reviewer or derivation agent through the global
 `~/.claude/tools/codex_agent.py`, never by typing `codex exec` directly:
 
 ```
-python ~/.claude/tools/codex_agent.py --model gpt-5.6-sol --prompt <prompt file> --out .reviews/<PACKAGE>.review-of-Claude.md
+python ~/.claude/tools/codex_agent.py --model gpt-6-astra --reasoning-effort medium --prompt <prompt file> --out .reviews/<PACKAGE>.review-of-Claude.md
 ```
 
 By default, tasks should be executed according to method A. Tasks that involve source code reconstruction from the game binaries must be performed with method B. The methods run per subtask, not per item.
@@ -97,10 +97,15 @@ Perform the task implementation using the current agent, then launch another age
 
 Then revise the work according to the feedback provided. One review round is sufficient.
 
+Suite count is a cost, and the prompt given to the reviewer says so. A reviewer's "add a test here"
+is acted on only where the claim is genuinely uncovered and cannot enter as a preset fixture.
+Folding the check into an existing suite, or deleting a suite the finding shows to be redundant, is
+an equally valid response to a review finding.
+
 ### Method B:
 The current (main) agent prepares the reconstruction task and makes sure the number of instructions is no more than 1200. Otherwise, it splits the task into subunits and only proceeds with reconstructing the first subunit.
 
-Then the main agent will launch one Claude agent and one GPT agent to each perform an independent derivation of the source code, each with write access to its own derivation file; the GPT side goes through `~/.claude/tools/codex_agent.py --model gpt-5.6-sol --write`. The reciprocal-review round resumes the GPT session with `--resume <session-id>`; the tool prints the session id on success.
+Then the main agent will launch one Claude agent and one GPT agent to each perform an independent derivation of the source code, each with write access to its own derivation file; the GPT side goes through `~/.claude/tools/codex_agent.py --model gpt-6-astra --reasoning-effort medium --write`. The reciprocal-review round resumes the GPT session with `--resume <session-id>`; the tool prints the session id on success.
 
 Once both subagents have returned, it tells each agent using resumed sessions (`codex exec resume <session-id>`) to review the other agent's work and write the review into a review file. When both agents have done so, the main agent tells the agents to revise their own work according to the other agent's review. Finally, the main agent will merge the two revised derivations into a final reconstruction.
 
@@ -118,6 +123,12 @@ The revision round's inputs are the agent's own derivation, the other agent's re
 | Merged evidence, CASTER.EXE | `Reference docs/Caster binary/<PACKAGE>.evidence.md` | Main agent |
 
 After the finished implementation, the reconstructed code should be visualized in an artifact with graphical layout showing function calls and other explanatory text.
+
+### Which test suite a task runs
+
+Playwright is retired for non-UI testing. A task that changes page code runs `npm run test:all`;
+every other task runs the Node default, `npm test`, and nothing else. `TESTS.md` is the single home
+for where that boundary falls and for what the Node default cannot see.
 
 ## Version control
 
@@ -138,6 +149,26 @@ INV-5. **No console errors** during normal interaction.
 INV-6. **State round-trip.** Serialize → load → serialize is a fixpoint, and Reset yields the state a
    fresh page has.
 
+## Retiring a test
+
+A claim is retired by showing the corpus catches it, and the probe is the part that goes wrong.
+Reproducing the original bug is not enough: it establishes only that the fixtures see the defect
+that was already found. Probe the rule's **ordinary case**, and at a size the surviving fixtures do
+not share.
+
+Both halves are empirical, from F268 (2026-09-07), and both were caught by review after the
+deletion had been made:
+
+- A rule can be caught in three mutations and still be blind in the middle. Every fixture reaching
+  the modern to-block split rolls its first 15 dice at 100%, so applying the split only where the
+  chance is already 1 moves the mean over 20 dice from 10.5 to 12 with the whole tree green.
+- Two fixtures agreeing on a value is not two witnesses. Both fixtures behind Wild Game's ranged
+  `+1` state strength 5, where `+= trunc(strength / 5)` agrees with the flat `+1`, and diverges at
+  strength 2.
+
+Losing coverage is allowed. Losing it silently is not: a pass that retires a claim names it, and
+names the check now carrying it.
+
 ## Deliberate deviations
 
 <!-- Knowing departures from the thing modelled. A deviation not listed here is a defect, not a design. -->
@@ -153,6 +184,13 @@ At a fork between a binary-faithful implementation and one that is not, the fait
 
 <!-- The shape of the code and why it has that shape. Structure, not a tour of the modules. -->
 Fail-loud on out-of-range values. Halt with an error naming the offending value, the record or file it came from, and the set that was expected.
+
+Fail-loud is a code-design principle, verified by inspection. Individual halt sites are not each a
+test; what the rule exists to prevent is unjustified clamping or defaulting of values.
+
+A new numeric claim enters as preset fixtures. A new test file is written only where the claim
+cannot be a fixture: page-layer behaviour, layout, or console errors. A reproduced game bug and a
+named deliberate deviation are each carried by fixtures, not by a suite of their own.
 
 The calculator is a single static page. No build step, no bundler, no framework, no runtime dependencies: every source loads through a plain `<script src>` tag in `index.html`. A fan with no toolchain can open it.
 

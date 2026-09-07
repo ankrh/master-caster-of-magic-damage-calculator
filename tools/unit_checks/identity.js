@@ -114,8 +114,146 @@ function runIdentityProjectionChecks(ctx) {
   }
 }
 
+// F260.5: the card state carries one `identity` field, and every producer of one has to state
+// the same unit the control path states.
+//
+// Three properties, each of which a wrong implementation would break silently:
+//
+//  1. The roster producer round-trips. `cardStateIdentity` over `rosterCardIdentity(unit,
+//     version)` must equal `createRosterUnitIdentity(version, unit)` — the identity the page
+//     derived before the field existed. That is also what makes the special-unit clamp
+//     `rosterCardIdentity` applies *provably* inert on the roster rather than assumed inert: a
+//     future `specialUnitForRoster` answer wider than that key's own `versions` entry fails here.
+//  2. The control producer keeps the clamp's two answers in their order. `specialUnitAllowed`
+//     asks `specialUnitDef` first, so a key this build does not define halts, and only a defined
+//     key the selected version disallows clamps to `none`. A preset naming `golem` under MoM has
+//     to resolve to `none`, because that is what the `Special unit` selector leaves the card
+//     holding.
+//  3. `presetIdentity` translates the historical `unitType` token exactly as
+//     `setIdentityControlsFromLegacy` does, and never lets that token overwrite an explicit R8
+//     `identity` block.
+function runCardStateIdentityChecks(ctx) {
+  const rosterSets = [
+    ['mom_1.31', 'MOM_UNITS_DATA'],
+    ['mom_cp_1.60.00', 'MOM_UNITS_DATA'],
+    ['com_6.08', 'COM_UNITS_DATA'],
+    ['com2_1.05.11', 'COM2_UNITS_DATA'],
+    ['com2_warlord_1.5.12.9', 'WARLORD_UNITS_DATA'],
+  ];
+  for (const [version, dataName] of rosterSets) {
+    for (const unit of Object.values(evalInContext(ctx, dataName))) {
+      const label = `${version} template ${unit.templateId} (${unit.name})`;
+      const card = ctx.rosterCardIdentity(unit, version);
+      const stored = ctx.rosterStoredIdentity(unit, version);
+      assertEqual(card.specialUnit, stored.specialUnit,
+        `${label}: the card identity's special-unit clamp is inert on the roster`);
+      assert(!Object.prototype.hasOwnProperty.call(card, 'version'),
+        `${label}: the card identity bakes in no version`);
+      assertEqual(JSON.stringify(ctx.cardStateIdentity({ prefix: 'a', identity: card }, version)),
+        JSON.stringify(ctx.createRosterUnitIdentity(version, unit)),
+        `${label}: the card state's single identity field derives the record's own identity`);
+      assertEqual(card.name, unit.name, `${label}: the card identity carries the record's name`);
+    }
+  }
+
+  // The control producer, and the clamp's two questions in order.
+  const custom = ctx.customCardIdentity(
+    { isHero: true, baseRace: 'Life', baseFantastic: false, specialUnit: 'none' },
+    'com2_1.05.11', 'unit check');
+  assertEqual(custom.templateId, null, 'A control-stated card identity has no source template');
+  assertEqual(custom.heroTypeId, null, 'A control-stated card identity has no hero-type id');
+  assertEqual(custom.isHero, true, 'A control-stated card identity keeps Hero');
+  assertEqual(ctx.customCardIdentity({ specialUnit: 'golem' }, 'com2_1.05.11', 'x').specialUnit,
+    'golem', 'A special-unit key the version allows survives onto the card state');
+  assertEqual(ctx.customCardIdentity({ specialUnit: 'golem' }, 'mom_1.31', 'x').specialUnit,
+    'none', 'A defined special-unit key the version disallows clamps to none, as the selector does');
+  assertEqual(ctx.customCardIdentity({ specialUnit: 'chosen' }, 'com_6.08', 'x').specialUnit,
+    'none', 'Version scope is asked per key, not per version family');
+  let threw = null;
+  try {
+    ctx.customCardIdentity({ specialUnit: 'juggernautF260' }, 'com2_1.05.11', 'unit check');
+  } catch (err) { threw = err; }
+  assert(threw && /juggernautF260/.test(threw.message),
+    'A special-unit key this build does not define halts rather than clamping to none');
+
+  // `presetIdentity`: the R8 block wins, and the historical token translates one way.
+  const r8 = ctx.presetIdentity(
+    { identity: { isHero: false, baseFantastic: true, baseRace: 'Death', specialUnit: 'none' },
+      unitType: 'hero', race: 'Life' }, 'com2_1.05.11', 'unit check');
+  assertEqual(r8.baseRace, 'Death', 'An explicit R8 identity is not overwritten by unitType');
+  assertEqual(r8.isHero, false, 'An explicit R8 identity is not overwritten by unitType (Hero)');
+  assertEqual(r8.baseFantastic, true, 'An explicit R8 identity keeps its Fantastic bit');
+  const legacyHero = ctx.presetIdentity({ unitType: 'hero' }, 'com2_1.05.11', 'unit check');
+  assertEqual(legacyHero.isHero, true, 'The legacy hero token translates to isHero');
+  assertEqual(legacyHero.baseFantastic, false, 'The legacy hero token is not Fantastic');
+  const legacyRealm = ctx.presetIdentity({ unitType: 'fantastic_sorcery' }, 'com2_1.05.11', 'x');
+  assertEqual(legacyRealm.baseFantastic, true, 'A legacy realm token translates to Fantastic');
+  assertEqual(legacyRealm.baseRace, 'Sorcery', 'A legacy realm token names its realm as base race');
+  const legacyRace = ctx.presetIdentity({ unitType: 'fantastic_chaos', race: 'Troll' },
+    'com2_1.05.11', 'unit check');
+  assertEqual(legacyRace.baseRace, 'Troll', 'An explicit race outranks the token realm');
+  const bare = ctx.presetIdentity({}, 'com2_1.05.11', 'unit check');
+  assertEqual(bare.isHero, false, 'A fixture stating no identity is UNIT_DEFAULTS.unitType');
+  assertEqual(bare.baseFantastic, false, 'A fixture stating no identity is not Fantastic');
+  assertEqual(bare.specialUnit, 'none', 'A fixture stating no identity names no special unit');
+  assertEqual(ctx.presetIdentity({ specialUnit: 'golem' }, 'mom_1.31', 'x').specialUnit, 'none',
+    'A preset naming a special unit its version disallows resolves as the control path does');
+
+  // A preset's special unit, both ways round. Without these, `presetIdentity` emitting a constant
+  // `'none'` passes every other assertion here — the GPT review of F260.5 named that exact wrong
+  // implementation, and F267 later dissolves `specialUnit` into `u.unittype` comparisons, so the
+  // allowed case has to be pinned before that move.
+  assertEqual(ctx.presetIdentity({ specialUnit: 'golem' }, 'com2_1.05.11', 'x').specialUnit,
+    'golem', 'A preset naming a special unit its version allows keeps it');
+  assertEqual(ctx.presetIdentity({ identity: { specialUnit: 'chosen' } }, 'com2_1.05.11', 'x')
+    .specialUnit, 'chosen', 'An R8 preset identity keeps a special unit its version allows');
+  let presetUndefined = null;
+  try {
+    ctx.presetIdentity({ specialUnit: 'juggernautF260' }, 'com2_1.05.11', 'Preset probe');
+  } catch (err) { presetUndefined = err; }
+  assert(presetUndefined && /juggernautF260/.test(presetUndefined.message),
+    'A preset naming a special-unit key this build does not define halts');
+
+  // The fixture's display name travels with the identity, so F260.6 needs no second merge.
+  assertEqual(ctx.presetIdentity({ name: 'Synthetic Chosen', unitType: 'normal' },
+    'com2_1.05.11', 'x').name, 'Synthetic Chosen',
+  'A preset fixture name reaches the card identity through the legacy branch');
+  assertEqual(ctx.presetIdentity({ name: 'Synthetic Chosen', identity: { baseRace: 'Life' } },
+    'com2_1.05.11', 'x').name, 'Synthetic Chosen',
+  'A preset fixture name reaches the card identity through the R8 branch');
+  assertEqual(ctx.presetIdentity({ unitType: 'normal' }, 'com2_1.05.11', 'x').name, undefined,
+    'A fixture with no name states none rather than an empty one');
+
+  // A base race that is present and not a string is a broken fixture. The DOM path coerced it
+  // through the `<select>` and derived a race no version has.
+  let badRace = null;
+  try {
+    ctx.presetIdentity({ unitType: 'normal', race: { malformed: true } }, 'com2_1.05.11',
+      'Preset probe');
+  } catch (err) { badRace = err; }
+  assert(badRace && /not a string/.test(badRace.message),
+    'A non-string base race halts naming the fixture rather than reaching the derivation');
+  assertEqual(ctx.customCardIdentity({ baseRace: null }, 'com2_1.05.11', 'x').baseRace, '',
+    'An absent base race is the no-race answer, not an error');
+
+  // The projection halts on a state that does not state a plain-object identity rather than
+  // deriving a default unit from the spread of something else. `Date` and `RegExp` spread to
+  // nothing, so every field would silently take its default (GPT review of F260.5).
+  for (const [label, value] of [
+    ['absent', undefined], ['null', null], ['a scalar', 7], ['an array', []],
+    ['a Date', new Date(0)], ['a RegExp', /x/],
+  ]) {
+    let missing = null;
+    try { ctx.cardStateIdentity({ prefix: 'a', identity: value }, 'com2_1.05.11'); }
+    catch (err) { missing = err; }
+    assert(missing && /states no identity/.test(missing.message) && /side 'a'/.test(missing.message),
+      `A card state whose identity is ${label} halts naming the side`);
+  }
+}
+
 function runIdentityChecks(ctx) {
   runIdentityProjectionChecks(ctx);
+  runCardStateIdentityChecks(ctx);
   const rosterSets = [
     ['mom_1.31', evalInContext(ctx, 'MOM_UNITS_DATA')],
     ['com_6.08', evalInContext(ctx, 'COM_UNITS_DATA')],

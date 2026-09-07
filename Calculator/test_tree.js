@@ -589,6 +589,12 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Haste',
+        keys: [
+          'hasteIndependentFearSampleCoM2',
+        ],
+      },
+      {
         name: 'Hierophany',
         keys: [
           'hierophanyHalvesDefenseWarlord',

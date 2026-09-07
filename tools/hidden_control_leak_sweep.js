@@ -21,19 +21,13 @@
 
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
 const vm = require('vm');
-const { loadCalculatorContext, repoRoot } = require('./calculator_sources');
+const { loadCalculatorContext } = require('./calculator_sources');
 const { modernRecordForSharedSlot } = require('./unit_checks/assertions');
 
-const ctx = loadCalculatorContext();
 // `abilityVersionGated` is the single home for "does this def exist in this version"
-// (`ui_abilities.js`), and re-deriving the rule here would let the two drift. That source is
-// data-scope="page", but its top level is declarations only, so it loads without a DOM — the
-// same reason `loadPresetContext` can read the page-scope fixtures.
-vm.runInContext(fs.readFileSync(path.join(repoRoot, 'Calculator', 'ui_abilities.js'), 'utf8'),
-  ctx, { filename: 'Calculator/ui_abilities.js' });
+// (`ability_gating.js`, data-scope="core"), and re-deriving the rule here would let the two drift.
+const ctx = loadCalculatorContext();
 
 const read = expression => vm.runInContext(expression, ctx);
 const VERSIONS = read('ENGINE_VERSIONS');

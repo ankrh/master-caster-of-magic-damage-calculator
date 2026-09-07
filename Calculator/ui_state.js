@@ -122,7 +122,6 @@ function resetCalculatorState(version) {
   selectDefaultUnit('b', units);
   updateTypeVisibility();
   updateAbilityVisibility();
-  updateGlobalEnchantmentVisibility(initialVersion);
   recalculate();
 }
 
@@ -281,7 +280,6 @@ function onVersionChange() {
   // than in updateTypeVisibility, which runs on every input — re-deriving the magnitude on each
   // keystroke would overwrite whatever was just typed into it.
   if (!version.startsWith('com2')) { syncDosSpecialCard('a'); syncDosSpecialCard('b'); }
-  updateGlobalEnchantmentVisibility(version);
   renderAllMatrixPropLists();
   recalculate();
 }
@@ -290,107 +288,12 @@ function onVersionChange() {
 
 const PRESET_VERSIONS = {};
 
-// **A fixture states its version's own unit record and only that one.** The two engine families
-// keep different attack and To Hit records — the DOS shared `rtb`/`rtbType` slot and its
-// melee/shared To Hit pair against the modern record's four named channels and its common
-// `hitchance` with four channel modifiers — and naming the other family's field wrote a hidden
-// control nothing reads. That silent no-op is what let the modern To-Hit projection gap survive
-// unnoticed, so it halts the run instead (`SPEC.md`, *Out-of-range values stop the run*).
-//
-// The attack channels joined this reject in F127. A modern fixture used to be allowed to state
-// one channel through the DOS pair, which `applyPreset` projected onto the card; what that also
-// did was fill the modern record's shared slot, and the modern reads that still consulted
-// it answered from a field `Caster.exe` does not have. With every fixture stating `modernAttacks`
-// the slot stays empty in a modern run, so such a read has nothing to find.
-const DOS_ONLY_FIXTURE_FIELDS = ['toHitMod', 'toHitRtbMod', 'rtb', 'rtbType'];
-const MODERN_ONLY_FIXTURE_FIELDS = ['hitChance', 'hitMelee', 'hitRanged', 'hitThrown',
-  'hitBreath', 'modernAttacks'];
-
-function assertFixtureMatchesVersionRecord(name, prefix, side, version) {
-  const modern = version.startsWith('com2');
-  const foreign = (modern ? DOS_ONLY_FIXTURE_FIELDS : MODERN_ONLY_FIXTURE_FIELDS)
-    .filter(field => Object.prototype.hasOwnProperty.call(side, field));
-  if (foreign.length === 0) return;
-  throw new Error(
-    `Preset '${name}' side ${prefix}: ${version} carries the ${modern ? 'modern' : 'DOS'} unit `
-    + `record, so ${foreign.join(', ')} name${foreign.length === 1 ? 's' : ''} no card field it `
-    + `has and nothing would read the value. `
-    + `Expected ${(modern ? MODERN_ONLY_FIXTURE_FIELDS : DOS_ONLY_FIXTURE_FIELDS).join(', ')}.`);
-}
-
-// Ranged mode is a control the page withdraws on its own: `updateTypeVisibility` clears and
-// disables `#rangedCheck` whenever the attacker's *derived* record carries no conventional ranged
-// attack, and `recalculate` halts if a tick ever survives that withdrawal (`ui.js`, the F132
-// guard). For a live user the withdrawal is the page working — ticking Blaze of Glory empties the
-// Ranged field and takes ranged mode with it — so nothing here belongs in the shared path.
-//
-// A fixture is the other case. It states the controls it wants and then asserts a number, so a
-// `rangedCheck: true` the page withdraws means the fixture measured a melee exchange under a
-// ranged label and nothing said so: the preset's own statement was normalised away between
-// `applyPreset` and `recalculate` (`CLAUDE.md`, *Architecture*, the fail-loud rule). F131 found four
-// such fixtures, one of them vacuous on the axis its name claimed.
-//
-// The withdrawal is nonetheless a real assertion for a fixture whose subject is an attack an
-// effect empties or refuses to make live: with the tick in place a regression that leaves the
-// Ranged field live keeps ranged mode, fires the volley and moves the number, and without it the
-// same regression is invisible (measured: `holyBonusNeedsRangedStrengthCoM` 0 → 2 with the tick,
-// 0 → 0 without). So the fixture declares it — `rangedModeWithdrawn: true` — rather than dropping
-// the tick and the discriminator with it. Undeclared withdrawal halts, and so does a declaration
-// the page did not act on, so the claim cannot go stale in either direction.
-//
-// A harness that mutates a fixture and re-measures it is the one caller this cannot speak for: an
-// ablation may itself be what leaves the attacker without a ranged attack, and that delta is the
-// measurement. That exemption is the **caller's**, passed as `applyPreset(name, { origin })`, and
-// deliberately not a field of the fixture: a preset that could name its own exemption would be a
-// fixture authorising itself past the boundary this exists to hold
-// (`tools/preset_vacuity_sweep.js` is the one caller that passes it). The authored preset an
-// ablation was derived from still takes the assertion on its own baseline pass.
-const PRESET_ORIGINS = ['authored', 'ablation-probe'];
-
-function assertPresetRangedMode(name, preset, origin) {
-  if (!PRESET_ORIGINS.includes(origin)) {
-    throw new Error(
-      `applyPreset('${name}'): origin ${JSON.stringify(origin)} names no caller context this `
-      + `build defines (offered: ${PRESET_ORIGINS.join(', ')}).`);
-  }
-  if (origin === 'ablation-probe') return;
-  // `true` or absent, and nothing else. A truthy-coerced declaration would let `'false'` clear the
-  // finding it is supposed to state, which is the same silence the halt below exists to break.
-  if (Object.prototype.hasOwnProperty.call(preset, 'rangedModeWithdrawn')
-      && preset.rangedModeWithdrawn !== true) {
-    throw new Error(
-      `Preset '${name}': rangedModeWithdrawn is `
-      + `${JSON.stringify(preset.rangedModeWithdrawn)}, and the only value it takes is true. `
-      + `A fixture that does not assert the withdrawal omits the field.`);
-  }
-  const declared = !!preset.rangedCheck;
-  const held = document.getElementById('rangedCheck').checked;
-  const withdrawalClaimed = preset.rangedModeWithdrawn === true;
-  if (declared && !held && !withdrawalClaimed) {
-    // Name the record that lost the control, the way the F132 guard in `ui.js` does: the
-    // fixture's stated Ranged field is often not the one standing here, because an effect the
-    // fixture configures is what emptied it.
-    const a = readUnitStats('a');
-    const carried = a.modernAttacks
-      ? `modernAttacks.ranged = ${JSON.stringify(a.modernAttacks.ranged || null)}`
-      : `shared slot type ${JSON.stringify(a.rangedType)} strength ${a.rtb}`;
-    throw new Error(
-      `Preset '${name}': rangedCheck: true, but side a's derived record carries no conventional `
-      + `ranged attack (${carried}), so updateTypeVisibility withdrew the control and the fixture `
-      + `resolved a melee exchange under a ranged label. A valid configuration leaves side a a `
-      + `finished Ranged strength above 0, or drops rangedCheck, or states `
-      + `rangedModeWithdrawn: true where the withdrawal is what the fixture asserts.`);
-  }
-  if (withdrawalClaimed && (held || !declared)) {
-    throw new Error(
-      `Preset '${name}': rangedModeWithdrawn: true, but ${declared
-        ? 'the attacker\'s derived record still carries a conventional ranged attack and the '
-          + 'control was kept'
-        : 'the fixture states no rangedCheck: true for it to be withdrawn'}. `
-      + `The declaration asserts that a stated rangedCheck: true is withdrawn; drop it, or state `
-      + `the rangedCheck: true it is about.`);
-  }
-}
+// The two asserts a preset takes — that the fixture states its own version's unit record, and
+// that a stated ranged mode survived the page's own withdrawal — are `card_state.js`
+// (`data-scope="core"`), beside the pure applier that must halt on exactly the same fixtures.
+// `assertPresetRangedMode` takes the withdrawal's outcome rather than reading the control, so the
+// two appliers decide it the same way: the tick survives only where side a's derived record
+// carries a conventional ranged attack.
 
 // `origin` is the caller's own statement of what it is applying: `authored` for a key of the
 // merged `PRESETS` corpus — the TEST_TREE buttons, `runTests`, and the specs that install a
@@ -404,164 +307,58 @@ function applyPreset(name, { origin = 'authored' } = {}) {
   if (!preset) {
     throw new Error(`applyPreset: '${name}' is not a key of PRESETS.`);
   }
-  const targetVersion = preset.version || PRESET_VERSIONS[name];
-  if (targetVersion) {
-    const versionSel = document.getElementById('gameVersion');
-    if (versionSel.value !== targetVersion) {
-      versionSel.value = targetVersion;
-      onVersionChange();
-    }
+  const versionSel = document.getElementById('gameVersion');
+  // The whole preset, decided before a single control is written. What a fixture states is
+  // `presetToCardState` (`card_state.js`, `data-scope="core"`) and nothing else — the version, both
+  // card states and the globals object, version gating and the two fail-loud asserts included — so
+  // the Test Cases drawer and a caller with no DOM cannot state the same fixture differently.
+  // `base` is the card as the user left it, because a preset is applied *over* the page: the few
+  // fields no fixture restates keep their values, and the version switch's loadout reset runs over
+  // them (`presetDefaultCardState` names the four).
+  const applied = presetToCardState(name, preset, {
+    origin,
+    version: versionSel.value,
+    presetVersions: PRESET_VERSIONS,
+    base: { a: collectCardState('a'), b: collectCardState('b') },
+  });
+
+  // The version switch's *page* work: repopulating the roster dropdowns and rebuilding the ability
+  // panels and the version-scoped option lists. Its one state effect is already in `applied`, and
+  // every control it disturbs is written below.
+  if (versionSel.value !== applied.version) {
+    versionSel.value = applied.version;
+    onVersionChange();
   }
-  clearAbilities('a');
-  clearAbilities('b');
-  // R8 callers describe independent base identity directly. Historical presets remain
-  // compatible through a one-way translation of unitType at this boundary; the compact
-  // token never overwrites an explicit R8 identity.
-  function presetIdentity(s) {
-    if (s.identity && typeof s.identity === 'object') {
-      return {
-        isHero: !!s.identity.isHero,
-        baseFantastic: !!s.identity.baseFantastic,
-        baseRace: typeof s.identity.baseRace === 'string' ? s.identity.baseRace : '',
-        specialUnit: typeof s.identity.specialUnit === 'string' ? s.identity.specialUnit : 'none',
-      };
+
+  for (const prefix of ['a', 'b']) {
+    const unitName = preset[prefix + 'UnitName'];
+    const select = document.getElementById(prefix + 'Unit');
+    if (unitName) {
+      // `presetToCardState` has already halted if the version's roster does not carry the name, so
+      // the lookup here cannot miss; it is the same roster, read through the page's cache.
+      // No `setRosterUnitRecords` beside it, deliberately: everything it would install is restated
+      // one line later. The identity and the `generic` flag come off the card state, and the
+      // record-vocabulary halts it wraps (`assertRosterRecordStatable`) have already fired inside
+      // `applyRosterUnit`, which reads `predefinedUnitRtbType` and `predefinedModernAttacks`
+      // itself. Measured: removing the call left the whole suite green (F260.7 probe M15), which
+      // is what a dead call looks like rather than an uncovered one.
+      select.value = String(loadUnitDatabase(applied.version).find(u => u.name === unitName).id);
+    } else {
+      select.value = 'custom';
     }
-    const legacyType = s.unitType || UNIT_DEFAULTS.unitType;
-    const match = /^fantastic_(life|death|chaos|nature|sorcery|arcane)$/.exec(legacyType);
-    return {
-      isHero: legacyType === 'hero',
-      baseFantastic: !!match,
-      baseRace: s.race || (match ? match[1][0].toUpperCase() + match[1].slice(1) : ''),
-      specialUnit: s.specialUnit || 'none',
-    };
-  }
-  function setUnit(prefix, u) {
-    assertFixtureMatchesVersionRecord(name, prefix, u,
-      document.getElementById('gameVersion').value);
-    const s = { ...UNIT_DEFAULTS, ...u };
-    const identity = presetIdentity(s);
-    document.getElementById(prefix + 'Figs').value = s.figs;
-    document.getElementById(prefix + 'Atk').value = s.atk;
-    setSharedSlotRangedType(prefix, s.rtbType, `Preset '${name}' side ${prefix}`);
-    document.getElementById(prefix + 'Rtb').value = s.rtb;
-    // A CoM2/Warlord fixture states the card's four named channels through `modernAttacks`, and
-    // that statement is complete: an unnamed channel is empty. The DOS shared slot keeps the
-    // defaults above, which is what a modern record holds for a field its version has not got.
-    if (document.getElementById('gameVersion').value.startsWith('com2')) {
-      applyModernAttackFields(prefix, s.modernAttacks, `Preset '${name}' side ${prefix}`);
-    }
-    document.getElementById(prefix + 'Def').value = s.def;
-    document.getElementById(prefix + 'Res').value = s.res;
-    document.getElementById(prefix + 'ToHitMod').value = s.toHitMod;
-    document.getElementById(prefix + 'ToHitRtbMod').value = s.toHitRtbMod;
-    document.getElementById(prefix + 'HitChance').value = s.hitChance;
-    document.getElementById(prefix + 'HitMelee').value = s.hitMelee;
-    document.getElementById(prefix + 'HitRanged').value = s.hitRanged;
-    document.getElementById(prefix + 'HitThrown').value = s.hitThrown;
-    document.getElementById(prefix + 'HitBreath').value = s.hitBreath;
-    document.getElementById(prefix + 'ToBlkMod').value = s.toBlkMod;
-    document.getElementById(prefix + 'HP').value = s.hp;
-    document.getElementById(prefix + 'CityWalls').value = s.cityWalls;
-    document.getElementById(prefix + 'Dmg').value = s.dmg;
-    document.getElementById(prefix + 'Weapon').value = s.weapon;
-    document.getElementById(prefix + 'Armor').value = s.armor || 'normal';
-    document.getElementById(prefix + 'Level').value = s.level;
-    populateSpecialUnitOptions(prefix, document.getElementById('gameVersion').value,
-      identity.specialUnit);
-    setIdentityControls(prefix, identity);
-    syncLegacyUnitTypeControl(prefix);
-    clearAbilities(prefix);
-    applyAbilities(prefix, s.abilities);
-    // Special values are card-owned in every version. Presets still describe them by
-    // ability key, so mirror the just-applied fixture values before the calculation
-    // reads the card.
-    syncModernSpecialCard(prefix);
-    syncDosSpecialCard(prefix);
-    refreshAbilityFieldVisibility();
-  }
-  const activeVersion = document.getElementById('gameVersion').value;
-  const unitsDb = loadUnitDatabase(activeVersion);
-  // A fixture that names a roster unit is asserting a number about *that record*. Falling back
-  // to the preset's custom stat block computed a different unit under the same expectation, and
-  // a console warning nothing reads is not a stop (`SPEC.md`, *Out-of-range values stop the
-  // run*). A preset for a unit only some versions ship states its own `version:`.
-  function selectPredefined(prefix, unitName) {
-    const match = unitsDb.find(u => u.name === unitName);
-    if (!match) {
-      throw new Error(
-        `Preset '${name}': roster unit '${unitName}' is not in the ${activeVersion} roster.`);
-    }
-    document.getElementById(prefix + 'Unit').value = String(match.id);
+    writeCardStateToControls(prefix, applied[prefix], `Preset '${name}' side ${prefix}`);
+    // The DOM half, after the state and never before it: the lock styling, the innate marks the
+    // selection implies, the Golem row lock, the legacy token and the loadout lock row.
+    // `updateUnitLock` is deliberately not called — its custom branch would reset a locked Level or
+    // Weapon *after* the fixture's own, which the pure applier applies before.
+    refreshUnitLockDom(prefix);
     syncUnitDisplay(prefix);
   }
-  if (preset.aUnitName) {
-    selectPredefined('a', preset.aUnitName);
-  } else {
-    setUnit('a', preset.a || {});
-    document.getElementById('aUnit').value = 'custom';
-    syncUnitDisplay('a');
-  }
-  if (preset.bUnitName) {
-    selectPredefined('b', preset.bUnitName);
-  } else {
-    setUnit('b', preset.b || {});
-    document.getElementById('bUnit').value = 'custom';
-    syncUnitDisplay('b');
-  }
-  updateUnitLock('a');
-  updateUnitLock('b');
-  // Roster selection restores intrinsic abilities and clears the panel, but a
-  // preset may intentionally combine that predefined unit with user-selectable
-  // enchantment/building/reform conditions. Reapply only the enchantment-source
-  // values; intrinsic ability controls remain roster-owned and locked.
-  function applyPresetEnchantments(prefix, config) {
-    const values = config && config.abilities;
-    if (!values) return;
-    for (const abil of abilityUiDefs()) {
-      if (abil.source !== 'enchantment'
-          || !Object.prototype.hasOwnProperty.call(values, abil.key)) continue;
-      setAbilityControlValue(prefix, abil, values[abil.key]);
-    }
-  }
-  if (preset.aUnitName) applyPresetEnchantments('a', preset.a);
-  if (preset.bUnitName) applyPresetEnchantments('b', preset.b);
-  // Synthetic custom test units can declare base identity/name to exercise identity-gated
-  // paths (roster-selected presets already got authoritative identity from applyUnit).
-  const presetVersion = document.getElementById('gameVersion').value;
-  for (const [prefix, config] of [['a', preset.a], ['b', preset.b]]) {
-    if (document.getElementById(prefix + 'Unit').value !== 'custom') continue;
-    const controls = readIdentityControls(prefix);
-    unitIdentity[prefix] = {
-      ...createCustomUnitIdentity(presetVersion, controls),
-      ...(config && typeof config.name === 'string' ? { name: config.name } : {}),
-    };
-  }
-  if (preset.a && preset.a.level) document.getElementById('aLevel').value = preset.a.level;
-  if (preset.a && preset.a.weapon) document.getElementById('aWeapon').value = preset.a.weapon;
-  if (preset.b && preset.b.level) document.getElementById('bLevel').value = preset.b.level;
-  if (preset.b && preset.b.weapon) document.getElementById('bWeapon').value = preset.b.weapon;
-  document.getElementById('rangedCheck').checked = preset.rangedCheck || false;
-  document.getElementById('rangedDist').value = preset.rangedDist || 1;
-  document.getElementById('aCityWalls').value = (preset.a && preset.a.cityWalls) || 'none';
-  document.getElementById('bCityWalls').value = (preset.b && preset.b.cityWalls)
-    || preset.cityWalls || 'none';
-  document.getElementById('nodeAura').value = preset.nodeAura || 'none';
-  const legacyLightDark = preset.enchLightDark || 'none';
-  document.getElementById('trueLight').checked = !!preset.trueLight || legacyLightDark === 'trueLight';
-  document.getElementById('darkness').checked = !!preset.darkness || legacyLightDark === 'darkness';
-  if (preset.eternalNight) {
-    const side = preset.eternalNight === 'defender' ? 'b' : 'a';
-    const el = document.getElementById(side + 'Abil_eternalNight');
-    if (el) el.checked = true;
-  }
-  document.getElementById('chaosSurge').value = preset.chaosSurge || 0;
-  document.getElementById('wallOfFire').checked = preset.wallOfFire || false;
-  document.getElementById('warpReality').checked = preset.warpReality || false;
-  document.getElementById('chaosConjunction').checked = preset.chaosConjunction || false;
-  document.getElementById('hurricane').checked = preset.hurricane || false;
-  document.getElementById('poxHost').checked = preset.poxHost || false;
+
+  writeGlobalsToControls(applied.globals);
+  // The visibility pass, last, as it was: it clears nothing the gating in `applied` has not already
+  // cleared, and the ranged-mode withdrawal it performs is the `held` the applier already decided.
   refreshAbilityFieldVisibility();
-  assertPresetRangedMode(name, preset, origin);
   recalculate();
 }
 
@@ -773,7 +570,6 @@ function applyFullState(blob) {
     updateUnitLock('a', false);
     updateUnitLock('b', false);
     refreshAbilityFieldVisibility();
-    updateGlobalEnchantmentVisibility(versionSel ? versionSel.value : document.getElementById('gameVersion').value);
   } finally {
     _restoring = prevRestoring;
   }
@@ -1031,42 +827,145 @@ function initStateFromSources() {
 
 // --- Test Runner ---
 
-function runTests(tolerance) {
+// Which presets a `runTests` call will evaluate. Its own function because it is the whole of what
+// the optional `names` argument does, and a suite can then check the unfiltered selection without
+// paying for a 1,161-fixture evaluation to observe it (GPT review of F260.10, finding 4: with the
+// selection inlined, a fallback returning `[]` instead of the corpus made the Test Cases drawer
+// evaluate nothing while every named run stayed green).
+//
+// `names` absent is the drawer's call and selects the whole corpus. Present, it selects those
+// presets **in corpus order**, not in the caller's: each `applyPreset` writes over the card the
+// previous one left, so the order is part of what is being run and is not the caller's to vary.
+function presetNamesToRun(names) {
+  const stated = name => Object.prototype.hasOwnProperty.call(PRESETS, name)
+    && Boolean(PRESETS[name].expected);
+  if (names == null) return Object.keys(PRESETS).filter(stated);
+  const requested = [...names];
+  // `in` would accept `toString` and every other inherited name (same review, finding 5).
+  const absent = requested.filter(
+    name => !Object.prototype.hasOwnProperty.call(PRESETS, name));
+  if (absent.length) {
+    throw new Error(`runTests: ${absent.length} requested preset(s) are in no fixture file `
+      + `[${absent.slice(0, 8).join(', ')}]. A caller naming a preset this build does not have `
+      + 'would otherwise run a shorter suite and still report green.');
+  }
+  const wanted = new Set(requested);
+  return Object.keys(PRESETS).filter(name => wanted.has(name) && stated(name));
+}
+
+// `names` is optional and is what the Test Cases drawer never passes: with it absent the whole
+// corpus runs, which is the drawer's behaviour and has not changed. `tests/preset-equivalence-gate.spec.js` passes
+// a derived control-path sample instead (`tools/preset_control_path_sample.js`); `TESTS.md` states
+// which suite carries which claim over the corpus.
+function runTests(tolerance, names) {
   tolerance = tolerance || 0.002;
   const results = [];
   let allPassed = true;
+  // Numbers actually compared, not expectation blocks present. `expected: {}` is truthy and used
+  // to reach the end of a run having compared nothing (F260.9 review, finding 2); the count is
+  // returned so a caller can see the difference, and a run that compares nothing halts below.
+  let comparisons = 0;
+  // The category quantities are counted apart from the two totals and never folded into them
+  // (F268.7). Sixteen of the two counts' numbers are compared per fixture and all but 168 of
+  // them across the whole corpus are `0 == 0`, so adding them to `comparisons` would take one
+  // honest figure and turn it into a much larger misleading one. `categoryStated` is the count
+  // that says what the category claims actually pin: the pairs a fixture writes out because
+  // they are not zero.
+  let categoryComparisons = 0;
+  let categoryStated = 0;
   // Run the whole suite with the step runner's write check on: a step that writes a stat
   // it did not declare is a migration bug the damage numbers may not reveal (steps.js).
   setStatStepDebug(true);
   try {
-    for (const [name, preset] of Object.entries(PRESETS)) {
-      if (!preset.expected) continue;
+    for (const name of presetNamesToRun(names)) {
+      const preset = PRESETS[name];
       applyPreset(name);
       const panels = document.querySelectorAll('.dist-header .avg');
       const dmgToA = parseFloat(panels[0].textContent);
       const dmgToB = parseFloat(panels[1].textContent);
-      const expA = preset.expected.dmgToA;
-      const expB = preset.expected.dmgToB;
-      const errA = expA != null ? Math.abs(dmgToA - expA) : 0;
-      const errB = expB != null ? Math.abs(dmgToB - expB) : 0;
-      const pass = errA < tolerance && errB < tolerance;
+      // The spread is read off the same two elements the means are read off, so the four numbers
+      // provably describe one panel of one render rather than a mean from this recalculation and a
+      // spread from whatever the page last held (F268.3). `renderDistPanel` writes it.
+      const sdToA = parseFloat(panels[0].dataset.sd);
+      const sdToB = parseFloat(panels[1].dataset.sd);
+      if (!Number.isFinite(sdToA) || !Number.isFinite(sdToB)) {
+        throw new Error(`runTests: the damage panels for '${name}' carry no \`data-sd\`, so the `
+          + 'standard deviation half of every expectation would be compared against NaN and pass. '
+          + '`renderDistPanel` (`ui.js`) is what writes it.');
+      }
+      // The four category quantities per side, off the panel `renderCombatStateSummary` wrote
+      // for the same recalculation (F268.7). A panel with no attributes is a halt for the same
+      // reason a missing `data-sd` is: sixteen expectations would otherwise be compared against
+      // NaN and every one of them would pass.
+      const categoryPanels = {
+        A: document.getElementById('aCombatStateSummary'),
+        B: document.getElementById('bCombatStateSummary'),
+      };
+      const observedCategories = {};
+      for (const [side, panel] of Object.entries(categoryPanels)) {
+        if (!panel) {
+          throw new Error(`runTests: '${name}' rendered no #${side.toLowerCase()}`
+            + 'CombatStateSummary panel, so its four category expectations would be compared '
+            + 'against nothing. `renderCombatStateSummary` (`ui.js`) is what writes it.');
+        }
+        observedCategories[side] = {};
+        for (const attribute of COMBAT_CATEGORY_PANEL_ATTRIBUTES) {
+          const mean = parseFloat(panel.dataset[attribute.mean]);
+          const sd = parseFloat(panel.dataset[attribute.sd]);
+          if (!Number.isFinite(mean) || !Number.isFinite(sd)) {
+            throw new Error(`runTests: the post-combat panel for '${name}' side ${side} carries `
+              + `no \`data-${attribute.mean}\`/\`data-${attribute.sd}\` pair for `
+              + `${attribute.metric}, so that expectation would be compared against NaN and pass.`);
+          }
+          observedCategories[side][attribute.metric] = { mean, sd };
+        }
+      }
+      const expected = presetExpectation(name, preset);
+      comparisons += expected.comparisons;
+      categoryComparisons += expected.categoryComparisons;
+      categoryStated += expected.categoryStated;
+      const categoryFailures = [];
+      for (const claim of Object.values(expected.categories)) {
+        const observed = observedCategories[claim.side][claim.metric];
+        const errMean = Math.abs(observed.mean - claim.mean);
+        const errSd = Math.abs(observed.sd - claim.sd);
+        if (!(errMean < tolerance) || !(errSd < tolerance)) {
+          categoryFailures.push(`${claim.meanField}=${observed.mean} (exp ${claim.mean}), `
+            + `${claim.sdField}=${observed.sd} (exp ${claim.sd})`);
+        }
+      }
+      const errA = expected.comparedA ? Math.abs(dmgToA - expected.dmgToA) : 0;
+      const errB = expected.comparedB ? Math.abs(dmgToB - expected.dmgToB) : 0;
+      const errSdA = expected.comparedA ? Math.abs(sdToA - expected.sdDmgToA) : 0;
+      const errSdB = expected.comparedB ? Math.abs(sdToB - expected.sdDmgToB) : 0;
+      const pass = errA < tolerance && errB < tolerance
+        && errSdA < tolerance && errSdB < tolerance && categoryFailures.length === 0;
       if (!pass) allPassed = false;
       results.push({
         name, pass,
-        dmgToA, expectedA: expA, errA: +errA.toFixed(4),
-        dmgToB, expectedB: expB, errB: +errB.toFixed(4),
+        dmgToA, expectedA: expected.dmgToA, errA: +errA.toFixed(4),
+        dmgToB, expectedB: expected.dmgToB, errB: +errB.toFixed(4),
+        sdToA, expectedSdA: expected.sdDmgToA, errSdA: +errSdA.toFixed(4),
+        sdToB, expectedSdB: expected.sdDmgToB, errSdB: +errSdB.toFixed(4),
+        categoryFailures,
       });
     }
   } finally {
     setStatStepDebug(false);
   }
   const failures = results.filter(r => !r.pass);
+  if (results.length > 0 && comparisons === 0) {
+    throw new Error(`runTests: ${results.length} preset(s) ran and 0 numbers were compared, so `
+      + 'this run reported a pass while checking nothing.');
+  }
   if (allPassed) {
-    console.log(`All ${results.length} tests passed.`);
+    console.log(`All ${results.length} tests passed (${comparisons} numbers compared, plus `
+      + `${categoryComparisons} category numbers of which ${categoryStated} pairs are stated).`);
   } else {
     console.error(`${failures.length}/${results.length} tests FAILED:`);
-    failures.forEach(f => console.error(`  ${f.name}: A=${f.dmgToA} (exp ${f.expectedA}, err ${f.errA}), B=${f.dmgToB} (exp ${f.expectedB}, err ${f.errB})`));
+    failures.forEach(f => console.error(`  ${f.name}: A=${f.dmgToA} (exp ${f.expectedA}, err ${f.errA}), B=${f.dmgToB} (exp ${f.expectedB}, err ${f.errB}), sdA=${f.sdToA} (exp ${f.expectedSdA}, err ${f.errSdA}), sdB=${f.sdToB} (exp ${f.expectedSdB}, err ${f.errSdB})${f.categoryFailures.length ? '; ' + f.categoryFailures.join('; ') : ''}`));
   }
-  return { allPassed, total: results.length, failures };
+  return { allPassed, total: results.length, comparisons, categoryComparisons, categoryStated,
+    failures };
 }
 

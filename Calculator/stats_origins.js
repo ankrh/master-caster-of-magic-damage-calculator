@@ -32,7 +32,7 @@
 //
 // **What the check pins, and what it does not.** `tools/unit_checks/ability_origins.js` re-derives
 // two classes of `versions` and halts on a disagreement: a `template` row must cover exactly the
-// versions a control offers the key in (`abilityVersionGated`, `ui_abilities.js`), and a row whose
+// versions a control offers the key in (`abilityVersionGated`, `ability_gating.js`), and a row whose
 // producers are *all* steps must equal the union of their `STEP_VERSION_SCOPES` entries. Every
 // other row — `cast:`, `input:`, `grant:`, `transform:`, `postChain:`, and any row mixing a step
 // with one of those — carries a scope the check can only test for membership in the engine list

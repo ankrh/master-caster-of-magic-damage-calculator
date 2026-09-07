@@ -13,9 +13,9 @@
 // cannot be read off a data structure — the transforms write object literals — so it is stated
 // below and checked against the transforms by running them.
 //
-// `abilityVersionGated` (`ui_abilities.js`) is the single home for "does this control exist in this
-// version". That source is `data-scope="page"`, but its top level is declarations only, so it loads
-// without a DOM — the same reason `hidden_control_gating.js` reads it.
+// `abilityVersionGated` (`ability_gating.js`) is the single home for "does this control exist in this
+// version". That source is `data-scope="core"` (F260.2), so the calculator context already carries
+// it and no page source is injected here.
 
 'use strict';
 
@@ -96,11 +96,13 @@ function assertCompatibilityReads() {
 
 const WARLORD = 'com2_warlord_1.5.12.9';
 
+// `abilityUiDefs` and `abilityVersionGated` are `data-scope="core"` (`ability_gating.js`), so a
+// core context already carries them. Kept as a named assertion rather than dropped: a move back
+// into page scope must fail here loudly instead of throwing a bare ReferenceError deeper in.
 function loadUiDefs(ctx) {
   if (!vm.runInContext('typeof abilityUiDefs === "function"', ctx)) {
-    vm.runInContext(
-      fs.readFileSync(path.join(repoRoot, 'Calculator', 'ui_abilities.js'), 'utf8'),
-      ctx, { filename: 'Calculator/ui_abilities.js' });
+    throw new Error('ability_origins: abilityUiDefs is not in the core context; '
+      + 'Calculator/ability_gating.js must stay data-scope="core"');
   }
 }
 

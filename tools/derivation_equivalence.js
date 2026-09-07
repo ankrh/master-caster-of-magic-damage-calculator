@@ -65,7 +65,7 @@ function rng(seed) {
 //
 // `key` names the control and so names the case; `calcKey` is what `deriveUnitStats` reads.
 // The two differ on eight enchantments (`natureLink` -> `landLinking`, `apotheosis` ->
-// `destiny`, ...), and `abilityUiDefs()` (`ui_abilities.js`) is what establishes that the
+// `destiny`, ...), and `abilityUiDefs()` (`ability_gating.js`) is what establishes that the
 // derivation sees the `calcKey`. Both defs lists reach the derivation the same way — the UI
 // merges them into one `abilities` map — so a spec never names a top-level input field.
 function controlSpecs(defs) {

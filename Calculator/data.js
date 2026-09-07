@@ -41,6 +41,14 @@ const GAZE_TYPES = ['gaze_stoning', 'gaze_multiple', 'gaze_death'];
 // transcribed copy that can drift from the vocabularies.
 const SLOT_ATTACK_TYPES = ['none', ...RANGED_TYPES, ...THROWN_TYPES, ...GAZE_TYPES];
 
+// What the shared slot itself can hold, which is narrower than the union above: the DOS
+// projectile vocabulary, the thrown/breath tokens and the gazes, plus `none`. The modern-only
+// tokens (`magic`, `magic_lightning`) have no `<option>` in `#*RtbType`, which is why a modern
+// Ranged record typed with one leaves the slot saying `none` and states its projectile through
+// the modern selector instead (`sharedSlotTypeForToken`, `card_state.js`). `setSharedSlotRangedType`
+// (`ui_card.js`) checks the rendered option list against this, so the two cannot drift.
+const DOS_SLOT_ATTACK_TYPES = ['none', ...DOS_RANGED_TYPES, ...THROWN_TYPES, ...GAZE_TYPES];
+
 // --- Definition layout helpers ---
 // ABILITY_DEFS (abilities.js) and ENCHANTMENT_DEFS (enchantments.js) are authored through
 // these; see Calculator/CLAUDE.md for the column order each one has to produce.

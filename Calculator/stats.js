@@ -420,7 +420,10 @@ function deriveUnitStats(input) {
       `deriveUnitStats: armor quality '${armorInput}' is not one of ${ARMOR_MATERIALS.join('/')}, `
       + `the option set of the Armor Type control and of MATRIX_ARMOR_OPTIONS.`);
   }
-  const armorExists = !version.startsWith('mom_');
+  // The MoM "no armor quality" rule has one home, `versionHasArmorQuality`
+  // (`ability_gating.js`), which the card's row hiding and `applyVersionGating`'s state reset
+  // already read. Same expression, three readers (F260.4).
+  const armorExists = versionHasArmorQuality(version);
   // What the training city leaves in the persistent armour-material field, which
   // `training:armorQuality` writes onto the record and `c:orihalcon` reads back. The `!isHero`
   // term is the control's, as the paragraph above says; the Fantastic term is the permanent flag
