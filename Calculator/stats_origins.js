@@ -52,6 +52,32 @@
 //   `postChain:<name>`        a write made after the chain has run
 //   `none`                    nothing writes it — see the defect list in `JOURNAL.md`
 //
+// **`admits`: which input key admits the row's write (F253.2).** A row's write does not always
+// follow from the caller stating the row's own key. `training:lavaSmelter:flameBlade` writes
+// `fieryBlade`, but its gate reads `lavaSmelterFieryBlade` — the mineral pair's control — so a
+// caller stating `fieryBlade` raw admits nothing at all and the seed erases it. Where the
+// admitting input differs from the row's key, the row says so:
+//
+//   `admits: ['<key>', …]`   the input keys this row's gate reads to admit the write
+//   `admits: []`             no input key admits it — the gate is the unit's own record or
+//                            identity (the strayed Marionette branch is the case: the Wanderer
+//                            hero record chooses the branch)
+//   omitted                  the row's own key **may** admit the write. That is the common case —
+//                            a `debuffs:<curse>:cast` step reads the curse the card marked — but
+//                            an omission is the permissive reading rather than a claim, and it is
+//                            safe in one direction only: it can hide an erasure, never invent a
+//                            halt. F253.2 audited every row of every seeded key that has an
+//                            in-version row and **no** `template` row, which is where the erasure
+//                            lives. Rows of `template`-origin keys — `armorPiercing`,
+//                            `largeShield`, `poison` and the rest — are unaudited, so annotating
+//                            one later can only tighten the halt.
+//
+// The keys named are the **input** keys a card or probe states, not record fields, and where a
+// gate reads a derived record (`deriveOutlanderReformRecord`'s `reform`, `deriveMarionettePackage`'s
+// package) they are the controls that record is built from. `seedNonStatRecordFields` asks it, so a
+// stated key whose every in-version row is admitted by something else halts instead of being
+// erased in silence; `tools/unit_checks/ability_origins.js` checks the grammar.
+//
 // A `cast:` or `input:` producer is a **mention**, not an audited anchor: the write is named, and
 // the anchor for it lives on the step that reads the flag (`PROVENANCE[…]` in `stats_sequence.js`
 // and `combat_abilities.js`) or on the transform that makes it (`stats_identity.js`). That is the
@@ -147,7 +173,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   arcaneWard: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:strayedPackage'] },
+      producers: ['step:b:marionette:strayedPackage'],
+      // The branch, not the key: `UnitCalcPre.CAS!STRAYEDMARIONETTE!` is entered by a Wanderer
+      // hero record whose owner is not a Channeler, so no input key states this write and
+      // `channeler` only steers away from it (`deriveMarionettePackage`, `stats_identity.js`).
+      admits: [] },
   ],
   armorPiercing: [
     { origin: 'template', versions: SCOPE_ALL,
@@ -161,7 +191,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   armorclad: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:armorclad'] },
+      producers: ['step:training:armorclad'],
+      // `reform.armorclad` — the research state under an Outlander owner, and the permanent
+      // Mechanical the block requires (`deriveOutlanderReformRecord`, `stats_identity.js`).
+      admits: ['outlanderWizard', 'armorcladReform', 'mechanical', 'rebuild'] },
   ],
   armorcladReform: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -213,7 +246,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   blackpowder: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:militaryWorkshop'] },
+      producers: ['step:training:militaryWorkshop'],
+      // The building or the reform that stands in for it, over an eligible attack channel
+      // (`stats.js`, the channel's `blackpowder` term).
+      admits: ['militaryWorkshop', 'outlanderWizard', 'rocketry'] },
   ],
   blazeOfGlory: [
     { origin: 'buffs', versions: SCOPE_WARLORD,
@@ -237,7 +273,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     // The row was missing until then: the transform granted the key and the table had only the
     // cast row, which no check could catch because a transform row was never required.
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:ascension:bless'] },
+      producers: ['step:b:marionette:ascension:bless'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteAscension', 'marionettePrimary'] },
   ],
   bloodLust: [
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
@@ -325,11 +364,17 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   counterImmunity: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:ascension:counterImmunity'] },
+      producers: ['step:b:marionette:ascension:counterImmunity'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteAscension', 'marionettePrimary'] },
   ],
   createUndead: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:ascension:createUndead'] },
+      producers: ['step:b:marionette:ascension:createUndead'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteAscension', 'marionettePrimary'] },
   ],
   darkForce: [
     // The item-power loop writes the calculated record: `if item.powers[IPDarkForce] then
@@ -368,7 +413,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'buffs', versions: SCOPE_MODERN,
       producers: ['step:buffs:discipline:cast'] },
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:militaryDrilling'] },
+      producers: ['step:training:militaryDrilling'],
+      admits: ['outlanderWizard', 'militaryDrilling'] },
   ],
   disheartenProphecy: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -410,7 +456,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   elementalArmor: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:lavaSmelter:elementalProtection'] },
+      producers: ['step:training:lavaSmelter:elementalProtection'],
+      admits: ['lavaSmelterElementalArmor', 'lavaSmelter'] },
   ],
   endurance: [
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
@@ -422,7 +469,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   energyCannon: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:energyCannon'] },
+      producers: ['step:training:energyCannon'],
+      // The Beam Weapon research over a Power Engine unit; the flag is the calculator's label
+      // for the conversion, never an input.
+      admits: ['outlanderWizard', 'energyBeamWeapons', 'heatPowerEngine', 'mechanical',
+        'rebuild'] },
   ],
   energyCannonDestruction: [
     { origin: 'derived', versions: SCOPE_WARLORD,
@@ -430,7 +481,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   energyWeaponry: [
     { origin: 'regionD', versions: SCOPE_WARLORD,
-      producers: ['step:d:energyWeaponry'] },
+      producers: ['step:d:energyWeaponry'],
+      admits: ['outlanderWizard', 'energyBeamWeapons'] },
   ],
   eternalNight: [
     { origin: 'nonRecord', versions: SCOPE_ALL,
@@ -464,7 +516,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   fieryBlade: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:lavaSmelter:flameBlade'] },
+      producers: ['step:training:lavaSmelter:flameBlade'],
+      // The mineral pair's own control, or the legacy selector beside it
+      // (`lavaSmelterGrantSteps`, `stats_identity.js`). This is the case F253.2 was filed on.
+      admits: ['lavaSmelterFieryBlade', 'lavaSmelter'] },
   ],
   fieryFury: [
     { origin: 'buffs', versions: SCOPE_WARLORD,
@@ -502,7 +557,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   forester: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:books:forester'] },
+      producers: ['step:b:marionette:books:forester'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteNatureBooks'] },
   ],
   fortification: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -536,15 +594,23 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'buffs', versions: SCOPE_ALL,
       producers: ['step:buffs:haste:cast'] },
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:temporalDrive'] },
+      producers: ['step:training:temporalDrive'],
+      admits: ['outlanderWizard', 'temporalEngineering', 'heatPowerEngine', 'mechanical',
+        'rebuild'] },
   ],
   healer: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:books:healer'] },
+      producers: ['step:b:marionette:books:healer'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteLifeBooks'] },
   ],
   healingAura: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:ascension:healingAura'] },
+      producers: ['step:b:marionette:ascension:healingAura'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteAscension', 'marionetteLifeBooks'] },
   ],
   heatPowerEngine: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -809,7 +875,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   mechanicalMaster: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:strayedPackage'] },
+      producers: ['step:b:marionette:strayedPackage'],
+      // The branch, not the key: `UnitCalcPre.CAS!STRAYEDMARIONETTE!` is entered by a Wanderer
+      // hero record whose owner is not a Channeler, so no input key states this write and
+      // `channeler` only steers away from it (`deriveMarionettePackage`, `stats_identity.js`).
+      admits: [] },
   ],
   merging: [
     { origin: 'template', versions: SCOPE_MODERN,
@@ -858,7 +928,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   mountaineer: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:books:mountaineer'] },
+      producers: ['step:b:marionette:books:mountaineer'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteNatureBooks'] },
   ],
   mysticSurge: [
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
@@ -932,7 +1005,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   powerEngine: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:powerEngine'] },
+      producers: ['step:training:powerEngine'],
+      admits: ['outlanderWizard', 'heatPowerEngine', 'mechanical', 'rebuild'] },
   ],
   powerMinerals: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -981,11 +1055,16 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'buffs', versions: SCOPE_WARLORD,
       producers: ['step:buffs:rebuild:cast'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:strayedPackage'] },
+      producers: ['step:b:marionette:strayedPackage'],
+      // The strayed branch again: no input key states it, only the Wanderer record (see `sage`).
+      admits: [] },
   ],
   regeneration: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:ascension:regeneration'] },
+      producers: ['step:b:marionette:ascension:regeneration'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteAscension', 'marionetteNatureBooks'] },
   ],
   reinforceMagic: [
     // `Units.RecalculateUnits.pas:1902` `Wizards[U.owner].GlobalEnchantments[GEReinforceMagic]`.
@@ -994,15 +1073,23 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   resistElements: [
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:lavaSmelter:resistElementsAlias'] },
+      producers: ['step:training:lavaSmelter:resistElementsAlias'],
+      admits: ['lavaSmelterResistElements', 'lavaSmelter'] },
   ],
   resistMagic: [
     { origin: 'buffs', versions: SCOPE_ALL,
       producers: ['step:buffs:resistMagic:cast'] },
     { origin: 'training', versions: SCOPE_WARLORD,
-      producers: ['step:training:magitekScience'] },
+      producers: ['step:training:magitekScience'],
+      // The research state over the Armorclad flag training:armorclad wrote one rank
+      // earlier, so the inputs are that step's plus the research state.
+      admits: ['outlanderWizard', 'magitekScience', 'armorcladReform', 'mechanical',
+        'rebuild'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:books:resistMagic'] },
+      producers: ['step:b:marionette:books:resistMagic'],
+      // The owned branch's grant table gate: a Channeler owner and the realm's book count
+      // (`MARIONETTE_OWNED_GRANTS`, `stats_identity.js`). The key itself is never read.
+      admits: ['channeler', 'marionetteSorceryBooks'] },
   ],
   // The other half of the provided/received pair; see `holyBonus` above for why the marked
   // control is the `nonRecord` row and owes no `buffs` row (F252.2).
@@ -1022,7 +1109,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   ritualMaster: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:strayedPackage'] },
+      producers: ['step:b:marionette:strayedPackage'],
+      // The branch, not the key: `UnitCalcPre.CAS!STRAYEDMARIONETTE!` is entered by a Wanderer
+      // hero record whose owner is not a Channeler, so no input key states this write and
+      // `channeler` only steers away from it (`deriveMarionettePackage`, `stats_identity.js`).
+      admits: [] },
   ],
   rocketry: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -1038,7 +1129,11 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   sage: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:strayedPackage'] },
+      producers: ['step:b:marionette:strayedPackage'],
+      // The branch, not the key: `UnitCalcPre.CAS!STRAYEDMARIONETTE!` is entered by a Wanderer
+      // hero record whose owner is not a Channeler, so no input key states this write and
+      // `channeler` only steers away from it (`deriveMarionettePackage`, `stats_identity.js`).
+      admits: [] },
   ],
   sailing: [
     { origin: 'template', versions: SCOPE_WARLORD,
@@ -1084,7 +1179,9 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
       producers: ['step:buffs:spellLock:cast'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:spellLock'] },
+      producers: ['step:b:marionette:spellLock'],
+      // The strayed branch again: no input key states it, only the Wanderer record (see `sage`).
+      admits: [] },
   ],
   spellWard: [
     { origin: 'nonRecord', versions: SCOPE_MODERN,
@@ -1163,13 +1260,18 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   transmuteEquipment: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:marionette:strayedPackage'] },
+      producers: ['step:b:marionette:strayedPackage'],
+      // The branch, not the key: `UnitCalcPre.CAS!STRAYEDMARIONETTE!` is entered by a Wanderer
+      // hero record whose owner is not a Channeler, so no input key states this write and
+      // `channeler` only steers away from it (`deriveMarionettePackage`, `stats_identity.js`).
+      admits: [] },
   ],
   trueSight: [
     { origin: 'buffs', versions: SCOPE_ALL,
       producers: ['step:buffs:trueSight:cast'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:eyeOfHeaven'] },
+      producers: ['step:b:eyeOfHeaven'],
+      admits: ['eyeOfHeaven'] },
   ],
   undead: [
     // The innate row is a **declaration**, not a derivation: `undead` is a condition flag gating a
@@ -1204,9 +1306,15 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   ],
   wallCrusher: [
     { origin: 'regionB', versions: SCOPE_WARLORD,
-      producers: ['step:b:bombsGrenades', 'step:b:marionette:ascension:wallCrusher'] },
+      producers: ['step:b:bombsGrenades', 'step:b:marionette:ascension:wallCrusher'],
+      // Bombs & Grenades' own reform gate (`explosiveEligibleAt`, `stats.js`, whose
+      // `outlanderSapiensAt` tail reads the `sapiens` label off the permanent record) and the
+      // Chaos ascension arm's. Neither reads the flag it writes.
+      admits: ['explosive', 'outlanderWizard', 'sapiens', 'channeler', 'marionetteAscension',
+        'marionettePrimary'] },
     { origin: 'regionD', versions: SCOPE_WARLORD,
-      producers: ['step:d:blazeOfGlory'] },
+      producers: ['step:d:blazeOfGlory'],
+      admits: ['blazeOfGlory'] },
   ],
   wallOfFireBoost: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
@@ -1288,6 +1396,64 @@ function abilityOriginPhases(key) {
 function abilityOriginIsTemplate(key, version) {
   return abilityOriginRows(key)
     .some(row => row.origin === 'template' && row.versions.includes(version));
+}
+
+// The origins this key has **in this version**, in table order, or an empty list where the table
+// gives it none. A key with no row here is on none of this version's records and reaches no step:
+// nothing in this build can carry it, so a caller stating it is stating something the version
+// cannot hold. `seedNonStatRecordFields` asks it (F253.1) and names the answer in its halt, so the
+// "and here is what the table does offer" half of the message comes off the table rather than a
+// hand list. Note this is *not* `abilityOriginPhases`, which drops `nonRecord` and `derived`: a key
+// with only a `nonRecord` row is read somewhere in this version and is not the erasure case.
+function abilityOriginsInVersion(key, version) {
+  return abilityOriginRows(key)
+    .filter(row => row.versions.includes(version))
+    .map(row => row.origin);
+}
+
+// The origins that put the key on **no** record and therefore read the input map directly, so a
+// caller stating the key is heard whatever the write rows say: a `nonRecord` key is a global, a
+// retort, a research state or a query input, and a `derived` key is a calculator-internal name.
+const NON_RECORD_ORIGINS = Object.freeze(['nonRecord', 'derived']);
+
+// The input keys this row's gate reads on the way to its write (F253.2). It is a **dependency
+// account, not a trigger list**: some of the entries are alternatives (either Lava Smelter
+// control, or the legacy selector) and some are conjuncts (Armorclad needs the Outlander owner
+// *and* the research state *and* permanent Mechanical), and satisfying them all is still not
+// sufficient — the step's own eligibility terms stand behind them. What the seed asks of it is
+// only membership: is this key among the inputs its own write reads at all? An omitted `admits`
+// answers that permissively with the row's own key, which is the unaudited default the table's
+// introduction describes.
+function abilityRowAdmittingKeys(key, row) {
+  return row.admits ? row.admits : [key];
+}
+
+// Is anything at all reached by a caller stating this key in this version? Three ways yes: the
+// template seed carries it, some in-version write row is admitted by the key itself, or an
+// in-version row puts it on no record and the input map is read directly. A `false` here is the
+// erasure F253.2 halts on — the key has rows, but every one of them is admitted by a *different*
+// input, so the statement reaches nothing and the seed would drop it in silence.
+function abilityKeyAdmitsOwnWrite(key, version) {
+  return abilityOriginRows(key)
+    .filter(row => row.versions.includes(version))
+    .some(row => row.origin === 'template'
+      || NON_RECORD_ORIGINS.includes(row.origin)
+      || abilityRowAdmittingKeys(key, row).includes(key));
+}
+
+// Which inputs each of this key's in-version writes is reached through, for the halt to name. It
+// prints the row's dependency account rather than a promise: an entry there is an input the gate
+// reads, not an input that on its own makes the write land. A row reached through no input key at
+// all says so, since its gate is the unit's own record.
+function abilityAdmissionSummary(key, version) {
+  return abilityOriginRows(key)
+    .filter(row => row.versions.includes(version))
+    .map(row => {
+      const admits = abilityRowAdmittingKeys(key, row);
+      return `${row.origin} (${row.producers.join(', ')}) reached through `
+        + (admits.length ? `input ${admits.map(name => `'${name}'`).join(', ')}`
+          : 'no input key — the unit record alone');
+    });
 }
 
 // The origins a **marked** control's write takes: the card marks the enchantment or condition and

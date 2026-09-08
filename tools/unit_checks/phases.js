@@ -6,6 +6,7 @@
 const {
   evalInContext, assert, assertEqual, assertClose, assertDistSumsToOne, assertSameKeyList,
   assertCloseToPrecision, assertGreaterThan, assertIs, assertStrictArrayEqual, baseUnitInput,
+  assertSeedRefusesKey, seedRefusesKeyIn,
 } = require('./assertions');
 
 function runPhaseChecks(ctx) {
@@ -607,9 +608,14 @@ function runRiderHistogramChecks(ctx) {
   // a Death immunity. Life Steal is not on this card: a DOS drain is wide and
   // `repeatTouchAttack` squares the outcome list per joint cell, so it gets its own
   // single-figure fixture below rather than riding this one.
+  // The two Life-realm rider names are **not** both on this card any more (F253.1). `exorcise` has
+  // no origin row at all in either MoM build, so stating it there is now a halt at the input
+  // boundary rather than a key the resolver quietly declines to name; `dispelEvil` is not a seeded
+  // record field in any build, so the CoM 1 half of the claim is unchanged and still supplied
+  // below. The MoM half is discharged by asserting the halt, which is the same INV-2 statement one
+  // layer earlier.
   const dosRiders = {
-    stoningTouch: -3, deathTouch: -3, poison: 2,
-    dispelEvil: true, exorcise: -1, destruction: 0,
+    stoningTouch: -3, deathTouch: -3, poison: 2, destruction: 0,
   };
   const dosTarget = {
     figs: 2, def: 0, toBlkMod: 0, res: 5, hp: 6, unitType: 'fantastic_chaos',
@@ -626,11 +632,22 @@ function runRiderHistogramChecks(ctx) {
   for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
     const lifeRider = dosLifeRiderKey[version];
     const otherLifeRider = lifeRider === 'dispelEvil' ? 'exorcise' : 'dispelEvil';
+    // The version's own Life rider, plus the other name wherever the input boundary still admits
+    // it. In CoM 1 that is `dispelEvil`, and the assertions below are what say the resolver
+    // declines to name it; in the two MoM builds `exorcise` is refused by the seed instead.
+    const lifeRiders = { dispelEvil: true,
+      ...(seedRefusesKeyIn(ctx, 'exorcise', version) ? {} : { exorcise: -1 }) };
+    if (seedRefusesKeyIn(ctx, 'exorcise', version)) {
+      assertSeedRefusesKey(() => resolve(version, { atk: 4, toHitMod: 3, hp: 10, figs: 2,
+        abilities: { ...dosRiders, ...lifeRiders, exorcise: -1 } }, dosTarget),
+      `F222 ${version} refuses an 'exorcise' input outright rather than dropping it`);
+    }
+    const riders = { ...dosRiders, ...lifeRiders };
     // A Thrown attack gives the run a second row without Haste, and it is the DOS shared
     // ranged flag record — `touchRecordForPhase` sends every non-melee DOS call to it.
     const dos = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
-        rtb: 3, rtbType: 'thrown', toHitRtbMod: 3, abilities: dosRiders },
+        rtb: 3, rtbType: 'thrown', toHitRtbMod: 3, abilities: riders },
       dosTarget);
     const dosRows = (dos.phases || []).filter(phase => (phase.riders || []).length);
     assert(dosRows.length >= 2,
@@ -660,7 +677,7 @@ function runRiderHistogramChecks(ctx) {
     const dosGaze = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
         rtb: 1, rtbType: 'gaze_stoning', toHitRtbMod: 3,
-        abilities: { stoningGaze: 0, ...dosRiders } },
+        abilities: { stoningGaze: 0, ...riders } },
       dosTarget);
     const gazeRow = (dosGaze.phases || []).find(phase => /Gaze/.test(phase.label));
     assert(!!gazeRow, `F222 ${version} deals an attacker gaze row`);
@@ -679,7 +696,7 @@ function runRiderHistogramChecks(ctx) {
     // PMF and sum-to-total checks, against `totalDmgToB`, which is that volley's own total.
     const dosVolley = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
-        rtb: 3, rtbType: 'missile', toHitRtbMod: 3, abilities: dosRiders },
+        rtb: 3, rtbType: 'missile', toHitRtbMod: 3, abilities: riders },
       dosTarget, { isRanged: true });
     const volleyKeys = (dosVolley.riders || []).map(rider => rider.key);
     for (const key of [lifeRider, 'stoningTouch', 'deathTouch', 'poison', 'melee']) {
@@ -718,7 +735,7 @@ function runRiderHistogramChecks(ctx) {
     const dosImmune = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
         rtb: 3, rtbType: 'thrown', toHitRtbMod: 3,
-        abilities: { ...dosRiders, lifeSteal: -3 } },
+        abilities: { ...riders, lifeSteal: -3 } },
       { ...dosTarget, abilities: { magicImmunity: true } });
     const immuneKeys = new Set((dosImmune.phases || [])
       .flatMap(phase => (phase.riders || []).map(rider => rider.key)));
@@ -757,7 +774,7 @@ function runRiderHistogramChecks(ctx) {
     // build reaches. Its rider tally is a separate code path from the dealt-strike arm above.
     const dosBigTarget = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
-        abilities: { ...dosRiders, firstStrike: true } },
+        abilities: { ...riders, firstStrike: true } },
       { ...dosTarget, figs: 1, hp: 30 });
     const bigRows = (dosBigTarget.phases || []).filter(phase => (phase.riders || []).length);
     assert(bigRows.length > 0,
@@ -1046,10 +1063,15 @@ function runRiderChainChecks(ctx) {
   // The DOS families run their own routine, and no chain may name a modern step. Dispel Evil
   // stands in for Exorcise in the two MoM builds; Destruction is not placed in any DOS build.
   for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
+    // `exorcise` is stated only where the origin table gives the key a row: in the two MoM builds
+    // it has none, and stating it there is a halt at the input boundary since F253.1 rather than a
+    // key the DOS routine declines to place. `dispelEvil` is on every card here — it is not a
+    // seeded record field in any build — and is the Life rider the MoM routine does place.
     const dosAttacker = {
       atk: 4, toHitMod: 1, hp: 4, figs: 1,
       abilities: {
-        stoningTouch: -3, deathTouch: -2, poison: 1, dispelEvil: true, exorcise: -1,
+        stoningTouch: -3, deathTouch: -2, poison: 1, dispelEvil: true,
+        ...(seedRefusesKeyIn(ctx, 'exorcise', version) ? {} : { exorcise: -1 }),
       },
     };
     const dosTarget = {

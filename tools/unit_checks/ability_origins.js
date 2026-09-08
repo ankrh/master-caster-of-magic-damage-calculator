@@ -23,7 +23,8 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { repoRoot } = require('../calculator_sources');
-const { assert, assertClose, assertEqual, assertSameKeyList, baseUnitInput } = require('./assertions');
+const { assert, assertClose, assertEqual, assertSameKeyList, assertSeedRefusesKey,
+  baseUnitInput, seedRefusesKeyIn } = require('./assertions');
 
 // The keys each pre-sequence transform writes into the ability map. Stated here because the writes
 // are object literals inside the transforms; `runTransformWriteChecks` below runs each transform
@@ -279,6 +280,24 @@ function runAbilityOriginChecks(ctx) {
       const phase = originPhase[row.origin];
       assert(phase === null || stepPhases.includes(phase),
         `${key}/${row.origin}: ORIGIN_PHASE names a declared step phase or null`);
+      // `admits` — which input key admits the row's write (F253.2). Omitting it reads as the row's
+      // own key, so a row that spells that out explicitly would be a second spelling of the
+      // default and is refused; a row naming an input key the table has never heard of is a typo
+      // the seed's halt would print verbatim. It belongs only on a row whose origin is a record
+      // write: a `nonRecord` or `derived` key is read straight off the input map, where there is
+      // no gate to be admitted by.
+      if ('admits' in row) {
+        assert(Array.isArray(row.admits), `${key}/${row.origin}: admits is a list`);
+        assert(phase !== null,
+          `${key}/${row.origin}: admits belongs to a record write, not a ${row.origin} row`);
+        assert(!(row.admits.length === 1 && row.admits[0] === key),
+          `${key}/${row.origin}: admits naming only '${key}' is the default — omit it`);
+        for (const admitted of row.admits) {
+          assert(!!table[admitted],
+            `${key}/${row.origin}: admits names '${admitted}', which is an ability key the origin `
+            + 'table knows');
+        }
+      }
     }
   }
 
@@ -666,8 +685,18 @@ function runStrayedMarionetteChecks(ctx, deps) {
   // in every version. This is the half a derived assertion cannot reach.
   for (const version of versions) {
     for (const key of STRAYED_UNCONTROLLED_KEYS) {
-      const raw = derive(baseUnitInput({ version, atk: 1, def: 1, abilities: { [key]: true } }));
-      assert(!raw.abilities[key],
+      const rawMark = () => derive(baseUnitInput({
+        version, atk: 1, def: 1, abilities: { [key]: true } }));
+      // Where the table names the key nowhere in this version, the raw mark is refused at the seed
+      // (F253.1) rather than reaching a record that publishes nothing; where it names it, the
+      // original claim stands and the strayed package is the writer. Read off the table, not off a
+      // version test, so a key gaining a row elsewhere moves to the other arm on its own.
+      if (seedRefusesKeyIn(ctx, key, version)) {
+        assertSeedRefusesKey(rawMark,
+          `${version}: a raw '${key}' mark is refused rather than silently dropped`);
+        continue;
+      }
+      assert(!rawMark().abilities[key],
         `${version}: ${key} has no control, so b:marionette:strayedPackage is its only source`);
     }
   }
@@ -686,11 +715,18 @@ function runStrayedMarionetteChecks(ctx, deps) {
   // one did. Fixed in F244.3f on the user's ruling; this section is what holds the eight sites
   // together, so a partial revert fails here rather than silently in one version.
   for (const version of versions) {
-    const locked = derive(baseUnitInput({ version, atk: 1, def: 1,
+    const stateLock = () => derive(baseUnitInput({ version, atk: 1, def: 1,
       abilities: { spellLock: true } }));
     const offered = version === 'com_6.08' || version.startsWith('com2');
-    assertEqual(!!locked.abilities.spellLock, offered,
-      `${version}: buffs:spellLock:cast is in scope exactly where the Spell Lock control is`);
+    // In the two MoM builds the table names `spellLock` nowhere, so the card's mark is refused at
+    // the seed (F253.1); where the control is offered the cast step carries it onto the record.
+    if (offered) {
+      assertEqual(!!stateLock().abilities.spellLock, true,
+        `${version}: buffs:spellLock:cast is in scope exactly where the Spell Lock control is`);
+    } else {
+      assertSeedRefusesKey(stateLock,
+        `${version}: a Spell Lock mark is refused, the control not being offered here`);
+    }
     // And the number it protects: a Spell-Locked Fantastic target takes no Exorcise roll in any
     // engine that has the spell, and the two MoM builds compile no Exorcise rider at all.
     const reaches = read('exorciseReachesRoll')({ spellLock: true }, 'fantastic_nature', version);
@@ -952,8 +988,17 @@ function runOwnedMarionetteChecks(ctx, deps) {
   // in every version. This is the half a derived assertion cannot reach.
   for (const version of versions) {
     for (const key of OWNED_UNCONTROLLED_KEYS) {
-      const raw = derive(baseUnitInput({ version, atk: 1, def: 1, abilities: { [key]: true } }));
-      assert(!raw.abilities[key],
+      const rawMark = () => derive(baseUnitInput({
+        version, atk: 1, def: 1, abilities: { [key]: true } }));
+      // Where the table names the key in this version at all, the mark reaches a record that
+      // publishes nothing; where it names it nowhere the mark is refused at the seed instead
+      // (F253.1). Which of the two applies is read off the table, not listed here.
+      if (seedRefusesKeyIn(ctx, key, version)) {
+        assertSeedRefusesKey(rawMark,
+          `${version}: a raw '${key}' mark is refused rather than silently dropped`);
+        continue;
+      }
+      assert(!rawMark().abilities[key],
         `${version}: ${key} has no control, so the owned Marionette step is its only source`);
     }
   }
@@ -1039,11 +1084,14 @@ function runLavaSmelterGrantChecks(ctx, deps) {
       `the block's BASEFANTASTIC gate refuses ${key} to a permanently Fantastic unit`);
 
     // A key with a template row somewhere is a card fact as well as a grant, so a raw mark is a
-    // legitimate input there and this claim does not apply to it.
+    // legitimate input there and this claim does not apply to it. For the other three —
+    // `fieryBlade`, `resistElements`, `elementalArmor` — the step is the only source and a raw
+    // mark used to write *nothing*: this check asserted that erasure, which is exactly what
+    // F253.2 turned into a halt. The claim is the same one layer earlier and stronger: the mineral
+    // pair's control admits the write and the key does not, so stating the key stops the run.
     if (!versions.some(version => abilityOriginIsTemplate(key, version))) {
-      assertEqual(!!warlordUnit({ [key]: true }).abilities[key], false,
-        `${key} has no control of its own, so the step is its only source and a raw mark writes `
-        + 'nothing');
+      assertSeedRefusesKey(() => warlordUnit({ [key]: true }),
+        `${key} has no control of its own, so the step is its only source and stating the key raw`);
     }
   }
 
@@ -1218,12 +1266,24 @@ function runOutlanderReformGrantChecks(ctx, deps) {
     const marked = derive(baseUnitInput({ version, def: 1, abilities: { resistMagic: true } }));
     assertEqual(marked.abilities.resistMagic, true,
       `${version}: buffs:resistMagic:cast carries the card's mark onto the record`);
-    const disciplined = derive(baseUnitInput({ version, def: 1,
-      abilities: { discipline: 'overland' } }));
     const offered = version.startsWith('com2');
-    assertEqual(disciplined.abilities.discipline, offered ? 'overland' : undefined,
+    const stateDiscipline = () => derive(baseUnitInput({ version, def: 1,
+      abilities: { discipline: 'overland' } }));
+    if (!offered) {
+      // Outside the two modern builds the origin table names `discipline` nowhere, so the card's
+      // value is refused at the seed rather than reaching a record that drops it (F253.1). That is
+      // the "in scope exactly where the control is offered" claim, made at the input boundary.
+      assertSeedRefusesKey(stateDiscipline,
+        `${version}: the Discipline value is refused by the seed, the control not being offered `
+        + 'here');
+      assertEqual(derive(baseUnitInput({ version, def: 1 })).def, 1,
+        `${version}: and Defense is what it was without it`);
+      continue;
+    }
+    const disciplined = stateDiscipline();
+    assertEqual(disciplined.abilities.discipline, 'overland',
       `${version}: buffs:discipline:cast is in scope exactly where the control is offered`);
-    assertEqual(disciplined.def, offered ? 2 : 1,
+    assertEqual(disciplined.def, 2,
       `${version}: and c:discipline moves Defense only there`);
   }
 
@@ -1490,17 +1550,28 @@ function runRecordSeedChecks(ctx, table, deps) {
 // The seed, executed rather than described (F244.3b review, finding 6). The checks above read the
 // tables; these run `seedNonStatRecordFields` itself and then the whole derivation, because a
 // partition that is well formed on paper can still seed the wrong value.
+// A key whose statement this version's origin table cannot hear — no row at all (F253.1), or rows
+// every one of which is admitted by a different input key (F253.2). The seed refuses such an input
+// outright rather than erasing it, so the checks below state it as a halt instead of stating it on
+// a card and asking what the record did with it. `seedRefusesKeyIn` (`assertions.js`) is the one
+// home for the question and reads the seed's own predicate, so this file cannot drift from it.
+
 function runSeedExecutionChecks(ctx, deps) {
   const read = expression => vm.runInContext(expression, ctx);
   const { seeded, versions, abilityOriginIsTemplate,
     magicCurses, grantWrites, grantValueWrites, table, scopes } = deps;
   const seedFn = read('seedNonStatRecordFields');
+  const uiDefs = read('abilityUiDefs()');
+
+  const noRowIn = (key, version) => seedRefusesKeyIn(ctx, key, version);
 
   for (const version of versions) {
-    // Every seeded key marked on the card. A key with a template row in this version takes the
-    // mark; a key without one starts unwritten however loudly the card states it, because its
-    // arrival is a positioned write.
-    const marked = Object.fromEntries(seeded.map(key => [key, true]));
+    // Every seeded key the version can carry, marked on the card. A key with a template row in
+    // this version takes the mark; a key without one starts unwritten however loudly the card
+    // states it, because its arrival is a positioned write. A key with no row of any kind is not
+    // on this card — stating it halts (F253.1), which the `noRow` block below asserts directly.
+    const carriable = seeded.filter(key => !noRowIn(key, version));
+    const marked = Object.fromEntries(carriable.map(key => [key, true]));
     const seed = seedFn(version, marked, marked, marked);
     assertSameKeyList(Object.keys(seed).sort(), [...seeded].sort(),
       `${version}: the seed names exactly the record's non-stat fields`);
@@ -1582,6 +1653,61 @@ function runSeedExecutionChecks(ctx, deps) {
       assertEqual(!!seedFn(version, { [key]: true }, { [key]: true }, { [key]: true })[key], true,
         `${version}: '${key}' stated in the innate half is what the template seed carries`);
     }
+
+    // --- the caller's own statement of a key this version cannot carry (F253.1) --------------
+    // The erasure this replaces was silent and total: no template row to seed the key into and no
+    // origin row anywhere, so no positioned step was waiting for it either, and the two arms of
+    // the seed simply dropped what the caller said. Three claims, and the second is the one that
+    // keeps the rule narrow — "no template row" would fire on every cursed unit.
+    // What the key's own controls read as off, and what they read as stated. The off values are
+    // the ones a card really hands over for a hidden control (`versionGatedClearedValue`,
+    // `card_state.js`), and the stated ones are where the seed must halt. The `numcheck` pair is
+    // the distinction a token list gets wrong: `null` is an unticked box and `0` is a ticked one
+    // stating a zero modifier, which the combat consumers read as present (review, finding 1).
+    const offValues = key => {
+      const defs = uiDefs.filter(def => (def.calcKey || def.key) === key);
+      if (!defs.length) return [null];
+      const values = new Set([null]);
+      for (const def of defs) {
+        if (def.type === 'bool') values.add(false);
+        else if (def.type === 'select') values.add((def.options || [['none']])[0][0]);
+        else if (def.type === 'num') values.add(0);
+      }
+      return [...values];
+    };
+    const statedValues = key => {
+      const defs = uiDefs.filter(def => (def.calcKey || def.key) === key);
+      const values = new Set([true]);
+      for (const def of defs) {
+        if (def.type === 'numcheck') { values.add(0); values.add(-1); }
+        else if (def.type === 'num') values.add(3);
+        else if (def.type === 'select') {
+          for (const option of (def.options || []).slice(1)) values.add(option[0]);
+        }
+      }
+      return [...values];
+    };
+    for (const key of seeded) {
+      const stated = { [key]: true };
+      if (noRowIn(key, version)) {
+        for (const value of statedValues(key)) {
+          const map = { [key]: value };
+          assertSeedRefusesKey(() => seedFn(version, map, map, map),
+            `${version}: stating '${key}' as ${JSON.stringify(value)} halts rather than being `
+            + 'dropped in silence');
+        }
+        // And the control's *off* position states nothing, so it must not halt.
+        for (const off of offValues(key)) {
+          seedFn(version, {}, { [key]: off }, { [key]: off });
+        }
+        continue;
+      }
+      // A key the table does place in this version is stated freely, whether or not it has a
+      // template row: the nine curses have none and land in their own `debuffs:*:cast` steps.
+      // Stated in every half, so this is the caller's statement alone and neither the transform
+      // guard nor F252.3's marked-half guard is the thing being probed.
+      seedFn(version, stated, stated, stated);
+    }
   }
 
   // The record has to be the carrier in both directions, not just inbound. `rebuild` was written
@@ -1606,6 +1732,14 @@ function runSeedExecutionChecks(ctx, deps) {
       if (abilityOriginIsTemplate(key, version)) continue;
       const inScope = writers.some(stepKey => (scopes[stepKey] || []).includes(version));
       if (inScope) continue;
+      // Where the table gives the key no row here at all, the input never reaches the record: the
+      // seed halts on it (F253.1), which is the same claim discharged one layer earlier and is
+      // asserted as a halt rather than as an absent publication.
+      if (noRowIn(key, version)) {
+        assertSeedRefusesKey(() => derive(baseUnitInput({ version, abilities: { [key]: true } })),
+          `${version}: marking '${key}' is refused by the seed rather than published`);
+        continue;
+      }
       const marked = derive(baseUnitInput({ version, abilities: { [key]: true } }));
       assert(!marked.abilities[key],
         `${version}: '${key}' has no writer in scope and no template row, so marking it publishes `
@@ -1754,6 +1888,16 @@ function runMarkedBuffPhaseChecks(ctx, deps) {
         .find(entry => entry.phase === 'buffs' && entry.id === `${key}:cast`);
       const inScope = scope.includes(version);
       const mark = markValue(key);
+      // Where this version's table names the key nowhere, marking it is refused at the seed
+      // (F253.1) rather than carried nowhere, which is the out-of-scope claim below made one
+      // layer earlier and more strongly. `discipline` in the three DOS builds is the live case.
+      if (seedRefusesKeyIn(ctx, key, version)) {
+        assert(!inScope,
+          `${version}: '${stepKey}' is out of scope wherever the table names '${key}' nowhere`);
+        assertSeedRefusesKey(() => run({}, { [key]: mark }),
+          `${version}: marking '${key}' is refused by the seed`);
+        continue;
+      }
 
       // Neither half: unwritten, and the step does not run — the value alone cannot separate
       // "nothing wrote it" from "something wrote false".
@@ -1886,6 +2030,16 @@ function runMarkedDebuffPhaseChecks(ctx, deps) {
       const event = result => result.statExecutionTrace
         .find(entry => entry.phase === 'debuffs' && entry.id === `${key}:cast`);
       const inScope = scope.includes(version);
+      // The same refusal the buffs block states: a key this version's table names nowhere is
+      // refused at the seed rather than carried nowhere (F253.1). `nausea` outside Warlord is the
+      // live case; the other eight curses have rows in every build and fall through.
+      if (seedRefusesKeyIn(ctx, key, version)) {
+        assert(!inScope,
+          `${version}: '${stepKey}' is out of scope wherever the table names '${key}' nowhere`);
+        assertSeedRefusesKey(() => run({}, { [key]: true }),
+          `${version}: marking '${key}' is refused by the seed`);
+        continue;
+      }
 
       // Neither half: unwritten, and the step does not run — the value alone cannot separate
       // "nothing wrote it" from "something wrote false".
@@ -2000,13 +2154,19 @@ function runSapiensLabelChecks(ctx, deps) {
       `${version}: and '${stepKey}' is in the chain exactly where its scope puts it`);
 
     // The innate control alone: the template seed is the writer and the step stands down. Out of
-    // scope the key has no template row, so the statement reaches nothing — the record is the
-    // carrier, and the card's mark is not published past it.
-    const innateOnly = run(version, 'normal', { sapiens: true }, {});
-    assertEqual(!!innateOnly.abilities.sapiens, inScope,
-      `${version}: the innate half carries the label exactly where a template row offers it`);
-    assertEqual((event(innateOnly) || {}).status, inScope ? 'skipped' : undefined,
-      `${version}: and the cast step stands down — the seed is the innate half's writer`);
+    // scope the table names the label nowhere, so the statement is refused at the seed rather than
+    // carried nowhere (F253.1) — the same claim, one layer earlier.
+    const statedInnate = () => run(version, 'normal', { sapiens: true }, {});
+    if (inScope) {
+      const innateOnly = statedInnate();
+      assertEqual(!!innateOnly.abilities.sapiens, true,
+        `${version}: the innate half carries the label where a template row offers it`);
+      assertEqual((event(innateOnly) || {}).status, 'skipped',
+        `${version}: and the cast step stands down — the seed is the innate half's writer`);
+    } else {
+      assertSeedRefusesKey(statedInnate,
+        `${version}: the Sapiens label stated in the innate half alone is refused`);
+    }
 
     // Spirit Link on a **base-Fantastic** unit: the cast is the writer, at `buffs` rank.
     const castFantastic = run(version, 'fantastic_chaos', {}, { spiritLink: true });
@@ -2028,11 +2188,18 @@ function runSapiensLabelChecks(ctx, deps) {
 
     // Both writers: the idempotent OR at the grant position (F252.2, shape 1). The write is a set
     // onto the same field, so the step still runs over the seeded bit rather than standing down.
-    const both = run(version, 'fantastic_chaos', { sapiens: true }, { spiritLink: true });
-    assertEqual(!!both.abilities.sapiens, inScope,
-      `${version}: both writers leave the label on the record exactly in scope`);
-    assertEqual((event(both) || {}).status, inScope ? 'applied' : undefined,
-      `${version}: and the step still runs over the seeded bit`);
+    const statedBoth = () => run(version, 'fantastic_chaos', { sapiens: true },
+      { spiritLink: true });
+    if (inScope) {
+      const both = statedBoth();
+      assertEqual(!!both.abilities.sapiens, true,
+        `${version}: both writers leave the label on the record`);
+      assertEqual((event(both) || {}).status, 'applied',
+        `${version}: and the step still runs over the seeded bit`);
+    } else {
+      assertSeedRefusesKey(statedBoth,
+        `${version}: and so is the label stated by both writers`);
+    }
   }
 
   // The reader, at the rank of the step asking. `b:bombsGrenades` is one of the six region-`b`

@@ -74,8 +74,10 @@ function runPresetApplierChecks() {
         for (const side of ['a', 'b']) {
           for (const abil of abilityUiDefs()) {
             if (!abilityVersionGated(abil, state.version)) continue;
+            // Every control type has an off value since F253.1 - the undefined skip that used
+            // to stand here was the numeric pair's exemption, and it is gone with it. (No
+            // backticks in this block: it is inside a template literal.)
             const cleared = versionGatedClearedValue(abil);
-            if (cleared === undefined) continue;
             const held = state[side].abilities[abil.uiKey || abil.key];
             if (held !== cleared) {
               report.failures.push(name + ' side ' + side + ': gated ' + abil.key

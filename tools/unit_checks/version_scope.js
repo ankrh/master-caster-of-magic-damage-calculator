@@ -9,7 +9,7 @@ const { calculatorFiles, readProvenanceComments } = require('../provenance_audit
 const { repoRoot } = require('../calculator_sources');
 const {
   evalInContext, assert, assertEqual, baseUnitInput, assertSameKeyList,
-  modernRecordForSharedSlot,
+  modernRecordForSharedSlot, seedRefusesKeyIn,
 } = require('./assertions');
 
 // `Calculator/steps.js` STEP_VERSION_SCOPES is the single home for which engines make a
@@ -411,8 +411,16 @@ function runCanonicalVersionScopeChecks(ctx) {
 
   // --- 5. the sweep: membership, the complement assertion, and inertness ---
   const probes = abilityScopeProbeValues(ctx);
-  const everyAbility = {};
-  for (const [key, values] of probes) everyAbility[key] = values[0];
+  // A key the origin table gives no row in this version is not part of the version's input
+  // surface: no control offers it (`abilityVersionGated` hides every one of them) and since
+  // F253.1 `seedNonStatRecordFields` halts rather than erasing it, so a sweep stating it would be
+  // probing an input the page cannot produce. The filter is per version, so the key is still swept
+  // in the versions whose table does carry it, and the sweep's own step-coverage assertion below
+  // is what says nothing was lost by dropping it here.
+  const statableIn = (key, version) => !seedRefusesKeyIn(ctx, key, version);
+  const abilityMapFor = version => Object.fromEntries(probes
+    .filter(([key]) => statableIn(key, version))
+    .map(([key, values]) => [key, values[0]]));
   const unitTypes = ['normal', 'hero', 'fantastic_life', 'fantastic_death', 'fantastic_chaos',
     'fantastic_nature', 'fantastic_sorcery', 'fantastic_arcane'];
   // Every token the DOS-shaped shared slot can carry, read from `SLOT_ATTACK_TYPES` (`data.js`)
@@ -495,12 +503,13 @@ function runCanonicalVersionScopeChecks(ctx) {
         for (const rtbType of rtbTypes) {
           // `orihalcon` is the armor control's only non-normal value; passing a weapon quality
           // such as `magic` here would name the armor axis without exercising it.
-          record(sweepInput({ ...globalState, version, abilities: { ...everyAbility },
+          record(sweepInput({ ...globalState, version, abilities: abilityMapFor(version),
             unitType, rtbType, level: 'elite', weapon: 'magic', armor: 'orihalcon', dmg: 2 }));
         }
       }
     }
     for (const [key, values] of probes) {
+      if (!statableIn(key, version)) continue;
       for (const value of values) {
         // `missile` is the conventional ranged projectile both engine families spell, paired
         // with the `thrown` probe below. This pair read `ranged`, an F117 straggler the token

@@ -15,7 +15,8 @@
 'use strict';
 
 const vm = require('vm');
-const { assert, assertSameKeyList, modernRecordForSharedSlot } = require('./assertions');
+const { assert, assertSameKeyList, modernRecordForSharedSlot,
+  seedRefusesKeyIn } = require('./assertions');
 
 // Derived-stat leaks that exist today, each with the read that causes it. This list is the
 // worklist, not an exemption: an entry leaves when its read is gated, and the check fails if a
@@ -32,6 +33,9 @@ const KNOWN_DERIVED_LEAKS = [];
 const KNOWN_TOUCH_RIDER_LEAKS = [];
 
 const MAGICAL_RANGED = '@magical';
+
+// The marker a probe returns when `seedNonStatRecordFields` refuses the input outright (F253.1).
+const SEED_REFUSAL = '@seedRefusedTheKey';
 
 const SHAPES = [
   { name: 'bare', over: { atk: 6, rtb: 0, rtbType: 'none', def: 4, res: 6, hp: 4, figs: 6 } },
@@ -105,6 +109,14 @@ function runHiddenControlGatingChecks(ctx) {
   const deriveUnitStats = read('deriveUnitStats');
   const abilityUiDefs = read('abilityUiDefs');
   const abilityVersionGated = read('abilityVersionGated');
+  // A key this version's origin table cannot hear — no row at all (F253.1), or rows every one of
+  // which is admitted by a different input key (F253.2) — is refused outright by
+  // `seedNonStatRecordFields` rather than erased, so the probe below throws instead of returning a record. That
+  // is invariant 4 discharged at the input boundary — the strongest form of "cannot move a number"
+  // — and it is counted rather than read as a leak. The expected set is computed off the origin
+  // table, so a key that stops being refused, or starts being refused where the table still gives
+  // it a row, fails here.
+  const refusedBySeed = (calcKey, version) => seedRefusesKeyIn(ctx, calcKey, version);
 
   const byCalcKey = new Map();
   for (const def of abilityUiDefs()) {
@@ -119,6 +131,8 @@ function runHiddenControlGatingChecks(ctx) {
   // 21 baselines were being recomputed for all 485 pairs.
   const baselines = new Map();
   const found = [];
+  const refused = [];
+  const expectedRefusals = [];
   let pairs = 0;
   for (const version of versions) {
     for (const [calcKey, defs] of byCalcKey) {
@@ -133,8 +147,10 @@ function runHiddenControlGatingChecks(ctx) {
       }
       if (!values.length) continue;
       pairs += 1;
+      if (refusedBySeed(calcKey, version)) expectedRefusals.push(`${version}|${calcKey}`);
 
       let leaks = false;
+      let seedRefused = false;
       for (const identity of IDENTITIES) {
         for (const shape of SHAPES) {
           if (leaks) break;
@@ -144,21 +160,31 @@ function runHiddenControlGatingChecks(ctx) {
               const { abilities: echo, ...rest } = deriveUnitStats(
                 Object.assign(baseInput(ctx, version, over), { abilities }));
               return JSON.stringify(digest(rest));
-            } catch (err) { return 'THREW: ' + err.message; }
+            } catch (err) {
+              return /no row in that version at all|admitted by a different input key/.test(err.message)
+                ? SEED_REFUSAL : 'THREW: ' + err.message;
+            }
           };
           const baselineKey = `${version}|${identity.name}|${shape.name}`;
           if (!baselines.has(baselineKey)) baselines.set(baselineKey, derive({}));
           const base = baselines.get(baselineKey);
           for (const value of values) {
-            if (derive({ [calcKey]: value }) !== base) { leaks = true; break; }
+            const probed = derive({ [calcKey]: value });
+            if (probed === SEED_REFUSAL) { seedRefused = true; continue; }
+            if (probed !== base) { leaks = true; break; }
           }
         }
       }
       if (leaks) found.push(`${version}|${calcKey}`);
+      if (seedRefused) refused.push(`${version}|${calcKey}`);
     }
   }
 
   assert(pairs > 0, 'The hidden-control gating sweep found hidden (calcKey, version) pairs to probe');
+  assertSameKeyList(refused.sort(), expectedRefusals.sort(),
+    'The hidden (calcKey, version) pairs the record seed refuses outright are exactly those the '
+    + 'origin table gives no row in that version (F253.1). A pair on one list and not the other '
+    + 'means the halt and the table disagree about what this version can carry');
   assertSameKeyList(found.sort(), [...KNOWN_DERIVED_LEAKS].sort(),
     'Version-hidden controls moving a derived stat match the declared worklist '
     + '(SPEC.md, Versions, invariant 4). A new entry is a regression; a missing one means a '
@@ -188,8 +214,12 @@ function runHiddenControlGatingChecks(ctx) {
       toBlkMod: 70, ...toHit, ...over,
     }), { prefix });
     // The attacker never carries the probed key, so it is derived once per version.
+    // Both rider names, minus any the version's origin table cannot carry — stating `exorcise` in
+    // a MoM build is a halt since F253.1, not a key `touchKeyInVersion` declines to place.
+    const attackerRiders = { dispelEvil: true,
+      ...(refusedBySeed('exorcise', version) ? {} : { exorcise: -4 }) };
     const a = deriveUnitStats(unit('a', {
-      unitType: 'normal', res: 6, abilities: { dispelEvil: true, exorcise: -4 },
+      unitType: 'normal', res: 6, abilities: attackerRiders,
     }));
     const exchange = defenderAbilities => {
       try {
@@ -200,14 +230,19 @@ function runHiddenControlGatingChecks(ctx) {
           { isRanged: false, version, wallOfFire: false, chaosConjunction: false });
         return JSON.stringify([Number(mean(result.totalDmgToB).toFixed(9)),
           Number((result.bDestroyPct || 0).toFixed(9))]);
-      } catch (err) { return 'THREW: ' + err.message; }
+      } catch (err) {
+        return /no row in that version at all|admitted by a different input key/.test(err.message)
+          ? SEED_REFUSAL : 'THREW: ' + err.message;
+      }
     };
     const baseline = exchange({});
     for (const [calcKey, defs] of byCalcKey) {
       if (!defs.every(def => abilityVersionGated(def, version))) continue;
       for (const def of defs) {
         for (const value of valuesFor(def)) {
-          if (exchange({ [calcKey]: value }) !== baseline) {
+          const probed = exchange({ [calcKey]: value });
+          // A refused key moved nothing, by construction: the derivation would not run at all.
+          if (probed !== SEED_REFUSAL && probed !== baseline) {
             touchFound.push(`${version}|${calcKey}`);
           }
         }

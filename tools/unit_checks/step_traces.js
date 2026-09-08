@@ -3,8 +3,8 @@
 'use strict';
 
 const {
-  evalInContext, assert, assertEqual, assertClose, assertSameKeyList, baseUnitInput,
-  traceWrites,
+  evalInContext, abilitiesStatableIn, assert, assertEqual, assertClose, assertSameKeyList,
+  baseUnitInput, traceWrites,
 } = require('./assertions');
 
 function runStatStepChecks(ctx) {
@@ -1162,7 +1162,10 @@ function f20Input(ctx, version, scenario) {
     toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
     cityWalls: 'none', nodeAura: 'life', chaosSurge: 1,
     guidingBeaconAura: 2, divineBarrierAura: 2, soulLinkerAura: 2,
-    realmWard: 'life', abilities: { ...F20_PROBE_ABILITIES },
+    // Minus any key the origin table does not place in this version: stating one is a halt since
+    // F253.1, and it is not part of the version's input surface — no control offers it either, so
+    // the anchors it could contribute to are not this version's.
+    realmWard: 'life', abilities: abilitiesStatableIn(ctx, version, F20_PROBE_ABILITIES),
   };
 }
 

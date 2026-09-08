@@ -203,11 +203,13 @@ function runVersionGateDivergenceChecks(ctx) {
           `a gated select clears to its first option (${version}|${uiKey})`);
         clearedSelects += 1;
       } else {
-        // The carried looseness, asserted rather than merely commented: the page's `applyDisabled`
-        // never touched a number input, so neither does this. `hidden_control_gating.js` is what
-        // keeps it harmless, and F260.3's report proposes closing it as its own item.
-        assertEqual(value, state.abilities[uiKey],
-          `a gated number control keeps its value, as the page's clearing did (${version}|${uiKey})`);
+        // The looseness F260.3 recorded here is closed (F253.1): a gated number control is cleared
+        // like every other, an unticked `numcheck` being `null` and an empty `num` being `0`. It
+        // was harmless only while `deriveUnitStats` ignored a key the version cannot carry; the
+        // seed halts on one now, and `exorcise` — hidden in both MoM builds and named by no MoM
+        // origin row — is the pair that made the carried value reachable from the card.
+        assertEqual(value, def.type === 'numcheck' ? null : 0,
+          `a gated number control clears to its own off value (${version}|${uiKey})`);
         carriedNumerics += 1;
       }
     }

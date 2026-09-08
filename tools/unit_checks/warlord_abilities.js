@@ -446,6 +446,17 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(militaryDrilling.abilities.discipline, 'overland', 'Military Drilling gives new non-fantastic units permanent Discipline');
   assertEqual(militaryDrilling.def, 3, 'Military Drilling Discipline applies its Regular +2 Armor bonus');
 
+  // A derived output name stated raw as input. Five of these — `armorclad`, `powerEngine`,
+  // `blackpowder`, `energyCannon`, `energyWeaponry` — are Warlord record fields whose only write
+  // is admitted by the reform's own research state rather than by the key (F253.2), so the
+  // caller's statement gates nothing. The seed nevertheless never sees them:
+  // `deriveOutlanderReformRecord` strips every `DERIVED_OUTLANDER_STATE_KEYS` name from the map
+  // before the sequence runs (`stats_identity.js`). That deletion is the **named**, deliberate
+  // erasure the seed's halts deliberately keep legal, and it is one layer above the seed, so the
+  // claim here stays 'ignored' rather than becoming a refusal. `battleArmor`, `pneumaField` and
+  // `psychoForce` are block labels that are not record fields at all and are stripped the same
+  // way. Stating any of the five in a build with no Outlander reform is a different matter and
+  // halts under F253.1, which is where the fail-loud claim for these keys lives.
   const staleDerivedInputs = ctx.deriveUnitStats(warlordUnit({
     def: 1,
     rtbType: 'missile',

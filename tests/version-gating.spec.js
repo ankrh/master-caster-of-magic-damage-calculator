@@ -100,6 +100,36 @@ test('a hidden ability does not leak into the result', async ({ page }) => {
   expectNoConsoleErrors(errors);
 });
 
+// The same claim for a **numeric** control, which is the half the bool case cannot make: until
+// F253.1 the page's clearing pass left a `num`/`numcheck` value in place when the version hid the
+// control, harmlessly only because the derivation ignored a key the version cannot carry. The seed
+// halts on such a key now, so the carried value would take the page down on an ordinary version
+// switch — Exorcise is a `numcheck` offered in CoM 1 and hidden in both MoM builds.
+test('a hidden numeric ability is cleared by a version switch (F253.1)', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const meanB = () => page.locator('#distB .dist-header .avg').innerText();
+
+  // Default custom units on both sides: the claim is about the *switch*, and the smaller the card
+  // work per step the more of the 30s budget the three version changes get.
+  await selectCustom(page);
+  await setValue(page, 'gameVersion', 'mom_1.31');
+  const off = await meanB();
+
+  await setValue(page, 'gameVersion', 'com_6.08');
+  await setValue(page, 'aAbil_exorcise_on', true);
+  await setValue(page, 'aAbil_exorcise', '-4');
+  expect(await page.locator('#aAbil_exorcise').inputValue()).toEqual('-4');
+
+  // The switch the carried value used to survive: it reached `deriveUnitStats`, which since
+  // F253.1 halts on a key MoM's origin table names nowhere. The control is unticked instead, the
+  // card still computes, and nothing reaches the console.
+  await setValue(page, 'gameVersion', 'mom_1.31');
+  expect(await page.locator('#aAbil_exorcise_on').isChecked()).toBe(false);
+  expect(await meanB()).toEqual(off);
+
+  expectNoConsoleErrors(errors);
+});
+
 test('a hidden enchantment does not leak into the matrix', async ({ page }) => {
   const errors = await openCalculator(page);
 

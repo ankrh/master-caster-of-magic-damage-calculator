@@ -350,14 +350,20 @@ function presetIdentity(fixture, version, source) {
 // choose another: F261 deleted the matrix's weaker second test, so the card, the preset path and
 // the matrix reader all ask the one question.
 
-// What the page's clearing actually writes, which is not the same as "the def's default":
-// `applyDisabled` clears a checkbox and resets a select to its first option, and touches neither
-// a `num` input nor a `numcheck` pair (the numcheck's tick box is only disabled, in lockstep with
-// its number). `undefined` means "the page leaves this control alone", and the gating pass leaves
-// the state alone to match. Reproducing that exactly is the point: a stricter clear here would
-// make the pure path compute a different unit from the page's, which is the failure mode F260
-// exists to prevent. It costs nothing today only because `tools/unit_checks/hidden_control_gating.js`
-// shows no gated `calcKey` reaches a derived stat.
+// What the page's clearing writes. Every control type has an off value here, and the page follows:
+// `updateTypeVisibility` writes back whatever this pass changed (`ui_abilities.js`), so the two
+// paths cannot disagree — which is the property F260.3 established and this keeps.
+//
+// **The numeric pair used to be left alone (F253.1).** `applyDisabled` clears a checkbox and resets
+// a select, and touched neither a `num` input nor a `numcheck` pair, so a version-hidden numeric
+// control kept its value in the card state; the value reached `deriveUnitStats` and was ignored
+// there, which is why it cost nothing. It stopped being free when `seedNonStatRecordFields` began
+// halting on a stated key the version's origin table names nowhere: `exorcise` is a `numcheck`
+// hidden in both MoM builds and named by no MoM origin row, so setting it in CoM 1 and switching
+// to MoM 1.31 handed the derivation a key it had to refuse. Clearing it is also what INV-2 says —
+// a control hidden for the active version cannot move a number, and a value left in the state is
+// a number waiting to move. An unticked numcheck is `null` and an empty num is `0`
+// (`presetAbilityValues` below, and `setAbilityControlValue` in `ui_abilities.js`).
 function versionGatedClearedValue(abil) {
   if (abil.type === 'bool') return false;
   if (abil.type === 'select') {
@@ -368,7 +374,8 @@ function versionGatedClearedValue(abil) {
     }
     return options[0][0];
   }
-  if (abil.type === 'numcheck' || abil.type === 'num') return undefined;
+  if (abil.type === 'numcheck') return null;
+  if (abil.type === 'num') return 0;
   throw new Error(`versionGatedClearedValue: the def '${abil.key}' has control type `
     + `${JSON.stringify(abil.type)}, which is not one of bool/select/numcheck/num.`);
 }
@@ -389,9 +396,7 @@ function applyVersionGating(state, version) {
     const uiKey = cardStateAbilityUiKey(abil);
     if (!(uiKey in abilities)) continue;
     if (!abilityVersionGated(abil, version)) continue;
-    const cleared = versionGatedClearedValue(abil);
-    if (cleared === undefined) continue;
-    abilities[uiKey] = cleared;
+    abilities[uiKey] = versionGatedClearedValue(abil);
   }
   const gated = { ...state, abilities };
   if (!versionHasArmorQuality(version)) gated.armor = 'normal';

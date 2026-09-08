@@ -4,6 +4,165 @@
 
 # Journal
 
+## 2026-09-08 — F253.2: the origin table records which input key admits each write
+
+The other half of F253's erasure, and the one F253.1 could not see. A key can have an origin row in
+the active version and *still* be dropped in silence, because the row's write is admitted by a
+**different input key**. Warlord `fieryBlade` is the case the item was filed on:
+`training:lavaSmelter:flameBlade` writes it, and the step's `when` reads `lavaSmelterFieryBlade`.
+
+`ABILITY_KEY_ORIGINS` rows now carry an optional `admits` list — the input keys whose statement
+admits that row's write. `abilityKeyAdmitsOwnWrite(key, version)` is the predicate, and it answers
+*yes* three ways: a `template` row (the seed carries the statement), a `nonRecord` or `derived` row
+(nothing seeds the key but the input map is read directly), and any write row admitted by the key
+itself — which is the ordinary `debuffs:<curse>:cast` / `buffs:<spell>:cast` shape, and why the halt
+fires on no cursed unit. Every seeded key that has an in-version row and no `template` row now
+carries a correct `admits` on each of its rows; rows of `template`-origin keys (`armorPiercing`,
+`largeShield`, `poison`, …) were **not** audited, and omission is therefore read permissively rather
+than as a claim. That asymmetry is deliberate and safe in one direction only: a missing `admits` is
+a missed erasure, never a false halt. Completing the audit would tighten the halt further.
+
+**Refusal set: 21 keys, all Warlord, 0 in the other four versions.** `sage`, `mechanicalMaster`,
+`ritualMaster`, `arcaneWard`, `transmuteEquipment` (the strayed Marionette branch, chosen by the
+Wanderer hero record and admitted by no input key at all — `admits: []`), `regeneration`,
+`counterImmunity`, `createUndead`, `healingAura`, `forester`, `mountaineer`, `healer` (the owned
+branch's book and ascension grants), `wallCrusher`, `fieryBlade`, `resistElements`,
+`elementalArmor`, `armorclad`, `powerEngine`, `blackpowder`, `energyCannon`, `energyWeaponry`.
+The four non-Warlord versions have none: every non-template seeded key there is a curse or a
+beneficial cast whose step reads the key the card marked.
+
+**Why the halt cannot fire from the page, checked rather than argued.** None of the 21 has a control
+at all — `abilityUiDefs` names no def whose calc key is any of them, in any version — so no card,
+roster selection, saved state or share link can state one. That is a stronger statement than
+F253.1's, which had to close a real version-switch hole first. `tools/f253_card_path_probe.js`
+(scaffolding, deleted with the subtask) measured it anyway, across version switches as well as fresh cards, because the
+F253.1 review's lesson is that a probe over fresh cards says nothing about a transition: 4,494 cases
+through `presetDefaultCardState` → `applyRosterUnit` → `applyVersionGating` →
+`cardStateToDerivationInput` → `deriveUnitStats`, 0 refusals and 0 other throws. It halts if more
+than 2% of its cases throw at all, and its `--mutate` arm narrows Spell Lock's `buffs` row so the
+probe must see refusals: 9 of them, in CoM 1, base CoM2 and Warlord, and none in the two MoM builds
+that hide the control. A zero here was only read after the mutation had been seen to resolve.
+
+**Five of the 21 never reach the halt, and finding out why was the suite's doing.** `armorclad`,
+`powerEngine`, `blackpowder`, `energyCannon` and `energyWeaponry` are `DERIVED_OUTLANDER_STATE_KEYS`,
+and `deriveOutlanderReformRecord` **deletes** them from the ability map before the sequence runs. A
+transform deletion is the deliberate erasure the seed's halts keep legal (that is why the seed reads
+`effective` and not `supplied`), so stating one of the five was never silent — the strip is the
+thing that ignores it, one layer above the seed, and it is named where it happens. `deriveUnitStats`
+therefore halts on 16 of the 21 and passes the other five through to the strip. The declaration on
+all 21 rows is still true; only its reachability differs. `warlord_abilities.js`'s
+`staleDerivedInputs` check is what caught this: converting it to a refusal assertion — as F253.1
+converted its own erasure assertions — failed, because the erasure it asserts is the strip's, not
+the seed's. It keeps its original claim with the reason written beside it.
+
+**Completeness of the refusal set, measured.** A sweep stated each non-template, not-yet-refused
+seeded key on its own and compared the derivation against not stating it, over two unit shapes.
+Only `discipline` came back silent, and that is the probe's own fault — it states `true`, which is
+not one of the select's values. So nothing else is being erased that the declarations miss.
+
+**One incidental finding, not acted on.** `lavaSmelterGrantSteps`'s legacy selector term,
+`marked.lavaSmelter`, reads a calc key **no control produces**: the origin table gives
+`lavaSmelter` a `nonRecord` row saying old presets and share payloads keep loading through it, and
+no shipped preset or def states it. The term is therefore dead for every input the page can build.
+It is named in the two Lava Smelter `admits` lists because it is genuinely what the gate reads.
+
+**Two existing checks asserted the erasure and now assert the halt.** `ability_origins.js`'s Lava
+Smelter block held "`<key>` has no control of its own, so the step is its only source and a raw mark
+writes nothing" for `fieryBlade`, `resistElements` and `elementalArmor` — the erasure, written down
+as intended behaviour — and it is a refusal assertion now. Its seed-execution block's
+all-carriable map was the other one, and it tripped on `sage`.
+
+**`admits` is a dependency account, not a trigger list**, and the first draft's wording promised more
+than that. The reviewer caught two places: `abilityRowAdmittingKeys` said "the caller states it and
+the write follows", and the halt message joined the list with "or", which reads as each entry being
+individually sufficient. Some entries are alternatives (either Lava Smelter control, or the legacy
+selector) and some are conjuncts (Armorclad needs the Outlander owner *and* the research state *and*
+permanent Mechanical), and satisfying all of them is still not sufficient — the step's own
+eligibility terms stand behind them. What the seed asks is only membership. The reviewer's other
+finding was a genuine omission: `wallCrusher`'s Bombs & Grenades row left out `sapiens`, which
+`explosiveEligibleAt`'s `outlanderSapiensAt` tail reads, and a Fantastic Warlord unit needs it for
+the write to land at all. Neither finding moved the refusal set.
+
+`seedRefusesKeyIn` / `assertSeedRefusesKey` (`tools/unit_checks/assertions.js`) answer both refusals
+through the seed's own predicate, and `ability_origins.js`'s local `keyHasNoOriginRowIn` is deleted
+in favour of them — it was a second, now-wrong spelling of the question, and it is what the first
+suite run tripped on (`sage`, stated by the seed-execution block's all-carriable map).
+## 2026-09-08 — F253.1: the silent seed erasure becomes a halt
+
+`seedNonStatRecordFields` (`Calculator/stats_identity.js`) now halts where the input states a
+seeded record field the origin table gives **no row at all** in the active version. The predicate
+is `abilityOriginsInVersion` (`Calculator/stats_origins.js`), which returns the origins the table
+offers for the key in this build; empty means nothing in this version can carry it, so the old
+`seed[key] = false / undefined` arms were dropping the caller's statement in silence.
+
+Three decisions inside it that a reader will want the reason for:
+
+- **The map read is `effective`, not `supplied`.** A pre-sequence transform *deletion* — the
+  Outlander reform stripping its derived output names — must stay legal, and `effective` is the map
+  after the transforms, so a deleted key states nothing. A transform *write* already halts one
+  branch earlier (F244.3g).
+- **A control's off value states nothing, and the control says which value that is.**
+  `abilityValueStatesGrant(key, value)` answers absence itself and then asks `abilityValueIsActive`
+  (`ability_gating.js`), the existing home of the rule. This is deliberately the opposite reading
+  from the transform guard's, where writing `0` over nothing is a write. The baselines differ: the
+  card hands over its whole control surface on every call and `applyVersionGating` *resets* a hidden
+  control rather than omitting it, so every MoM card carries `discipline: 'none'`. Reading
+  `!= null` here halts on the default card in three versions — measured, not predicted. A blanket
+  token list (`false`/`0`/`'none'`) was the first draft and was wrong in one place the reviewer
+  found: a `numcheck`'s off is `null` alone, `0` being a ticked box stating a zero modifier, so
+  `exorcise: 0` in a MoM build has to halt exactly as `exorcise: -1` does.
+- The rule is "no origin row", not "no template row". 42–43 seeded keys per version have no
+  template row and are written at their own rank; only 31/31/29/28/0 have no row of any kind.
+
+Re-measured census (2026-09-08): **65** seeded non-stat fields; keys with no origin row at all are
+**31** in each MoM build, **29** in CoM 1, **28** in base CoM2, **0** in Warlord. The ten that any
+caller actually reached are `mechanical`, `exorcise`, `flying`, `discipline`, `sapiens`, `rage`,
+`bloodSucker`, `rebuild`, `nausea`, `spellLock`.
+
+**The page *could* produce one, through a version switch, and that hole is now closed.**
+`versionGatedClearedValue` (`card_state.js`) used to return `undefined` for a `num` or `numcheck`,
+meaning "the page leaves this control alone", and `applyVersionGating` left the state alone to
+match — the page's own `applyDisabled` never touched a number input. It cost nothing while the
+derivation ignored a key the version cannot carry. `exorcise` is a `numcheck`, offered in CoM 1 and
+hidden in both MoM builds, and named by no MoM origin row: setting it and switching to MoM 1.31
+handed the seed a key it now has to refuse. A hidden numeric control is therefore cleared like
+every other — `null` for a numcheck, `0` for a num — and the page follows automatically, because
+`updateTypeVisibility` writes back whatever the gating pass changed (F260.3's design). The looseness
+`version_gate_divergence.js` asserted as carried is asserted as cleared instead, and
+`tests/version-gating.spec.js` gained the switch as a case in the suite it already has. Found by
+the GPT reviewer, not by the author's own probes, which is worth remembering: a probe over *fresh*
+cards, roster selections and individually visible controls says nothing about a **transition**.
+
+With that in place a card-path probe over the default card, every roster unit in all five versions,
+and every visible control at each of its non-off values — 1,702 cases through `applyRosterUnit` →
+`applyVersionGating` → `cardStateToDerivationInput` → `deriveUnitStats` — reports 0 refusals and 0
+other throws. Its sensitivity was demonstrated rather than assumed: narrowing `discipline`'s
+`buffs` row from `SCOPE_MODERN` to `SCOPE_WARLORD` made it report exactly the two base-CoM2
+Discipline cases, and restoring the row returned it to 0. Statically, no control
+`abilityVersionGated` leaves visible in a version names a key with no row there, in any of the five.
+
+`derivation_equivalence`: 52,440 cases, 41,940 identical, **10,500 differing only by becoming an
+F253.1 refusal, and 0 differing in any value**. The tool enumerates every control in every version
+without version-gating them, which is why it reaches the refusals at all; both sides of a future
+comparison carry the same ones, so it still measures what it is for. F259 is the item that owns
+what the tool does and does not vary.
+
+The suite cost is in the checks that used to *state* an out-of-scope key and assert the record
+published nothing. That particular claim is now made one layer earlier and more strongly — the input
+is refused — via `assertSeedRefusesKey` / `seedRefusesKeyIn` / `abilitiesStatableIn`
+(`tools/unit_checks/assertions.js`). Converted: the F222 rider histograms and rider chains
+(`phases.js`), the hidden-control gating sweep (`hidden_control_gating.js`, which now also asserts
+the refused pair list equals the table's own), the canonical version-scope sweep and the F20 anchor
+probe (`version_scope.js`, `step_traces.js`), and six blocks in `ability_origins.js`. No suite was
+added and none deleted; Node assertions went 33,276 → 33,358, and Playwright 76 → 77.
+
+Two of the conversions are **filters** rather than replaced assertions, and are the one place
+coverage genuinely narrows: the canonical version-scope sweep and the F20 anchor probe drop the
+keys this version cannot carry from their all-controls-on map instead of asserting anything about
+them. Both keep every other claim they made — the anchors, the scope membership and the step
+coverage assertion — and the keys they drop are refused-input keys, asserted as refusals in
+`ability_origins.js` and `hidden_control_gating.js`.
+
 ## 2026-09-08 — F267.6: the identity object is retired, and F267 closes
 
 `initializeUnitIdentity` is gone. Its replacement, `unitIdentityRecordSeed(input)`

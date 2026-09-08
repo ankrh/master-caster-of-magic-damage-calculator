@@ -1119,6 +1119,44 @@ const SEEDED_NON_STAT_KEYS = Object.freeze([...new Set([
   ...POSITIONED_GRANT_FIELDS, ...POSITIONED_GRANT_WRITES,
 ])]);
 
+// Whether an ability map's value for a key is a **statement** rather than the control's off
+// position (F253.1). The card hands `deriveUnitStats` its whole control surface on every call and
+// a version-gated control is reset rather than omitted (`applyVersionGating`, `card_state.js`), so
+// the off value has to mean "nothing said" or the seed's halt fires on every card.
+//
+// **What "off" is belongs to the control, not to a token list.** `abilityValueIsActive`
+// (`ability_gating.js`) is the one home for that rule and this asks it rather than restating it:
+// an unticked checkbox is `false`, a select's off is its *first option*, an empty `num` is `0` —
+// and a `numcheck`'s off is `null` alone, because `0` there is a ticked box stating a zero
+// modifier, which the combat consumers read as present. A blanket `value !== 0` swallowed exactly
+// that case (review, finding 1): `exorcise: 0` in a MoM build is a stated key the version cannot
+// carry and must halt like `exorcise: -1`.
+//
+// A key with no control at all takes the fallback: anything but absence and `false` is a
+// statement, since there is no off position to respect and a caller stating such a key is already
+// out of band.
+let abilityDefsByCalcKey = null;
+function abilityDefsForCalcKey(key) {
+  if (!abilityDefsByCalcKey) {
+    abilityDefsByCalcKey = new Map();
+    for (const def of abilityUiDefs()) {
+      const calcKey = def.calcKey || def.key;
+      if (!abilityDefsByCalcKey.has(calcKey)) abilityDefsByCalcKey.set(calcKey, []);
+      abilityDefsByCalcKey.get(calcKey).push(def);
+    }
+  }
+  return abilityDefsByCalcKey.get(key) || [];
+}
+function abilityValueStatesGrant(key, value) {
+  // Absence first, and not through the def: a select's off test is `value !== options[0][0]`,
+  // which reads an *unstated* key as active. The maps here are partial — a card states only the
+  // controls it has — so absence has to be answered before the control is asked.
+  if (value == null) return false;
+  const defs = abilityDefsForCalcKey(key);
+  if (defs.length) return defs.some(def => abilityValueIsActive(def, value));
+  return value !== false;
+}
+
 // The record seed, by origin (F244.3b; F252.3; F252.4). F244's rule is that the record starts as the
 // roster template and nothing else, and every modification is a positioned write on top of it, so
 // a key is seeded only where `abilityOriginIsTemplate` (`stats_origins.js`) gives it a `template`
@@ -1190,6 +1228,70 @@ function seedNonStatRecordFields(version, innate, effective, supplied) {
       throw new Error(`seedNonStatRecordFields: '${key}' has no template origin in ${version}, `
         + 'yet a pre-sequence transform wrote it. Give the write a positioned step '
         + '(Calculator/stats_sequence.js) — no seed carry is offered any more (F244.3g).');
+    }
+    // The caller's own statement of a key this version cannot carry anywhere (F253.1). The seed
+    // has no template row to put it in and no transform wrote it, so the two arms below erase it;
+    // where the key also has **no origin row at all in this version** there is no positioned step
+    // waiting for it either, and the erasure is silent and total. That is the opposite of the
+    // fail-loud rule (`CLAUDE.md`, *Architecture*), so it halts naming the key, the version and the
+    // origins the table does offer.
+    //
+    // **The rule is "no origin row", not "no template row"** — the wider one would fire on every
+    // cursed unit, since 42–43 seeded keys per version lack a template row and the nine curses are
+    // among them, each landing in its own `debuffs:<curse>:cast` step which reads the marked half.
+    // Those keys are erased from the *seed* on purpose and written at their own rank.
+    //
+    // The map read is `effective`, the map as the pre-sequence transforms leave it, not `supplied`:
+    // a transform **deletion** is a deliberate erasure and must stay legal
+    // (`deriveOutlanderReformRecord` strips its derived output names, `blackpowder` among them),
+    // and a transform *write* has already halted above.
+    //
+    // **A control's *off* value states nothing, and that is the opposite reading from the
+    // transform guard's** — deliberately, because the baseline differs. There the comparison is
+    // against the map before the transform ran, so writing `0` where nothing stood is a write
+    // (F244.3g). Here there is no before: the caller hands over the whole control surface every
+    // time, version-gated controls reset to their own off value rather than being omitted
+    // (`applyVersionGating`, `card_state.js`), so a control at rest says nothing about its key.
+    // Reading `!= null` here halts on every MoM card, which all carry `discipline: 'none'` for a
+    // select the version hides. Which value is "at rest" is the control's own answer, above.
+    if (abilityValueStatesGrant(key, effective[key])) {
+      const offered = abilityOriginsInVersion(key, version);
+      if (offered.length === 0) {
+        throw new Error(`seedNonStatRecordFields: '${key}' is stated as `
+          + `${JSON.stringify(effective[key])} in the input for ${version}, `
+          + 'but the origin table gives the key no row in that version at all — no template seed '
+          + 'and no positioned step — so the record could only drop it in silence. Expected: a key '
+          + 'with at least one origin row for this version in Calculator/stats_origins.js. The '
+          + `table offers '${key}' only in `
+          + `${abilityOriginRows(key).flatMap(row => row.versions).filter(
+            (item, index, all) => all.indexOf(item) === index).join(', ') || '(no version)'}. `
+          + 'Either the control is being set outside its version scope, or the key needs its row '
+          + 'and its positioned write (F253.1).');
+      }
+      // The other half of the same erasure (F253.2). The key *does* have a row here, so F253.1's
+      // test passes — but every write the row names is admitted by a **different input key**, so
+      // the caller's own statement gates nothing and the seed drops it just as silently. Warlord
+      // `fieryBlade` is the case the item was filed on: `training:lavaSmelter:flameBlade` writes
+      // it, and its `when` reads `lavaSmelterFieryBlade`, the mineral pair's control.
+      //
+      // `abilityKeyAdmitsOwnWrite` (`stats_origins.js`) is what asks, off the table's own
+      // `admits` field, so the halt and the table cannot drift. It answers *yes* for a `template`
+      // row (the seed carries the statement), for a `nonRecord` or `derived` row (nothing seeds
+      // the key, but the input map is read directly and the statement is heard), and for any
+      // write row whose gate reads this key — which is the ordinary `debuffs:<curse>:cast` and
+      // `buffs:<spell>:cast` shape, and why this fires on no cursed unit.
+      if (!abilityKeyAdmitsOwnWrite(key, version)) {
+        throw new Error(`seedNonStatRecordFields: '${key}' is stated as `
+          + `${JSON.stringify(effective[key])} in the input for ${version}, and the origin table `
+          + 'does give the key rows there, but every one of them is admitted by a different input '
+          + 'key, so stating this key reaches no write and the record could only drop it in '
+          + 'silence. Expected: a key whose statement admits at least one of its own writes. What '
+          + `the table has for '${key}' in ${version}: `
+          + `${abilityAdmissionSummary(key, version).join('; ')}. Those are the inputs each write `
+          + 'is reached through, not a guarantee that stating one lands it. Either state them '
+          + 'instead of this key, or give the key a control and a write of its own and record what '
+          + 'reaches it on the row (`admits`, Calculator/stats_origins.js) (F253.2).');
+      }
     }
     seed[key] = isValueField ? undefined : false;
   }

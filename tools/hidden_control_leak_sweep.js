@@ -108,13 +108,24 @@ function digest(value) {
   return out;
 }
 
+// A key this version's origin table cannot hear — no row at all (F253.1), or rows every one of
+// which is admitted by a different input key (F253.2) — is refused outright by the record seed
+// rather than erased, so the probe throws instead of returning a digest. That is the
+// gating invariant discharged at the input boundary — the strongest form of "cannot move a number"
+// — and it is counted as its own outcome rather than read as a moved stat.
+const SEED_REFUSAL = '@seedRefusedTheKey';
+function seedRefusalOr(err) {
+  return /no row in that version at all|admitted by a different input key/.test(err.message)
+    ? SEED_REFUSAL : 'THREW: ' + err.message;
+}
+
 function deriveDigest(version, over, abilities) {
   const input = baseInput('a', version, over);
   input.abilities = abilities;
   try {
     const { abilities: echo, ...rest } = deriveUnitStats(input);
     return JSON.stringify(digest(rest));
-  } catch (err) { return 'THREW: ' + err.message; }
+  } catch (err) { return seedRefusalOr(err); }
 }
 
 // One exchange against a plain opponent of the same shape with no secondary attack, melee and
@@ -140,7 +151,7 @@ function combatDigest(version, over, abilities, isRanged, side) {
     return JSON.stringify([round(mean(result.totalDmgToA)), round(mean(result.totalDmgToB)),
       round(result.aDestroyPct), round(result.bDestroyPct),
       round(result.aAlive), round(result.bAlive)]);
-  } catch (err) { return 'THREW: ' + err.message; }
+  } catch (err) { return seedRefusalOr(err); }
 }
 
 function valuesFor(def) {
@@ -181,6 +192,7 @@ function run() {
   const pairs = hiddenPairs();
   const derived = [];
   const resolved = [];
+  const refusedPairs = new Set();
   let deriveCases = 0;
   let combatCases = 0;
 
@@ -192,7 +204,9 @@ function run() {
         const base = deriveDigest(pair.version, over, {});
         for (const value of pair.values) {
           deriveCases += 1;
-          if (deriveDigest(pair.version, over, { [pair.calcKey]: value }) !== base) {
+          const probed = deriveDigest(pair.version, over, { [pair.calcKey]: value });
+          if (probed === SEED_REFUSAL) { refusedPairs.add(`${pair.version}|${pair.calcKey}`); continue; }
+          if (probed !== base) {
             hitDerive = hitDerive || { ...pair, value, where: `${shape.name}/${identity.name}` };
           }
         }
@@ -208,6 +222,7 @@ function run() {
           for (const value of pair.values) {
             combatCases += 1;
             const got = combatDigest(pair.version, shape.over, { [pair.calcKey]: value }, isRanged, side);
+            if (got === SEED_REFUSAL) { refusedPairs.add(`${pair.version}|${pair.calcKey}`); continue; }
             if (got !== base) {
               hitCombat = hitCombat || {
                 ...pair, value, base, got,
@@ -225,6 +240,7 @@ function run() {
     + `  [${leak.where}]  controls=${leak.controls.join(',')}`;
   console.log(`hidden (calcKey, version) pairs: ${pairs.length}`);
   console.log(`derivations compared: ${deriveCases}`);
+  console.log(`pairs the record seed refuses outright (F253.1): ${refusedPairs.size}`);
   console.log(`pairs moving a derived stat: ${derived.length}`);
   derived.forEach(leak => console.log(line(leak)));
   if (deriveOnly) return;

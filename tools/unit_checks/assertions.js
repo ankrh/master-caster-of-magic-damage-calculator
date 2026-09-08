@@ -305,6 +305,56 @@ function traceWrites(projected) {
   return ((projected && projected.entries) || []).filter(entry => !entry.boundary);
 }
 
+// Whether `seedNonStatRecordFields` will refuse a stated key in this version: the key is one of
+// the record's non-stat fields and stating it reaches nothing, so the seed halts rather than
+// erasing it. A sweep that states the whole control surface asks this first, because a key in
+// this position is not part of the version's input surface at all — no control offers it either.
+//
+// Two refusals, one question. F253.1's is "the origin table gives the key no row in this build";
+// F253.2's is "it gives rows, but every one of them is admitted by a different input key, so the
+// statement gates no write". `abilityKeyAdmitsOwnWrite` (`Calculator/stats_origins.js`) answers
+// the second and is the halt's own test, so this cannot drift from it.
+const SEED_SURFACE_BY_CONTEXT = new WeakMap();
+function seedRefusesKeyIn(ctx, key, version) {
+  if (!SEED_SURFACE_BY_CONTEXT.has(ctx)) {
+    SEED_SURFACE_BY_CONTEXT.set(ctx, {
+      seeded: new Set(evalInContext(ctx, 'SEEDED_NON_STAT_KEYS')),
+      rows: evalInContext(ctx, 'ABILITY_KEY_ORIGINS'),
+      admitsOwnWrite: evalInContext(ctx, 'abilityKeyAdmitsOwnWrite'),
+    });
+  }
+  const { seeded, rows, admitsOwnWrite } = SEED_SURFACE_BY_CONTEXT.get(ctx);
+  if (!seeded.has(key)) return false;
+  if (!(rows[key] || []).some(row => row.versions.includes(version))) return true;
+  return !admitsOwnWrite(key, version);
+}
+
+// The same map with those keys dropped, for a probe that states every control at once.
+function abilitiesStatableIn(ctx, version, abilities) {
+  return Object.fromEntries(Object.entries(abilities)
+    .filter(([key]) => !seedRefusesKeyIn(ctx, key, version)));
+}
+
+// The record seed's refusal, asserted rather than described. A key whose statement this version
+// cannot hear cannot be stated on a card: `seedNonStatRecordFields` halts instead of erasing it,
+// so a check that used to state the key and ask what the record did with it now states it and
+// asks that the run stopped. The message is matched, not just the throw, so an unrelated failure
+// inside the derivation cannot pass as the refusal — and either halt satisfies it, because the
+// two are the same claim over disjoint key sets (F253.1 no row at all, F253.2 no row this key
+// admits).
+function assertSeedRefusesKey(run, message) {
+  let halted = null;
+  try {
+    run();
+  } catch (error) {
+    halted = String((error && error.message) || error);
+  }
+  const refusal = /no row in that version at all|admitted by a different input key/;
+  assert(halted !== null && refusal.test(halted),
+    `${message} — the seed halts on a key this version's origin table cannot hear `
+    + `(F253.1, F253.2); got ${halted === null ? 'no halt at all' : JSON.stringify(halted.slice(0, 160))}`);
+}
+
 // A primitive export would freeze at zero, so the total is read through a function.
 function assertionTotal() {
   return assertionCount;
@@ -315,5 +365,6 @@ module.exports = {
   assert, assertArrayContains, assertClose, assertCloseToPrecision, assertDeepEqual,
   assertDistSumsToOne, assertEqual, assertionTotal, assertIs, assertLength, assertNoConsoleErrors,
   assertNotDeepEqual, assertSameKeyList, assertStrictArrayEqual, assertStringContains,
+  abilitiesStatableIn, assertSeedRefusesKey, seedRefusesKeyIn,
   baseUnitInput, evalInContext, modernRecordForSharedSlot, traceWrites,
 };
