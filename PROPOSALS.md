@@ -67,3 +67,19 @@ Section: 2. node-unit-checks — the family table, in place of the deleted row
 Change: addition
 Text:
 | `version_gating` | `abilityVersionGated` as the one gating test, and `applyVersionGating` as the one implementation of the clearing |
+
+Document: CLAUDE.md
+Section: Architecture
+Change: deletion
+Text:
+Spell targeting is assumed to read the permanent (base) record.
+
+Document: CLAUDE.md
+Section: Architecture, in place of the deleted line
+Change: addition
+Text:
+Spell targeting reads the record its own arm names, and the two are not the same arm to arm.
+`SGUnitBuffNormalUnit` (group 15) reads the permanent record and `SGUnitCurseNormalUnit` (group 16)
+reads the calculated one, from mirrored blocks that differ only in the array base
+(`Reference docs/Caster binary/F264.1.evidence.md`). A targeting gate is read, not assumed; where no
+reading exists yet, the gap is named rather than filled by a default.

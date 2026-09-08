@@ -951,9 +951,28 @@ reconstruction of the target-selection dispatch exists to confirm or overturn it
 `UnitCalc.CAS`’s Spirit-Link tail-clear comment points the other way in the 632-case
 Spirit-Link-plus-Destiny class, the only place the two records disagree in that direction.
 
-Reconstructing the dispatch settles Rust, Shatter and every future targeting gate at once. A result
+Reconstructing the dispatch settles Rust and every future targeting gate at once. A result
 that confirms the ruling is as valuable as one that overturns it; either way the ruling stops being
 load-bearing.
+
+**F264.1 executed 2026-09-08 and answered the question; the ruling is overturned for this class.**
+The extent exceeded Method B's 1,200-instruction cap (1,790 for the two routines), so it was split
+and only the first subunit run: 617 instructions covering the group dispatch, the group-16 ownership
+and Fantastic arms, the CAS-API thunk and the human cast-time entry.
+`Reference docs/Caster binary/F264.1.evidence.md` is the merged evidence.
+
+**A group-16 (`SGUnitCurseNormalUnit`) gate reads the calculated `Units[]` record; its group-15
+(`SGUnitBuffNormalUnit`) mirror reads the permanent `BaseUnits[]` record.** The two blocks are 91
+bytes each, instruction-for-instruction identical, differing in exactly two immediates — the group
+compared and the array base — and the asymmetry is reported as a suspected engine defect without a
+claim about which arm was intended. A `PROPOSALS.md` entry replaces the `CLAUDE.md` ruling.
+
+The item body's claim that this also settles Shatter is **wrong for Warlord**, which moves Shatter to
+id 272 with `SpellTypeGroup = 13`. Base-CoM2 Shatter (id 88) is in the class.
+
+Two subunits remain unreconstructed and unfiled: the rest of the combat routing layer
+(`$0053C932..$0053D3F7`, wards, Spell Lock, distance, terrain, city) and the unit-target realm and
+immunity tail (`$0053E216..$0053E9BA`). Neither is needed for the F264 question.
 
 ### F265 — `SPEC.md` does not exist
 
