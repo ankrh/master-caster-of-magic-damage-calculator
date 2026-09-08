@@ -162,9 +162,9 @@ function runF19Checks(ctx) {
   });
   assertClose(chaosNoWardToHit.toHitMelee, 0.3,
     'F195 the same unit keeps its To Hit with no ward standing');
-  // The hero path is distinct: `legacyUnitTypeFromLiveIdentity` collapses a non-Fantastic hero to
-  // `hero`, which carries no realm, so the ward can only reach it through `realmOfUnitType`'s
-  // live-identity fallback. Torin (`units_com2.js` #34) is the base-CoM2 instance; Mortu,
+  // The hero path is distinct: `legacyUnitTypeFromLiveRecord` collapses a non-Fantastic hero to
+  // `hero`, which carries no realm, so the ward can only reach it through the record's own
+  // `race`, which is `realmOfUnitType`'s second argument. Torin (`units_com2.js` #34) is the base-CoM2 instance; Mortu,
   // Ravashack, Everchosen and Avatar are the Warlord ones.
   const lifeHeroWard = modern({
     isHero: true, identity: { baseFantastic: false, baseRace: 'Life' },
@@ -317,7 +317,7 @@ function runF19Checks(ctx) {
       armorPiercing: true },
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
   });
-  assertEqual(baseNormalConvertedFantastic.identity.fantastic, true,
+  assertEqual(baseNormalConvertedFantastic.abilities.liveFantastic, true,
     'F19 base-normal training regression reaches a later live-Fantastic conversion');
   assertEqual(baseNormalConvertedFantastic.modernAttacks.lightningBreath.strength, 8,
     'F19 permanent Workshop and Lightning Blade gates use base-normal identity');
@@ -330,7 +330,7 @@ function runF19Checks(ctx) {
       armorPiercing: true },
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
   });
-  assertEqual(baseFantasticClearedLive.identity.fantastic, false,
+  assertEqual(baseFantasticClearedLive.abilities.liveFantastic, false,
     'F19 base-Fantastic training regression reaches a later live-normal conversion');
   assertEqual(baseFantasticClearedLive.modernAttacks.thrown.strength, 3,
     'F19 live-normal conversion does not retroactively admit permanent training writes');
@@ -953,20 +953,20 @@ function runPriorityPrerequisitesChecks(ctx) {
     }),
   }));
   const construct = summoned(37);
-  assertIs(construct.identity.race, 'Special',
+  assertIs(construct.abilities.liveRace, 'Special',
     '[PP-15] F54 Warlord keeps base CoM 2\'s Construct Catapult Nature conversion out');
   assert(!construct.identityTrace.some(step => step.id === 'constructCatapult'),
     '[PP-15] F54 Warlord composes no a:constructCatapult step');
   const paladins = summoned(113);
-  assertIs(paladins.identity.race, 'High Men',
+  assertIs(paladins.abilities.liveRace, 'High Men',
     '[PP-16] F55 Warlord keeps base CoM 2\'s Call to Arms Paladins Life conversion out');
   assert(!paladins.identityTrace.some(step => step.id === 'callToArmsPaladins'),
     '[PP-16] F55 Warlord composes no a:callToArmsPaladins step');
   // Both are still `combatSummoned`, so the absence above is the conversion's and not the whole
   // summon block failing to run — without this the two assertions would pass on a broken input.
-  assertIs(construct.identity.fantastic, true,
+  assertIs(construct.abilities.liveFantastic, true,
     '[PP-17] F54 the Warlord Construct Catapult is still combat-summoned Fantastic');
-  assertIs(paladins.identity.fantastic, true,
+  assertIs(paladins.abilities.liveFantastic, true,
     '[PP-17] F55 the Warlord Paladins are still combat-summoned Fantastic');
 }
 

@@ -93,7 +93,7 @@ repeated.
 
 1. **S7 reads the compact token, not the realm.** `supremeLightActiveForUnit` tests
    `unitType === 'fantastic_life' || unitType === 'normal_life'`, but
-   `legacyUnitTypeFromLiveIdentity` returns `'hero'` for any non-Fantastic hero regardless of race
+   `legacyUnitTypeFromLiveRecord` returns `'hero'` for any non-Fantastic hero regardless of race
    (`Calculator/stats_identity.js:166-174`). A Life-race hero — Torin, a Sanctified hero —
    therefore fails the calculator's gate where `U.race = RCLife` passes. Same shape as the F195
    defect, but in a scalar-form consumer, so F224.2's membership reader does not fix it.

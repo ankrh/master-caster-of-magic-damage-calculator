@@ -73,7 +73,7 @@ function runPresetApplierChecks() {
         // The ability gating pass really ran, on both sides.
         for (const side of ['a', 'b']) {
           for (const abil of abilityUiDefs()) {
-            if (!ABILITY_VERSION_GATES.card(abil, state.version)) continue;
+            if (!abilityVersionGated(abil, state.version)) continue;
             const cleared = versionGatedClearedValue(abil);
             if (cleared === undefined) continue;
             const held = state[side].abilities[abil.uiKey || abil.key];
@@ -237,7 +237,7 @@ function runPresetApplierChecks() {
     const shared = [...SHARED_ABILITY_KEYS];
     const pick = source => abilityUiDefs().find(def => def.source === source && def.type === 'bool'
       && shared.includes(def.key)
-      && !ABILITY_VERSION_GATES.card(def, version) && !parsed[def.key]);
+      && !abilityVersionGated(def, version) && !parsed[def.key]);
     const innate = pick('ability');
     const ench = pick('enchantment');
     if (!innate || !ench || innate.key !== ench.key) {

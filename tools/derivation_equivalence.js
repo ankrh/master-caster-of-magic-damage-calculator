@@ -163,7 +163,7 @@ const ENVS = [
   { name: 'chaos-surge', over: { chaosSurge: 1 } },
 ];
 
-// The permanent identity a case states. `initializeUnitIdentity` (`stats_identity.js`) reads
+// The permanent identity a case states. `unitIdentityRecordSeed` (`stats_identity.js`) reads
 // `input.identity` in preference to the legacy `unitType`/`race` tokens, so a row that names one
 // states the whole base record: hero flag, base race, base Fantastic, special unit, and the two
 // source ids.

@@ -51,6 +51,7 @@ const CROSS_BOUNDARY_READS = [
       'Calculator/stats.js#finishedIdentity',        // the declaration, below the run
       'Calculator/stats.js#identityAtRank',          // the fallback when no step reaches the rank
       'Calculator/stats.js#curseGatedAbilities',     // liveRace/liveFantastic for combat
+      'Calculator/stats.js#modifierTraces',          // the finished end of the two identity rows
     ],
   },
   {

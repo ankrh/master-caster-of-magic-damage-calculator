@@ -29,6 +29,15 @@ const PERMANENT_RECORD_PHASES = new Set([
   'template', 'training', 'immunities', 'buffs', 'debuffs',
 ]);
 
+// The live identity a derivation left, assembled from what the result publishes. The derivation
+// publishes no identity object at all since F267.6 — the sequence record is the only thing that
+// carries `race`/`fantastic`, and `liveRace`/`liveFantastic` are the pair it publishes for combat
+// resolution (F267.5).
+function livePublishedIdentity(result) {
+  return { isHero: !!result.isHero,
+    race: result.abilities.liveRace, fantastic: result.abilities.liveFantastic };
+}
+
 function unitTypeTokenAgreesWithIdentity(token, identity) {
   if (token === 'hero') return !!identity.isHero && !identity.fantastic;
   if (token.startsWith('fantastic_')) {
@@ -112,10 +121,22 @@ function runIdentityProjectionChecks(ctx) {
           identity: ctx.createCustomUnitIdentity(version, shape),
           abilities: control === 'none' ? {} : { [control]: true },
         }));
-        assert(unitTypeTokenAgreesWithIdentity(result.unitType, result.identity),
+        assert(unitTypeTokenAgreesWithIdentity(result.unitType, livePublishedIdentity(result)),
           `${version}/${control}: the projected unit type agrees with the live identity `
-          + `(${result.unitType} vs race ${JSON.stringify(result.identity.race)}, `
-          + `fantastic ${result.identity.fantastic})`);
+          + `(${result.unitType} vs race ${JSON.stringify(result.abilities.liveRace)}, `
+          + `fantastic ${result.abilities.liveFantastic})`);
+        // Asked of **every** control, not only of the unconverted unit. The live pair lives on
+        // the sequence record and nowhere else, so there is no second copy for a conversion to
+        // leave stale (F267.5). Restricting this to `control === 'none'` was the gap the GPT
+        // review found: a write-back conditioned on the pair having *changed* — the exact shape
+        // F267.5 deleted — reinstates the copy on a converted unit alone, passed every other
+        // assertion, and is invisible to both numeric comparisons, which discard those two
+        // properties by construction. F267.6 widens the same assertion from the two properties to
+        // the whole object: there is no `result.identity` to hold a stale copy in, and a
+        // reinstated one would again move no number.
+        assert(!Object.prototype.hasOwnProperty.call(result, 'identity'),
+          `${version}/${control}: the derivation publishes no identity object — the record is `
+          + 'what carries race/fantastic/unittype/herotype/ishero (F267.6)');
       }
     }
   }
@@ -234,15 +255,16 @@ function runTemplateRankPermanentIdentityChecks(ctx) {
 // union. These three are not ability keys: they are seeded verbatim in the record literal beside
 // `race`, `fantastic` and the loadout fields.
 //
-// It would be wrong to say that listing one of them makes the seed *win* — the
-// `...seedNonStatRecordFields(...)` spread stands earlier in that literal than the explicit
-// `unittype:` / `herotype:` / `ishero:` properties, so the later properties would overwrite
-// whatever the seed put there. (The GPT review of F267.2 caught that; the first draft of this
-// comment claimed the overwrite went the other way.) The damage is to the *classification*, not to
-// the value: the key would acquire an `ABILITY_KEY_ORIGINS` row it has no business owning, join a
-// list whose entries every origin check and every F244-family rule reasons over as ability keys,
-// and be seeded twice from two different sources — which is exactly the drift F263 paid for in the
-// opposite direction, where a `template` origin row was mistaken for a record field.
+// Since F267.4 the three are seeded at the **input boundary**, ahead of the pre-sequence
+// transforms, and `seedNonStatRecordFields` lands on the same object afterwards through
+// `Object.assign`. That reverses which side would win: under F267.2's single literal the explicit
+// properties stood after the spread and overwrote it, and now the spread stands last and would
+// overwrite the boundary seed. So the value is at risk as well as the classification, and this
+// family is what stands between. The classification damage is the same either way: the key would
+// acquire an `ABILITY_KEY_ORIGINS` row it has no business owning, join a list whose entries every
+// origin check and every F244-family rule reasons over as ability keys, and be seeded twice from
+// two different sources — which is exactly the drift F263 paid for in the opposite direction,
+// where a `template` origin row was mistaken for a record field.
 //
 // F267.3 gives `unittype` its readers and its value its final shape: the record carries the
 // *resolved* id (`baseUnittypeId`, `stats_identity.js`) — the roster template id, or the id the
@@ -255,22 +277,69 @@ const RECORD_TYPE_FIELDS = Object.freeze([
   ['ishero', identity => identity.isHero],
 ]);
 
-function runSeededRecordTypeFieldChecks(ctx) {
-  // 1. Source: the three fields are seeded in the record literal, from the identity.
-  const statsSource = calculatorSource('Calculator/stats.js');
-  assert(/\n\s*unittype,\s*herotype:\s*identity\.heroTypeId,\s*ishero:\s*isHero/
-    .test(statsSource),
-  'The record literal seeds unittype/herotype/ishero from the stated identity (F267.2)');
-  assert(/const unittype = baseUnittypeId\(version, identity\);/.test(statsSource),
-    'The seeded unittype is the id baseUnittypeId resolves at the input boundary (F267.3)');
+// The five identity members of the boundary record, and the one place each is spelled. Since
+// F267.6 that place is `unitIdentityRecordSeed` (`Calculator/stats_identity.js`), which folds the
+// stated input shape into the record fragment `deriveUnitStats` spreads: the constructors still
+// declare what a caller states, but nothing keeps their result alive beside the record.
+const IDENTITY_SEED_SPELLINGS = Object.freeze([
+  ['race', 'race: stated.baseRace,'],
+  ['fantastic', 'fantastic: stated.baseFantastic,'],
+  ['unittype', 'unittype: baseUnittypeId(input.version, stated),'],
+  ['herotype', 'herotype: stated.heroTypeId,'],
+  ['ishero', 'ishero: stated.isHero,'],
+]);
 
-  // 2. The four ability-key lists do not claim them.
+function runSeededRecordTypeFieldChecks(ctx) {
+  // 1. Source: the five fields are seeded from the stated identity, in the one seed function, and
+  // the boundary record spreads that function's result (F267.6). Line endings are normalised
+  // first, because `core.autocrlf` decides them per checkout and the anchors are newline-sensitive.
+  const identitySource = calculatorSource('Calculator/stats_identity.js')
+    .split('\r\n').join('\n');
+  const seedAt = identitySource.indexOf('function unitIdentityRecordSeed(input) {\n');
+  assert(seedAt >= 0,
+    'stats_identity.js declares unitIdentityRecordSeed, the identity half of the boundary record '
+    + "seed - the retired initializeUnitIdentity's replacement (F267.6)");
+  const seedEnd = identitySource.indexOf('\n}\n', seedAt);
+  assert(seedEnd > seedAt, 'unitIdentityRecordSeed has a closing brace at column 0');
+  const seedBody = identitySource.slice(seedAt, seedEnd);
+  for (const [field, spelling] of IDENTITY_SEED_SPELLINGS) {
+    assert(seedBody.includes(spelling),
+      `The record's ${field} is seeded from the stated identity, in unitIdentityRecordSeed: `
+      + `'${spelling}' (F267.2, F267.3, F267.6)`);
+  }
+  const statsSource = calculatorSource('Calculator/stats.js');
+  assert(/\n\s*\.\.\.unitIdentityRecordSeed\(input\),/.test(statsSource),
+    'The stats.js boundary record spreads the identity seed rather than holding a live identity '
+    + 'object beside it (F267.6)');
+  // Comment lines are stripped: both files name the retired function in prose, which is where a
+  // reader looks for what replaced it.
+  const codeOnly = (statsSource + identitySource).replace(/^\s*\/\/.*$/gm, '');
+  assert(!/\binitializeUnitIdentity\b/.test(codeOnly),
+    'initializeUnitIdentity is retired: nothing constructs a derivation-lifetime identity object '
+    + 'that outlives the seed (F267.6)');
+
+  // 2. The four ability-key lists do not claim them — nor any other boundary field. Since F267.4
+  // the `seedNonStatRecordFields` spread stands *last*, so a misfiled key overwrites the boundary
+  // seed rather than being overwritten by it; the question therefore has to be asked of `race`,
+  // `fantastic` and the loadout fields too, and not only of the three type members (GPT review of
+  // F267.4).
   const seededAbilityKeys = new Set(evalInContext(ctx, 'SEEDED_NON_STAT_KEYS'));
+  const boundaryFields = [...RECORD_TYPE_FIELDS.map(([field]) => field),
+    'race', 'fantastic', 'weaponMaterial', 'armorMaterial', 'level',
+    'res', 'def', 'atk', 'hp', 'gaze', 'doomGaze',
+    'toHit', 'toHitMelee', 'toBlk', 'energyCannonToHit'];
+  for (const field of boundaryFields) {
+    assert(!seededAbilityKeys.has(field),
+      `${field} is seeded in the stats.js boundary record, which the ability seed's spread now `
+      + 'stands after: an ability key of the same name would overwrite it. It must not appear on '
+      + 'SEEDED_NON_STAT_KEYS or on any of the four lists that union into it (F267.4)');
+  }
   for (const [field] of RECORD_TYPE_FIELDS) {
     assert(!seededAbilityKeys.has(field),
-      `${field} is a record field seeded verbatim in the stats.js record literal, not an ability `
+      `${field} is a record field seeded verbatim at the stats.js input boundary, not an ability `
       + 'key: it must not appear on SEEDED_NON_STAT_KEYS or on any of the four lists that union '
-      + 'into it, which would give it an ABILITY_KEY_ORIGINS row and a second seeding source');
+      + 'into it, which would give it an ABILITY_KEY_ORIGINS row and a second seeding source — '
+      + 'and since F267.4 that source is the later write, so it would overwrite the seed too');
   }
 
   // 3. Execution, at the three positions the record passes through.
@@ -322,6 +391,166 @@ function runSeededRecordTypeFieldChecks(ctx) {
     }
   } finally {
     ctx.runStatSteps = realRunStatSteps;
+  }
+}
+
+// F267.4: the sequence record is constructed at the **input boundary**, and the eager
+// base-identity scalars read it.
+//
+// The engine builds `B` from the roster template and every gate afterwards reads `B` or `U`; it
+// keeps no side object holding the unit's identity. `deriveUnitStats` used to build ~2,500 lines
+// of predicates first and seed the record only below them, so `identity.baseRace`,
+// `identity.baseFantastic` and `identity.isHero` served as a shadow permanent record for the
+// handful of *eager* readers among those predicates - `baseUnitType`, `isHero`,
+// `isFantasticBase`, `baseUnitRace`, `unittype` and their dependents. The closures over `u` /
+// `runCtx` never needed it and are untouched.
+//
+// **Why a check and not a fixture.** Nothing moves: the values are identical either way, which is
+// the subtask's own claim. A construction-order change is invisible to every fixture, to the card
+// path and to `derivation_equivalence.js` alike, and the failure mode it opens - a scalar quietly
+// reading the identity object again while the record sits beside it - is invisible for the same
+// reason. Only a check that watches the construction can see it.
+//
+// Four families, and the two runtime ones are what make the source ones more than spelling:
+//
+//  1. **Source.** The seed stands ahead of every eager scalar, each scalar is assigned off it,
+//     and - the mechanical half - `Calculator/stats.js` reads `identity.baseRace`,
+//     `identity.baseFantastic`, `identity.isHero` and `identity.heroTypeId` **only** inside that
+//     seed. This is a spelling guard and is claimed as no more: it scans direct property access,
+//     so an alias, a helper-mediated read or bracket notation escapes it (GPT review of F267.4).
+//     What it does catch is the cheap and likely regression - one `identity.<field>` read put back
+//     where the record was meant to answer - which is worth catching precisely because reverting
+//     to an equal-valued read moves no number.
+//  2. **Object identity, and the seed's stability.** `legacyUnitTypeFromRecord` is handed the very
+//     object `runStatSteps` later runs over (`===`, not equality). That is the "no shadow record"
+//     claim as an assertion: reverting the eager unit type to `legacyUnitTypeFromIdentity(identity)`
+//     stops the call happening at all, and computing it from a scratch copy of the record fails the
+//     identity compare. The family also snapshots the five identity members at that call and
+//     compares them to the record entering the sequence, because one object is not enough on its
+//     own: the GPT review of F267.4 showed that `Object.assign(statRecord, { fantastic: false, … })`
+//     — the ability half overwriting a member the eager scalar has already taken — passed all four
+//     families as first written. It is caught elsewhere in `runIdentityChecks` (as "Non-Corporeal
+//     derives Breakthrough attack"), so nothing new was added for it; the snapshot is one
+//     comparison inside a family that already had the record in hand.
+//  3. **Order.** The record is built before the pre-sequence ability transforms, not after.
+//     `applySanctaBasilicaGrant` runs unconditionally on every derivation and is handed
+//     `baseUnitType`/`baseUnitRace`, so its call must follow the record's construction. This is
+//     the family that fails if the seed is moved back down: the transforms are the reason the
+//     rest of the seed cannot come up here, and they are what the boundary has to precede.
+//  4. **The transform is fed the record's values**, not a second reading of the identity - the
+//     unit type and race it receives are the record's own. The expectation is computed from the
+//     stated identity rather than from a captured snapshot, so this family witnesses the values
+//     travelling, not the record's stability; that is family 2's snapshot.
+const BOUNDARY_RECORD_SHAPES = Object.freeze([
+  ['custom', { isHero: false, baseRace: 'High Men', baseFantastic: false }],
+  ['customHero', { isHero: true, baseRace: 'Life', baseFantastic: false }],
+  ['fantasticLife', { isHero: false, baseRace: 'Life', baseFantastic: true }],
+  ['fantasticNoRealm', { isHero: false, baseRace: 'Dwarf', baseFantastic: true }],
+  ['heroFantastic', { isHero: true, baseRace: 'Chaos', baseFantastic: true }],
+  ['tpl81', { isHero: false, baseRace: 'Special', baseFantastic: false, templateId: 81 }],
+  ['heroTpl', { isHero: true, baseRace: 'Life', baseFantastic: false,
+    templateId: 113, heroTypeId: 7 }],
+  ['gnollRace', { isHero: false, baseRace: 'Gnoll', baseFantastic: false }],
+]);
+
+function runInputBoundaryRecordChecks(ctx) {
+  // 1. Source. Line endings are normalised first: `core.autocrlf` gives a Windows checkout CRLF
+  // working files, and the anchors below are newline-sensitive, so a scan written against the
+  // bare newline alone would pass on one machine and fail on another for no reason of the code's.
+  const statsSource = calculatorSource('Calculator/stats.js')
+    .split('\r\n').join('\n');
+  const seedAt = statsSource.indexOf('  const statRecord = {\n');
+  assert(seedAt > 0,
+    'deriveUnitStats constructs the sequence record `statRecord` at the input boundary (F267.4)');
+  const eagerScalars = [
+    ['baseUnitType', 'const baseUnitType = legacyUnitTypeFromRecord(statRecord);'],
+    ['isHero', 'const isHero = statRecord.ishero;'],
+    ['isFantasticBase', 'const isFantasticBase = statRecord.fantastic;'],
+    ['unittype', 'const unittype = statRecord.unittype;'],
+    ['baseUnitRace', 'const baseUnitRace = statRecord.race;'],
+  ];
+  for (const [name, line] of eagerScalars) {
+    const at = statsSource.indexOf(line);
+    assert(at > 0,
+      `The eager scalar ${name} is read off the boundary record: '${line}' (F267.4)`);
+    assert(at > seedAt, `The eager scalar ${name} stands behind the record it reads (F267.4)`);
+  }
+  // The mechanical half: the base identity triple and the hero-type id are read off the identity
+  // object exactly where the seed takes them, and nowhere else in the file.
+  const seedEnd = statsSource.indexOf('\n  };\n', seedAt);
+  assert(seedEnd > seedAt, 'The boundary record seed is a closed object literal');
+  const outsideSeed = (statsSource.slice(0, seedAt) + statsSource.slice(seedEnd))
+    .replace(/^\s*\/\/.*$/gm, '');
+  for (const field of ['baseRace', 'baseFantastic', 'isHero', 'heroTypeId']) {
+    assert(!new RegExp(`identity\\.${field}\\b`).test(outsideSeed),
+      `Calculator/stats.js reads identity.${field} only in the boundary record seed - every `
+      + 'other reader takes it off the record, so a reordering cannot silently resurrect the '
+      + 'shadow permanent record (F267.4)');
+  }
+
+  // 2-4. Runtime.
+  const realRunStatSteps = ctx.runStatSteps;
+  const realFromRecord = ctx.legacyUnitTypeFromRecord;
+  const realBasilica = ctx.applySanctaBasilicaGrant;
+  try {
+    for (const version of evalInContext(ctx, 'ENGINE_VERSIONS')) {
+      for (const [shapeName, shape] of BOUNDARY_RECORD_SHAPES) {
+        const label = `${version}/${shapeName}`;
+        const identity = ctx.createUnitIdentity({ version, ...shape });
+        const events = [];
+        const typeReads = [];
+        const basilicaCalls = [];
+        const statRecords = [];
+        const seedSnapshots = [];
+        ctx.legacyUnitTypeFromRecord = (u) => {
+          events.push('record');
+          typeReads.push(u);
+          seedSnapshots.push({ race: u.race, fantastic: u.fantastic, unittype: u.unittype,
+            herotype: u.herotype, ishero: u.ishero });
+          return realFromRecord(u);
+        };
+        ctx.applySanctaBasilicaGrant = (abilities, ver, unitType, race, name) => {
+          events.push('transform');
+          basilicaCalls.push({ unitType, race });
+          return realBasilica(abilities, ver, unitType, race, name);
+        };
+        ctx.runStatSteps = (steps, unit, runCtx) => {
+          if (Object.prototype.hasOwnProperty.call(unit, 'race')) statRecords.push(unit);
+          return realRunStatSteps(steps, unit, runCtx);
+        };
+        ctx.deriveUnitStats(baseUnitInput({ version, identity }));
+
+        assertEqual(statRecords.length, 1, `${label}: exactly one stat record is run`);
+        assert(typeReads.length >= 1,
+          `${label}: the eager unit type is read off a record, not off the identity object`);
+        assert(typeReads[0] === statRecords[0],
+          `${label}: the object the eager unit-type read is taken from IS the record the `
+          + 'sequence runs over - there is no shadow permanent record beside it (F267.4)');
+        for (const [field, seeded] of Object.entries(seedSnapshots[0])) {
+          assertEqual(statRecords[0][field], seeded,
+            `${label}: the record entering the sequence still carries the ${field} the eager `
+            + 'scalars read off it - the ability half of the seed is written onto the same object '
+            + 'and must not overwrite a boundary member (F267.4)');
+        }
+        assertEqual(events.indexOf('record'), 0,
+          `${label}: the record is constructed before anything reads a base-identity scalar`);
+        assert(events.indexOf('transform') > 0,
+          `${label}: the record stands ahead of the pre-sequence ability transforms, which are `
+          + 'the reason the rest of the seed cannot join it there (F267.4)');
+        assertEqual(basilicaCalls.length, 1, `${label}: one pre-sequence Basilica transform`);
+        assertEqual(basilicaCalls[0].race, identity.baseRace,
+          `${label}: the transform is handed the record's race`);
+        assertEqual(basilicaCalls[0].unitType,
+          identity.isHero ? 'hero'
+            : realFromRecord({ race: identity.baseRace, fantastic: identity.baseFantastic,
+              ishero: identity.isHero }),
+          `${label}: the transform is handed the record's unit type`);
+      }
+    }
+  } finally {
+    ctx.runStatSteps = realRunStatSteps;
+    ctx.legacyUnitTypeFromRecord = realFromRecord;
+    ctx.applySanctaBasilicaGrant = realBasilica;
   }
 }
 
@@ -569,6 +798,7 @@ function runIdentityChecks(ctx) {
   runIdentityProjectionChecks(ctx);
   runTemplateRankPermanentIdentityChecks(ctx);
   runSeededRecordTypeFieldChecks(ctx);
+  runInputBoundaryRecordChecks(ctx);
   runUnittypeIdTableChecks(ctx);
   runCardStateIdentityChecks(ctx);
   const rosterSets = [
@@ -590,7 +820,14 @@ function runIdentityChecks(ctx) {
       assert(!Object.prototype.hasOwnProperty.call(unit, 'golem'), `${label}: golem is not persisted`);
 
       const rosterIdentity = ctx.createRosterUnitIdentity(version, unit);
-      assertEqual(rosterIdentity.version, version, `${label}: templateId is scoped by active version`);
+      // The identity carries no `version` (F267.6). It is the input shape a caller states, and
+      // the version is what the *resolution* is scoped by, not what the statement carries: the
+      // one thing that was version-dependent, the `unittype` an identity resolves to, is
+      // `baseUnittypeId(version, identity)` at the derivation's boundary, where `input.version`
+      // is the only version the run has. A `version` member is a second place to answer that.
+      assert(!Object.prototype.hasOwnProperty.call(rosterIdentity, 'version'),
+        `${label}: the stated identity carries no version — the id resolution is what the `
+        + 'version scopes (F267.6)');
       assertEqual(rosterIdentity.templateId, unit.templateId, `${label}: identity keeps templateId`);
       assertEqual(rosterIdentity.heroTypeId, unit.heroTypeId, `${label}: identity keeps heroTypeId`);
     }
@@ -602,8 +839,20 @@ function runIdentityChecks(ctx) {
   const cpIdentity = ctx.createRosterUnitIdentity('mom_cp_1.60.00', momDwarf);
   assertEqual(momIdentity.templateId, cpIdentity.templateId,
     'The shared MoM roster preserves the same source template ID');
-  assert(momIdentity.version !== cpIdentity.version,
-    'The shared MoM source template is scoped independently to each active version');
+  // The two are now the *same* stated shape, and the version scoping has moved to where it is
+  // applied: the same identity resolves its `unittype` per version (F267.6). Asserting that here
+  // is what keeps the claim the deleted `version` member used to carry — 1.31 and CP 1.60 are
+  // independently scoped — rather than losing it with the field.
+  assertEqual(JSON.stringify(momIdentity), JSON.stringify(cpIdentity),
+    'The shared MoM source template states one identity: the version is not part of the statement');
+  assertEqual(ctx.baseUnittypeId('mom_1.31', momIdentity), momDwarf.templateId,
+    'The stated identity resolves its unittype under 1.31');
+  assertEqual(ctx.baseUnittypeId('mom_cp_1.60.00', cpIdentity), momDwarf.templateId,
+    'The stated identity resolves its unittype under CP 1.60');
+  assertEqual(ctx.unittypeIdFor('com2_1.05.11', 'chosen'), 34,
+    'The version-scoped half of the resolution is the id table, which answers per version');
+  assertEqual(ctx.unittypeIdFor('mom_1.31', 'chosen'), null,
+    'A version whose engine makes no such exception resolves the key to no id');
 
   const comData = evalInContext(ctx, 'COM_UNITS_DATA');
   const comSupernaturalUnits = Object.values(comData)
@@ -631,30 +880,46 @@ function runIdentityChecks(ctx) {
     identity: customBaseIdentity,
   });
   const first = ctx.deriveUnitStats(customInput);
-  assertEqual(first.identity.race, 'Life', 'Derivation initializes live race from baseRace');
-  assertEqual(first.identity.fantastic, false, 'Derivation initializes live Fantastic from baseFantastic');
-  assertEqual(first.identity.isHero, true, 'Derivation retains independent Hero identity');
-  assert(!Object.prototype.hasOwnProperty.call(first.identity, 'chosen'), 'Calculated identity does not persist chosen');
-  assert(!Object.prototype.hasOwnProperty.call(first.identity, 'golem'), 'Calculated identity does not persist golem');
+  assertEqual(first.abilities.liveRace, 'Life', 'Derivation initializes live race from baseRace');
+  assertEqual(first.abilities.liveFantastic, false, 'Derivation initializes live Fantastic from baseFantastic');
+  assertEqual(first.isHero, true, 'Derivation retains independent Hero identity');
   assert(!Object.prototype.hasOwnProperty.call(customBaseIdentity, 'race'),
     'Base identity is not mutated with calculated race');
   assert(!Object.prototype.hasOwnProperty.call(customBaseIdentity, 'fantastic'),
     'Base identity is not mutated with calculated Fantastic');
+  assert(!Object.prototype.hasOwnProperty.call(customBaseIdentity, 'chosen')
+    && !Object.prototype.hasOwnProperty.call(customBaseIdentity, 'golem'),
+  'The stated identity persists no special-unit boolean');
 
-  first.identity.race = 'Chaos';
-  first.identity.fantastic = true;
+  // The derivation publishes no identity object at all (F267.6). It used to publish the stated
+  // input shape - once with a mutable `race`/`fantastic` copy the run wrote back into (F267.5),
+  // and after that with the base fields alone. Every consumer of those base fields reads what the
+  // record publishes instead: `abilities.baseRace`/`baseFantastic` for the permanent pair and
+  // `isHero` for the hero flag. The assertion is what stops the object being reinstated as an
+  // equal-valued convenience, which would move no number.
+  assert(!Object.prototype.hasOwnProperty.call(first, 'identity'),
+    'The derivation publishes no identity object: the record carries race/fantastic/unittype/'
+    + 'herotype/ishero and the result publishes the permanent pair (F267.6)');
+  assertEqual(first.abilities.baseRace, 'Life',
+    'The permanent race is published off the boundary record');
+  assertEqual(first.abilities.baseFantastic, false,
+    'The permanent Fantastic flag is published off the boundary record');
+
+  first.abilities.liveRace = 'Chaos';
+  first.abilities.liveFantastic = true;
   const second = ctx.deriveUnitStats(customInput);
-  assert(first.identity !== second.identity, 'Every deriveUnitStats invocation owns a separate calculated identity record');
-  assertEqual(second.identity.race, 'Life', 'A later derivation resets live race from baseRace');
-  assertEqual(second.identity.fantastic, false, 'A later derivation resets live Fantastic from baseFantastic');
+  assert(first.abilities !== second.abilities,
+    'Every deriveUnitStats invocation owns a separate published ability record');
+  assertEqual(second.abilities.liveRace, 'Life', 'A later derivation resets live race from baseRace');
+  assertEqual(second.abilities.liveFantastic, false, 'A later derivation resets live Fantastic from baseFantastic');
 
   const chosen = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11',
     identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 34,
       isHero: true, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen' }),
   }));
-  assertEqual(chosen.identity.race, 'Life', 'Chosen writes live Life');
-  assertEqual(chosen.identity.fantastic, true, 'Chosen writes live Fantastic');
+  assertEqual(chosen.abilities.liveRace, 'Life', 'Chosen writes live Life');
+  assertEqual(chosen.abilities.liveFantastic, true, 'Chosen writes live Fantastic');
   assertEqual(chosen.identityTrace.map(t => t.id).join(','), 'chosen',
     'Identity writes are exposed on the calculated output trace');
   assert(chosen.statTrace.some(t => t.id === 'chosen'),
@@ -682,7 +947,7 @@ function runIdentityChecks(ctx) {
       }),
       abilities,
     }));
-    assertEqual(unit.identity.race, orderedRealmExpected[index][0],
+    assertEqual(unit.abilities.liveRace, orderedRealmExpected[index][0],
       `Ordered identity override ${index} writes the expected live race`);
     assertEqual(unit.unitType, orderedRealmExpected[index][1],
       `Ordered identity override ${index} projects the expected compatibility type`);
@@ -691,29 +956,29 @@ function runIdentityChecks(ctx) {
   const summoned = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', abilities: { combatSummoned: true },
   }));
-  assertEqual(summoned.identity.fantastic, true, 'Combat Summoned writes live Fantastic');
+  assertEqual(summoned.abilities.liveFantastic, true, 'Combat Summoned writes live Fantastic');
 
   const construct = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', abilities: { combatSummoned: true },
     identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 37,
       baseRace: 'Special', baseFantastic: false }),
   }));
-  assertEqual(construct.identity.race, 'Nature', 'Construct Catapult writes live Nature');
-  assertEqual(construct.identity.fantastic, true, 'Construct Catapult writes live Fantastic');
+  assertEqual(construct.abilities.liveRace, 'Nature', 'Construct Catapult writes live Nature');
+  assertEqual(construct.abilities.liveFantastic, true, 'Construct Catapult writes live Fantastic');
 
   const callToArms = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', abilities: { combatSummoned: true },
     identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 113,
       baseRace: 'High Men', baseFantastic: false }),
   }));
-  assertEqual(callToArms.identity.race, 'Life', 'Call to Arms Paladins writes live Life');
-  assertEqual(callToArms.identity.fantastic, true, 'Call to Arms Paladins writes live Fantastic');
+  assertEqual(callToArms.abilities.liveRace, 'Life', 'Call to Arms Paladins writes live Life');
+  assertEqual(callToArms.abilities.liveFantastic, true, 'Call to Arms Paladins writes live Fantastic');
 
   const invalidCallToArms = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', name: 'Paladins', abilities: { combatSummoned: true },
     identity: ctx.createCustomUnitIdentity('com2_1.05.11', { baseRace: 'High Men' }),
   }));
-  assertEqual(invalidCallToArms.identity.race, 'High Men', 'Call to Arms ignores display names');
+  assertEqual(invalidCallToArms.abilities.liveRace, 'High Men', 'Call to Arms ignores display names');
   assert(!invalidCallToArms.identityTrace.some(t => t.id === 'callToArmsPaladins'),
     'Custom Paladins display name does not infer Call to Arms');
 
@@ -722,9 +987,9 @@ function runIdentityChecks(ctx) {
     identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 150,
       baseRace: 'Troll', baseFantastic: false }),
   }));
-  assertEqual(com1SummonedOther.identity.race, 'Troll',
+  assertEqual(com1SummonedOther.abilities.liveRace, 'Troll',
     'CoM1 generic combat summons retain their loaded race');
-  assertEqual(com1SummonedOther.identity.fantastic, true,
+  assertEqual(com1SummonedOther.abilities.liveFantastic, true,
     'CoM1 generic combat summons become live Fantastic');
 
   const com1ConstructCatapult = ctx.deriveUnitStats(baseUnitInput({
@@ -732,9 +997,9 @@ function runIdentityChecks(ctx) {
     identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 37,
       baseRace: 'Special', baseFantastic: false, specialUnit: 'none' }),
   }));
-  assertEqual(com1ConstructCatapult.identity.race, 'Nature',
+  assertEqual(com1ConstructCatapult.abilities.liveRace, 'Nature',
     'CoM1 Construct Catapult recognizes source type 37 without a duplicated special-unit token');
-  assertEqual(com1ConstructCatapult.identity.fantastic, true,
+  assertEqual(com1ConstructCatapult.abilities.liveFantastic, true,
     'CoM1 Construct Catapult becomes live Fantastic');
   assertEqual(com1ConstructCatapult.weapon, 'magic',
     'CoM1 Construct Catapult source type 37 receives Magic Weapons');
@@ -744,9 +1009,9 @@ function runIdentityChecks(ctx) {
     identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 54,
       baseRace: 'Beastmen', baseFantastic: false }),
   }));
-  assertEqual(com1SummonedCentaurs.identity.race, 'Nature',
+  assertEqual(com1SummonedCentaurs.abilities.liveRace, 'Nature',
     'CoM1 combat-summoned Centaurs become live Nature');
-  assertEqual(com1SummonedCentaurs.identity.fantastic, true,
+  assertEqual(com1SummonedCentaurs.abilities.liveFantastic, true,
     'CoM1 combat-summoned Centaurs become live Fantastic');
 
   const com1SummonedPaladins = ctx.deriveUnitStats(baseUnitInput({
@@ -754,9 +1019,9 @@ function runIdentityChecks(ctx) {
     identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 113,
       baseRace: 'High Men', baseFantastic: false }),
   }));
-  assertEqual(com1SummonedPaladins.identity.race, 'Life',
+  assertEqual(com1SummonedPaladins.abilities.liveRace, 'Life',
     'CoM1 combat-summoned Paladins become live Life');
-  assertEqual(com1SummonedPaladins.identity.fantastic, true,
+  assertEqual(com1SummonedPaladins.abilities.liveFantastic, true,
     'CoM1 combat-summoned Paladins become live Fantastic');
 
   const zombies = ctx.deriveUnitStats(baseUnitInput({
@@ -781,7 +1046,7 @@ function runIdentityChecks(ctx) {
   // The block at $005A376D..$005A3DDE admits the normal package on `(not U.combatsummoned) and
   // (not B.Fantastic)`, so the Fantastic term is the **permanent** record. The Chosen are live
   // Fantastic over a non-Fantastic base and therefore still take the package (F179).
-  assertEqual(breakthroughChosen.identity.fantastic, true,
+  assertEqual(breakthroughChosen.abilities.liveFantastic, true,
     'Chosen convert to live Fantastic over a non-Fantastic base');
   assert(breakthroughChosen.statTrace.some(t => t.id === 'breakthrough:normal'),
     'Live-Fantastic Chosen still receive the normal Breakthrough package, which tests the permanent record');

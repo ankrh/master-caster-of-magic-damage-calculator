@@ -7,7 +7,7 @@
 // deletion default.  The one page-layer claim - that the matrix's *property list* offers Spell
 // Lock in exactly the versions the gate admits - stayed in Playwright as
 // `tests/matrix.spec.js`, and F268.4 kept it: removing the matrix's version gate
-// outright (`ABILITY_VERSION_GATES.matrix`, `ui_matrix_properties.js`) is caught by that spec and
+// outright (`abilityVersionGated`, `ui_matrix_properties.js`) is caught by that spec and
 // by nothing else in the 36-spec suite.
 //
 // **What F268.4 retired here, each shown covered elsewhere by mutation:**

@@ -380,14 +380,16 @@ function destinyActiveForUnit(abilities, version) {
   return !!(version && version.startsWith('com2_') && hasAbil(abilities, 'destiny'));
 }
 
-// The realm a unit belongs to. Prefer the live identity because the compact compatibility
-// token cannot represent a realm-tagged hero (notably a Sanctified Warlord hero).
+// The realm a unit belongs to. Prefer the record's own `race` because the compact compatibility
+// token cannot represent a realm-tagged hero (notably a Sanctified Warlord hero). The second
+// argument is that race value — `u.race` at a step's position, or the `liveRace` the derivation
+// publishes for combat resolution — rather than an identity object (F267.5).
 // Calculator compatibility projection; not an independent source-authored formula.
-function realmOfUnitType(unitType, identity = null) {
-  const liveRealm = identity && {
+function realmOfUnitType(unitType, liveRace = null) {
+  const liveRealm = {
     Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
     Sorcery: 'sorcery', Arcane: 'arcane', 'No Heal': 'unaligned',
-  }[identity.race];
+  }[liveRace];
   if (liveRealm) return liveRealm;
   const us = String(unitType || '');
   if (us.startsWith('fantastic_')) return us.slice('fantastic_'.length);

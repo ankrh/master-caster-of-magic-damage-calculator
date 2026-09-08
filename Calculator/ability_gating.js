@@ -60,8 +60,11 @@ function subgroupAllowedForVersion(subgroup, version) {
 // are gated by their subgroup. A leading `_` only suppresses the rendered heading and is stripped
 // before the version test, so `_MoM only` restricts exactly as `MoM only` does. A def with no
 // subgroup, or one that is nothing but the marker (`_`), resolves to "allowed everywhere".
-// `updateTypeVisibility` applies this and tests/version-gating.spec.js asserts against it —
-// re-deriving the rule in either place would let the two drift.
+// `updateTypeVisibility` applies this, `applyVersionGating` clears by it, the matrix reader
+// (`ui_matrix_properties.js`) gates its three sites on it since F261, and
+// tests/version-gating.spec.js asserts against it — re-deriving the rule in any of those places
+// would let them drift, which is exactly how the matrix came to admit six Warlord enchantments the
+// card hides.
 function abilityVersionGated(abil, version) {
   const subgroupOk = subgroupAllowedForVersion(abil.subgroup, version);
   const overrideOk = (abil.alsoVersions || []).some(v => version.startsWith(v));
@@ -345,38 +348,21 @@ function modernAttackRecord(fields) {
   };
 }
 
-// --- The two gating tests, named ---
+// --- The gating test, named once ---
 //
-// "Is this def unavailable in this version" has two answers in the tree today, and this subtask
-// (F260.3) carries the divergence explicitly rather than resolving it. Every caller names the one
-// it wants; there is no default, so a new caller cannot inherit either silently.
-
-// The card's test: the subgroup restriction, then the def's own `alsoVersions` / `exceptVersions`
-// overrides. This is what `updateTypeVisibility` applies to the ability panels and what
-// `applyVersionGating` clears by.
-function abilityGatedForCard(abil, version) {
-  return abilityVersionGated(abil, version);
-}
-
-// The matrix's test: the subgroup restriction alone, plus one hand-added exception for `blur`.
-// It admits six `com2_warlord_1.5.12.9` enchantments the card hides — `flameBlade`, `landLinking`,
-// `discipline`, `destiny`, `mislead`, `blazingEyes`, each the CoM2-named half of a Warlord rename
-// — which is INV-2 in the matrix. **F261 deletes this function** and points the matrix at
-// `abilityGatedForCard`; numbers move in Warlord matrix runs when it does, which is why F260.3
-// preserves the divergence instead of fixing it. `tools/unit_checks/version_gate_divergence.js`
-// pins the six as a worklist, so F261 landing empties the list rather than going unnoticed.
-function abilityGatedForMatrix(abil, version) {
-  if (!subgroupAllowedForVersion(abil.subgroup, version)) return true;
-  if (abil.key === 'blur' && abilityVersionGated(abil, version)) return true;
-  return false;
-}
-
-// Named so a caller passing something else gets a message listing the two, rather than a silent
-// `undefined` gate that hides every control or none.
-const ABILITY_VERSION_GATES = {
-  card: abilityGatedForCard,
-  matrix: abilityGatedForMatrix,
-};
+// There is one answer to "is this def unavailable in this version": `abilityVersionGated`, above.
+// Until F261 the matrix asked a weaker question — the subgroup restriction alone, plus a
+// hand-added `blur` exception — which admitted six `com2_warlord_1.5.12.9` enchantments the card
+// hides (`flameBlade`, `landLinking`, `discipline`, `destiny`, `mislead`, `blazingEyes`, each the
+// CoM2-named half of a Warlord rename). That was INV-2 in the matrix, and it is gone: the matrix
+// reader (`ui_matrix_properties.js`) calls `abilityVersionGated` directly, as the card's
+// `updateTypeVisibility` and `applyVersionGating` do. The `blur` exception went with it — it was
+// already unreachable, `blur` carrying neither `alsoVersions` nor `exceptVersions`, so the
+// disjunct it guarded could never be true.
+//
+// No registry of gates and no gate parameter survive: a second gating test is what let the two
+// views disagree, so there is deliberately nowhere for one to be selected from.
+// `tools/unit_checks/version_gate_divergence.js` fails if a second one reappears.
 
 // Armor quality does not exist in the MoM engines: the card hides the row and resets the select
 // (`updateLoadoutLocks`), `applyVersionGating` performs the same reset on a card state so a state

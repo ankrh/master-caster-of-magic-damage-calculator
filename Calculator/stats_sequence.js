@@ -39,7 +39,7 @@ function baseStatSteps(ctx) {
     weaponTrainingInputAt,
     baseHitChance, baseHitMelee, modernSecondaryHitMod, secondaryHitTargets,
     baseToBlkMod, baseToHitMod, baseToHitRtbMod, calcBaseAtk, calcBaseDef, calcBaseHP,
-    calcBaseRes, channels, dragonMound, identity, isCoM1, isCoM2, lightningBladeSlots,
+    calcBaseRes, channels, dragonMound, isCoM1, isCoM2, isFantasticBase, lightningBladeSlots,
     ludusAgoge, motherFungus,
     naturalSelectionCoalAt, naturalSelectionIronAt, naturalSelectionNightshadeAt,
     naturalSelectionNightshadeCount, naturalSelectionPowerMineralsAt,
@@ -304,7 +304,7 @@ function baseStatSteps(ctx) {
     // PROVENANCE[spiritLink:level]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS@span:10:33b04c988e4846d5dfe6cfbd
     statStep({ id: 'spiritLink:level', sourceId: 'spiritLink', sourceLabel: 'Spirit Link',
       phase: 'buffs', writes: ['level'],
-      when: () => spiritLinkClearsPermanentFantastic(identity, abilities, version),
+      when: () => spiritLinkClearsPermanentFantastic(abilities, version, isFantasticBase),
       apply: u => { u.level = 'normal'; } }),
     // Rust's cast clears the material flags on the target's permanent record once the resistance
     // roll has beaten it, so the recalculation that follows finds an unequipped unit. The block
@@ -615,7 +615,7 @@ function precalcScriptStatSteps(ctx) {
     ffMeleeBonusAt,
     ffRegularBonusAt,
     fieryFuryRtbWrite, goblinPoxAtkMod, goblinPoxDefMod, goblinPoxResMod, godsPlayDicesResMod,
-    greatUnbindingActive, identity, isWarlord,
+    greatUnbindingActive, isHero, isWarlord,
     marionette, marionetteAttackBonus, marionetteDefenseBonus, marionetteOwned,
     marionetteStrayed, natureLinkActive, outlanderReform,
     plagueActive, poxHostActive, poxHostIsGoblin, rangedTypeFields,
@@ -865,7 +865,7 @@ function precalcScriptStatSteps(ctx) {
     // constant it used to be (F244.3f). The two ranks are what make the reading order observable;
     // `b:rebuild` one block later is the same shape.
     //
-    // `identity.isHero` is the block's enclosing region, not a second copy of the branch test:
+    // The `isHero` term is the block's enclosing region, not a second copy of the branch test:
     // the augmentation sits between `UnitCalcPre.CAS!NOVAMPIRISM!+3 "IF ( ISHERO(U) = 0 ) THEN { GOTO"` and `UnitCalcPre.CAS!NOTHERO!`,
     // so it reaches heroes alone. The branch constant this gate used to be carried that term
     // implicitly; a record read does not, and the flag has writers outside the Marionette package
@@ -882,7 +882,7 @@ function precalcScriptStatSteps(ctx) {
     statStep({ id: 'marionette:strayedTransmute', sourceId: 'marionetteStrayed',
       sourceLabel: 'Marionette (strayed): Transmute Equipment', phase: 'b',
       writes: ['atk', ...strengthFields, 'def', 'res'],
-      when: u => !!identity.isHero && !!u.transmuteEquipment,
+      when: u => !!isHero && !!u.transmuteEquipment,
       apply: u => {
         u.atk += 2;
         for (const c of channels) {
@@ -1170,7 +1170,7 @@ function magicCalcBinaryStatSteps(ctx) {
     hasDarkness, hasMeleeAttackAt, heavenlyLightActive, heavenlyLightHitPickAt,
     heavenlyLightMeleeToHitAt, holyArmorActive, holyWeaponHitPick, hwMeleeToHit,
     landLinkingEligible,
-    identity, inputBaseAtk, isCoM1, isCoM2,
+    inputBaseAtk, isCoM1, isCoM2, isHero,
     isCoMVersion, isWarlord, lionheartHpMod,
     natureConjunctionActiveAt, nodeAuraActive, orihalconActive,
     rangedTypeFields, realmWardActive, secondaryHitTargets, secondaryHitFields, spellWardActive,
@@ -1288,8 +1288,8 @@ function magicCalcBinaryStatSteps(ctx) {
           const baseRangedType = base[c.rangedTypeField];
           // The Thrown and Breath gates are positive-strength tests on a field with no type of
           // its own; the slot's type pair is what says which of the three fields it is.
-          const gatedType = identity.isHero ? u[c.thrownTypeField] : base[c.thrownTypeField];
-          const gatedStrength = identity.isHero ? u[c.strengthField] : base[c.strengthField];
+          const gatedType = isHero ? u[c.thrownTypeField] : base[c.thrownTypeField];
+          const gatedStrength = isHero ? u[c.strengthField] : base[c.strengthField];
           if (baseRangedType !== 'none') {
             u[c.strengthField] += isMagicalRangedType(baseRangedType)
               ? lvl.magicRanged : lvl.missileRanged;
@@ -1973,7 +1973,7 @@ function magicCalcScriptStatSteps(ctx) {
   const {
     abilByPhase, abilities, blazeOfGloryActive, channels, colossalScaled,
     colossalStrength, energyCannonResearchAt, energyCannonHitField, gazeDisabled,
-    hasDarkness, hurricaneActive, identity, isWarlord, outlanderReform,
+    hasDarkness, hurricaneActive, isWarlord, outlanderReform,
     rangedTypeFields, recordContext, secondaryHitFieldsFor,
     secondaryHitTargets, secondaryHitFields, strengthFields, thrownTypeFields,
     shadowStrikeActive, vampirismActive, version,

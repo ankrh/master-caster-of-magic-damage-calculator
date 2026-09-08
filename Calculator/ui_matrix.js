@@ -21,8 +21,10 @@ async function renderMatrixSnapshot() {
   }
   ensureMatrixPropertyStateLoaded();
   renderAllMatrixPropLists();
-  const attackerEnchantments = matrixAppliedEnchantments('a');
-  const defenderEnchantments = matrixAppliedEnchantments('b');
+  // The enchantment rows in card-state shape (`uiKey` -> control value): the roster rows overlay
+  // them onto the card state `applyRosterUnit` produced.
+  const attackerEnchantments = matrixEnchantmentRows('a');
+  const defenderEnchantments = matrixEnchantmentRows('b');
   const wrap = document.getElementById('matrixTableWrap');
   matrixLoadingCount += 1;
   if (wrap) wrap.classList.add('is-loading');
@@ -112,74 +114,92 @@ function isRangedMatrixAttacker(matrixMode, prefix) {
   return matrixMode === 'ranged' && prefix === 'a';
 }
 
-function buildMatrixUnitStats(prefix, unit, appliedEnchantments, matrixMode) {
-  const version = document.getElementById('gameVersion').value;
-  const level  = matrixSideSetting(prefix, 'level');
-  const weapon = matrixSideSetting(prefix, 'weapon');
-  const armor  = matrixSideSetting(prefix, 'armor');
-  // The matrix's own combination, unchanged: the applied enchantment replaces the roster
-  // record's value outright where the card's two halves contend under `mergeAbilityCalcValue`.
-  // The divergence is F269.2's to close, when this becomes the card's own path; F252.1 only
-  // states which half each key belongs to, which the def lists answer. The halves the split
-  // produces therefore reconstruct *membership* after the override has already discarded the
-  // losing value; they are not two independently stated source facts the way the card's are.
-  const abilities = { ...parseAbilitiesFromUnit(unit), ...appliedEnchantments };
-  const { innateAbilities, markedAbilities } = splitAbilityCalcValuesBySource(abilities);
-  const enemyPrefix = prefix === 'a' ? 'b' : 'a';
+// The battlefield the matrix states, in the shape the projection takes. `perSide` carries the two
+// cross-side enchantments for **both** sides, because that is where `cardStateToDerivationInput`
+// reads the enemy's copy from; the ranged pair is per-side, since only side a shoots.
+function matrixGlobalsForSide(prefix, matrixMode, version) {
   const rangedMatrixAttacker = isRangedMatrixAttacker(matrixMode, prefix);
-  return deriveUnitStats({
-    prefix,
+  const crossSide = side => ({
+    eternalNight: matrixHasActiveEnchantment(side, 'eternalNight'),
+    eyeOfHeaven: matrixHasActiveEnchantment(side, 'eyeOfHeaven'),
+  });
+  return {
     version,
-    innateAbilities,
-    markedAbilities,
-    identity: createRosterUnitIdentity(version, unit),
-    name: unit.name,
-    level,
-    weapon,
-    armor,
-    rtbType: predefinedUnitRtbType(unit),
-    figs: unit.figures || 1,
-    atk: unit.melee,
-    rtb: predefinedUnitRtb(unit),
-    modernAttacks: predefinedModernAttacks(unit, version),
-    def: unit.defense,
-    res: unit.resist,
-    hp: unit.hp,
-    dmg: matrixSideSetting(prefix, 'damageTaken'),
-    irrecoverableDamage: 0,
-    undeadDamage: 0,
-    baseBonusHp: 0,
-    noHealing: false,
-    // `UNITS.INI` defines one `Hit=` per record and no per-channel key, so it seeds the DOS
-    // pair and the modern common `hitchance` alike; the four modern channel modifiers have no
-    // roster source.
-    ...(version.startsWith('com2')
-      ? { hitChance: unit.to_hit || 0 }
-      : { toHitMod: unit.to_hit || 0, toHitRtbMod: unit.to_hit || 0 }),
-    toBlkMod: unit.to_block || 0,
-    cityWalls: matrixSideSetting(prefix, 'cityWalls'),
     nodeAura: matrixGlobalValue('nodeAura'),
     wallOfFire: !!matrixGlobalValue('wallOfFire'),
     trueLight: !!matrixGlobalValue('trueLight'),
     darkness: !!matrixGlobalValue('darkness'),
-    enemyEternalNight: matrixHasActiveEnchantment(enemyPrefix, 'eternalNight'),
-    enemyEyeOfHeaven: matrixHasActiveEnchantment(enemyPrefix, 'eyeOfHeaven'),
-    chaosSurge: matrixGlobalValue('chaosSurge'),
+    // The two numeric globals are stringified because that is what the card's controls hold and
+    // what `collectGlobals` and `presetGlobals` therefore state. `deriveUnitStats` parses either
+    // (`parseInt`), so nothing moves; what it buys is that a matrix globals object and a card one
+    // agree field for field, so a comparison of the two can be exact.
+    chaosSurge: String(matrixGlobalValue('chaosSurge')),
     rangedCheck: rangedMatrixAttacker,
-    rangedDist: rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1,
+    rangedDist: String(rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1),
     warpReality: !!matrixGlobalValue('warpReality'),
+    chaosConjunction: !!matrixGlobalValue('chaosConjunction'),
     hurricane: !!matrixGlobalValue('hurricane'),
     poxHost: !!matrixGlobalValue('poxHost'),
-    generic: unit.category === 'Generic',
-  });
+    perSide: { a: crossSide('a'), b: crossSide('b') },
+  };
 }
 
-function buildMatrixDefenderStats(unit, appliedEnchantments, matrixMode) {
-  return buildMatrixUnitStats('b', unit, appliedEnchantments, matrixMode);
+// One roster row's card state: the card's own roster statement, over the matrix's own settings.
+//
+// The order is the card's — an empty card, the roster record's statement of it, the settings the
+// user chose, the identity's own derived Elements value, and version gating last
+// (`applyVersionGating`, the state half of `updateTypeVisibility`). The enchantment rows go on as
+// **controls**, keyed by `uiKey`, so a key an ability and an enchantment both name keeps two values
+// and they contend at the derivation boundary under `mergeAbilityCalcValue` (F252.1).
+//
+// Level, weapon and armor are written after the roster statement and are **not** put back by
+// `cardStateLoadoutLocks`. That is the preset applier's treatment of a fixture's own level, and
+// for the same reason: the matrix's settings are a statement about the whole filter, made after
+// the record was named, not a control the record locks.
+//
+// The Golem write comes **after** the rows, because that is where the card performs it:
+// `refreshAbilityFieldVisibility` -> `updateSpecialUnitDerivedEffects` runs once the abilities are
+// written, and `presetToCardState` restates it after its own overlay for the same reason. The
+// selector owns that value rather than the user (`specialUnitDerivesResistElements`), so a drawer
+// row naming `elemArmor` must not overwrite it (GPT review of F269.2, P2).
+//
+// Which gating rule reaches which control, since both now run over this state (F261's question):
+// `matrixEnchantmentValue` **refuses** a gated row, so a version-hidden enchantment never arrives
+// with an active value; `applyVersionGating` **clears**, which is what covers the innate rows the
+// reader never sees — `applyRosterUnit` writes every ability row the record states, gated or not,
+// exactly as it does on the card. The two do overlap on the enchantment rows, which the empty card
+// carries at their off values: there the clearing pass rewrites an already-off value and decides
+// nothing. Both are needed; neither is a fallback for the other.
+function matrixRosterCardState(prefix, unit, enchantmentRows, version) {
+  const state = applyRosterUnit(presetDefaultCardState(prefix, version), unit, version);
+  const abilities = { ...state.abilities, ...enchantmentRows };
+  if (specialUnitDerivesResistElements(version, state.identity.specialUnit)) {
+    abilities.elemArmor = 'resistElements';
+  }
+  return applyVersionGating({
+    ...state,
+    abilities,
+    level: matrixSideSetting(prefix, 'level'),
+    weapon: matrixSideSetting(prefix, 'weapon'),
+    armor: matrixSideSetting(prefix, 'armor'),
+    cityWalls: String(matrixSideSetting(prefix, 'cityWalls')),
+    dmg: String(matrixSideSetting(prefix, 'damageTaken')),
+  }, version);
 }
 
-function buildMatrixAttackerStats(unit, appliedEnchantments, matrixMode) {
-  return buildMatrixUnitStats('a', unit, appliedEnchantments, matrixMode);
+function buildMatrixUnitStats(prefix, unit, enchantmentRows, matrixMode) {
+  const version = document.getElementById('gameVersion').value;
+  return deriveUnitStats(cardStateToDerivationInput(
+    matrixRosterCardState(prefix, unit, enchantmentRows, version),
+    matrixGlobalsForSide(prefix, matrixMode, version)));
+}
+
+function buildMatrixDefenderStats(unit, enchantmentRows, matrixMode) {
+  return buildMatrixUnitStats('b', unit, enchantmentRows, matrixMode);
+}
+
+function buildMatrixAttackerStats(unit, enchantmentRows, matrixMode) {
+  return buildMatrixUnitStats('a', unit, enchantmentRows, matrixMode);
 }
 
 // Read stats for the user-customized custom unit row in the matrix.
@@ -201,9 +221,11 @@ function readMatrixCustomUnitStats(prefix, matrixMode) {
   }
   // The DOS block replaces the ability-row values for its consumers, same as on the main path.
   Object.assign(abilities, dosSpecialValues(prefix));
-  // Merge matrix-state enchantments on top. As in `buildMatrixUnitStats`, this replaces rather
-  // than contends; F269.2 closes that. `splitAbilityCalcValuesBySource` then says which half of
-  // the boundary each key states (F252.1).
+  // Merge matrix-state enchantments on top. This replaces rather than contends, where the card
+  // and — since F269.2 — the matrix's roster rows let the two halves contend under
+  // `mergeAbilityCalcValue`. F269.2 closed that for the roster rows only; the custom row still
+  // overwrites. `splitAbilityCalcValuesBySource` then says which half of the boundary each key
+  // states (F252.1).
   const stateEnch = matrixAppliedEnchantments(prefix);
   for (const k of Object.keys(stateEnch)) {
     abilities[k] = stateEnch[k];
@@ -278,7 +300,7 @@ function selectedMatrixUnitRow(prefix, matrixMode) {
   };
 }
 
-function predefinedMatrixUnitRows(prefix, appliedEnchantments, matrixMode) {
+function predefinedMatrixUnitRows(prefix, enchantmentRows, matrixMode) {
   const version = document.getElementById('gameVersion').value;
   const unitsById = new Map((unitDatabases[version] || []).map(unit => [String(unit.id), unit]));
   return (unitComboboxData[prefix] || [])
@@ -286,10 +308,10 @@ function predefinedMatrixUnitRows(prefix, appliedEnchantments, matrixMode) {
     .filter(Boolean)
     .map(unit => {
       const stats = prefix === 'a'
-        ? buildMatrixAttackerStats(unit, appliedEnchantments, matrixMode)
-        : buildMatrixDefenderStats(unit, appliedEnchantments, matrixMode);
+        ? buildMatrixAttackerStats(unit, enchantmentRows, matrixMode)
+        : buildMatrixDefenderStats(unit, enchantmentRows, matrixMode);
       const classTag = stats.isHero ? 'Hero'
-                     : stats.identity.fantastic ? 'Fantastic'
+                     : stats.abilities.liveFantastic ? 'Fantastic'
                      : 'Normal';
       return {
         label: unit.name,

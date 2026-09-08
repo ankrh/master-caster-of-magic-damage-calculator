@@ -39,16 +39,34 @@ for (const version of VERSIONS) {
               && Number(figs) >= 1 && Number(hp) >= 1)) {
           bad.push({ id: u.id, name: u.name, figs, hp, atk, def, res });
         }
-        const identity = readUnitStats('a').identity;
-        if (!(identity.version === document.getElementById('gameVersion').value
-              && source
+        // Both halves are read off what the derivation publishes, not off an identity object:
+        // the sequence record is the only carrier of `race`/`fantastic`, and the derivation
+        // publishes no identity at all since F267.6 - the permanent pair as
+        // `baseRace`/`baseFantastic` and the live pair as `liveRace`/`liveFantastic`. What the
+        // page still holds as a stated identity is `unitIdentity[prefix]`, the input shape, and
+        // that is where the two ids are asserted. An unconverted roster unit's live pair still
+        // has to equal its base pair, which is the claim being made.
+        const derived = readUnitStats('a');
+        const identity = unitIdentity['a'];
+        if (!(source
+              && !Object.prototype.hasOwnProperty.call(derived, 'identity')
+              && !Object.prototype.hasOwnProperty.call(identity, 'version')
               && identity.templateId === source.templateId
               && identity.heroTypeId === source.heroTypeId
+              // The derivation-side half of the id claim, which the page is the only realm that
+              // can make: the ids the page stored have to reach the record the run left, not
+              // merely sit in `unitIdentity`. `unittype` is `baseUnittypeId`'s resolution, which
+              // for a roster unit is its template id (F267.6, GPT review P2).
+              && derived.unittype === source.templateId
+              && derived.herotype === source.heroTypeId
               && identity.isHero === source.isHero
-              && identity.baseRace === source.baseRace
-              && identity.baseFantastic === source.baseFantastic
-              && identity.race === source.baseRace
-              && identity.fantastic === source.baseFantastic
+              && derived.isHero === source.isHero
+              && derived.abilities.baseRace === source.baseRace
+              && derived.abilities.baseFantastic === source.baseFantastic
+              && derived.abilities.liveRace === source.baseRace
+              && derived.abilities.liveFantastic === source.baseFantastic
+              && !Object.prototype.hasOwnProperty.call(identity, 'race')
+              && !Object.prototype.hasOwnProperty.call(identity, 'fantastic')
               && !Object.prototype.hasOwnProperty.call(identity, 'chosen')
               && !Object.prototype.hasOwnProperty.call(identity, 'golem'))) {
           identityBad.push({ id: u.id, name: u.name, source, identity });
@@ -66,17 +84,13 @@ for (const version of VERSIONS) {
       const hero = document.getElementById('aBaseHero');
       hero.checked = true;
       hero.dispatchEvent(new Event('change'));
-      const customIdentity = readUnitStats('a').identity;
-      return { count: list.length, bad, identityBad, customIdentity,
+      return { count: list.length, bad, identityBad,
         fantasticIdentity, storedCustomIdentity: unitIdentity['a'] };
     });
 
     expect(report.count, 'the picker should have units for this version').toBeGreaterThan(0);
     expect(report.bad, 'every unit yields numeric core stats').toEqual([]);
     expect(report.identityBad, 'every predefined unit carries source/base/live identity').toEqual([]);
-    expect(report.customIdentity.templateId, 'custom template ID').toBeNull();
-    expect(report.customIdentity.heroTypeId, 'custom hero-type ID').toBeNull();
-    expect(report.customIdentity.isHero, 'custom Hero remains independent of null IDs').toBe(true);
     expect(report.fantasticIdentity.baseRace, 'custom Fantastic realm is stored independently').toBe('Chaos');
     expect(report.fantasticIdentity.baseFantastic, 'custom Fantastic flag is synchronized').toBe(true);
     expect(report.storedCustomIdentity.templateId, 'stored custom template ID').toBeNull();

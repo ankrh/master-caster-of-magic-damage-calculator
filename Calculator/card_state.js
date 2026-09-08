@@ -346,9 +346,9 @@ function presetIdentity(fixture, version, source) {
 // routes its own clearing through it, so a card state built without controls (F260.6) is gated by
 // the same code rather than by a second rule written beside it.
 //
-// The gate is a mandatory parameter — `abilityGatedForCard` or `abilityGatedForMatrix`
-// (`ability_gating.js`) — because the two disagree on six Warlord enchantments today and F260
-// must move no number. There is deliberately no default.
+// The gating test is `abilityVersionGated` (`ability_gating.js`), and there is no parameter to
+// choose another: F261 deleted the matrix's weaker second test, so the card, the preset path and
+// the matrix reader all ask the one question.
 
 // What the page's clearing actually writes, which is not the same as "the def's default":
 // `applyDisabled` clears a checkbox and resets a select to its first option, and touches neither
@@ -375,7 +375,7 @@ function versionGatedClearedValue(abil) {
 
 // Clear the controls the given version cannot have, on a copy. Also performs the MoM armor reset
 // `updateLoadoutLocks` performs on the card, so the two paths agree on the armor field as well.
-function applyVersionGating(state, version, gate) {
+function applyVersionGating(state, version) {
   if (!state || typeof state !== 'object' || !state.abilities) {
     throw new Error('applyVersionGating: expected a card state carrying `abilities`, got '
       + JSON.stringify(state) + '.');
@@ -384,16 +384,11 @@ function applyVersionGating(state, version, gate) {
     throw new Error('applyVersionGating: version must be a version string, got '
       + JSON.stringify(version) + '.');
   }
-  if (typeof gate !== 'function') {
-    throw new Error('applyVersionGating: the gating test is a mandatory argument — pass '
-      + Object.keys(ABILITY_VERSION_GATES).map(name => `ABILITY_VERSION_GATES.${name}`).join(' or ')
-      + ' (`ability_gating.js`). The card and the matrix gate differently, so there is no default.');
-  }
   const abilities = { ...state.abilities };
   for (const abil of abilityUiDefs()) {
     const uiKey = cardStateAbilityUiKey(abil);
     if (!(uiKey in abilities)) continue;
-    if (!gate(abil, version)) continue;
+    if (!abilityVersionGated(abil, version)) continue;
     const cleared = versionGatedClearedValue(abil);
     if (cleared === undefined) continue;
     abilities[uiKey] = cleared;
@@ -821,7 +816,7 @@ function assertRosterRecordStatable(unit, version) {
 // innate-lock classes, the special-unit option list and the visibility refresh, none of which is
 // state. Version gating is deliberately *not* applied here, because on the page it runs after the
 // selection (`refreshAbilityFieldVisibility` -> `updateTypeVisibility`); a pure caller composes it
-// the same way, `applyVersionGating(applyRosterUnit(state, unit, version), version, gate)`.
+// the same way, `applyVersionGating(applyRosterUnit(state, unit, version), version)`.
 function applyRosterUnit(state, unit, version) {
   if (!state || typeof state !== 'object' || !state.abilities) {
     throw new Error('applyRosterUnit: expected a card state carrying `abilities`, got '
@@ -1522,11 +1517,11 @@ function presetToCardState(name, preset, options = {}) {
     }
   }
 
-  // Version gating, last, exactly as `refreshAbilityFieldVisibility` runs it last. The card gate
-  // and not the matrix one: a preset states a card (`ABILITY_VERSION_GATES`, `ability_gating.js`).
+  // Version gating, last, exactly as `refreshAbilityFieldVisibility` runs it last, through
+  // `abilityVersionGated` (`ability_gating.js`) — the one gating test there is (F261).
   const gated = {
-    a: applyVersionGating(states.a, version, ABILITY_VERSION_GATES.card),
-    b: applyVersionGating(states.b, version, ABILITY_VERSION_GATES.card),
+    a: applyVersionGating(states.a, version),
+    b: applyVersionGating(states.b, version),
   };
   const globals = applyGlobalVersionGating(presetGlobals(preset, version, gated));
 

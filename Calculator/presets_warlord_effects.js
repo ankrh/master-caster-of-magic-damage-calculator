@@ -734,6 +734,13 @@ definePresets({
     b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
     expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 6.000, sdDmgToB: 4.899, regDmgToB: 0.000, sdRegDmgToB: 0.000, irrDmgToB: 6.000, sdIrrDmgToB: 4.899 },
   },
+  angelicGuardiansLifeHeroTierWarlord: {
+    desc: 'The Life tier reached by a hero, which is the only shape where the compact unit-type token cannot answer the realm: `legacyUnitTypeFromLiveRecord` returns `hero` for any non-Fantastic hero whatever its race (stats_identity.js), so `realmOfUnitType` has to read the race the record itself carries in `race` (combat_abilities.js). A Life-race hero therefore gains Exorcise -1 rather than the regular -0: vs fantastic Res 5, effRes 4 -> pFail 0.6 x 10 = 6.0. Read the realm off the token alone and it is 5.0. angelicGuardiansLifeTierWarlord pins the same 6.000 through Sanctify, whose `normal_life` token answers without the record read; this fixture is that claim with the token blinded.',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10, identity: { isHero:true, baseRace:'Life', baseFantastic:false }, abilities: { angelicGuardians: true } },
+    b: { def:1, toBlkMod:70, res:5, hp:10, unitType:'fantastic_nature' },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 6.000, sdDmgToB: 4.899, regDmgToB: 0.000, sdRegDmgToB: 0.000, irrDmgToB: 6.000, sdIrrDmgToB: 4.899 },
+  },
   angelicGuardiansImprovesExistingExorciseWarlord: {
     desc: 'Angelic Guardians on a regular unit that already has Exorcise -1 adds -2 → -3: vs fantastic Res 5, effRes 2 → pFail 0.8 × 10 = 8.0. Without the enchantment, Exorcise -1 → effRes 4 → 0.6 × 10 = 6.0.',
     version: V_WARLORD,

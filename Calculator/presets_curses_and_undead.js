@@ -1588,6 +1588,15 @@ definePresets({
     bUnitName: 'Zombies',
     expected: { dmgToA: 9.600, sdDmgToA: 2.400, dmgToB: 4.819, sdDmgToB: 0.933 },
   },
+  constructCatapultRefusedOnHeroCoM: {
+    desc: 'CoM 1 Construct Catapult, refused on a hero. `isConstructCatapultUnit` (`stats_identity.js`) is one predicate over the record: Combat Summoned, the version\u2019s block, `u.unittype` = the `catapult` id \u2014 and `not u.ishero`, the term this fixture is the only witness of. A combat-summoned CoM 1 hero stating the Catapult type therefore takes `a:summonBranch` instead and keeps a normal weapon, so its melee rolls at the base 30% for 1.800; admit the hero and it takes `a:constructCatapult` with Magic Weapons\u2019 +10 percentage points and the mean rises to 2.400. Both arms leave the unit Fantastic, which is why the weapon and not the conversion is what the number reads.',
+    version: V_COM,
+    a: { figs:1, atk:6, toHitMod:0, hp:20, unitType:'hero',
+      identity: { specialUnit:'catapult', isHero:true },
+      abilities: { combatSummoned: true } },
+    b: { atk:0, def:0, toBlkMod:70, hp:20 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.800, sdDmgToB: 1.122 },
+  },
   golemResistElementsByUnitTypeCoM2: {
     desc: 'CoM2 Golem (roster template 81, `inferred_UnitGolem`): Resist Elements is a hard-coded unit-type rule, not a `UNITS.INI` ability — `if BaseUnits[i].unittype = inferred_UnitGolem` (`Units.RecalculateUnits.pas:768`, block $00599E31). Magic ranged strength 20 against the Golem’s defence 7 plus that grant gives 16.700; a wrong id in the version-scoped table (F267.3) loses both the grant and the roster token that stands in for it, and the mean rises to 17.900.',
     version: V_COM2,

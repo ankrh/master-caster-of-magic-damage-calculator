@@ -20,17 +20,93 @@ function deriveUnitStats(input) {
       + `lightningBreath); the input for side ${JSON.stringify(input.prefix)} supplied none. A `
       + 'record that states no attack is `modernAttacks: {}`, not a missing one.');
   }
-  const identity = initializeUnitIdentity(input);
-  const baseUnitType = legacyUnitTypeFromIdentity(identity);
-  const isHero = !!identity.isHero;
-  const isFantasticBase = !!identity.baseFantastic;
-  // The record's `unittype`, resolved once at the input boundary: the roster template id, or the
-  // id the stated special-unit key names in this version (`baseUnittypeId`, `stats_identity.js`).
-  // Every type exception below is an integer compare against it, which is the only shape the
-  // engines have — there is no `specialUnit` field in `Typedec.pas` (F267.3). The two eager
-  // readers here cannot ask the record because they run ahead of it; F267.4 moves the seed to
-  // this boundary and closes that gap.
-  const unittype = baseUnittypeId(version, identity);
+  // **The sequence record, constructed at the input boundary.** The engine builds `B` from the
+  // roster template first and every gate after that reads `B` or `U`; it has no side object
+  // holding the unit's identity beside the record. This one is the same object the whole
+  // derivation runs over — `runStatSteps` mutates it in place below — so the eager base-identity
+  // scalars underneath read the record rather than a shadow copy of it (F267.4).
+  //
+  // What stands here is everything that does not depend on the ability map: the five identity
+  // members `unitIdentityRecordSeed` folds in from the stated input shape (`stats_identity.js`),
+  // and the constant template defaults. What cannot is `seedNonStatRecordFields` over the map the
+  // pre-sequence transforms leave — and those transforms are handed `baseUnitType`,
+  // `baseUnitRace` and `isHero`, these very fields — together with the channel fields, whose slot
+  // contexts are built from the same map. That is an ordering constraint on the ability half
+  // alone, not on the record: the `Object.assign(statRecord, …)` below adds it to *this* object,
+  // so there is one record and not two.
+  //
+  // The three type/hero members of `UnitT`, at their engine names and seeded at `template` rank
+  // (F267.2). `Typedec.pas` keeps one flat record and these are ordinary members of it:
+  // `ishero : boolean` (:203, between `bloodsucker` and `equip`), `unittype : smallint` (:246)
+  // and `herotype : smallint` (:247). `BaseUnits[]` and `Units[]` are both arrays of that
+  // record, so all three stand on the permanent record `a:baseCopy` publishes *and* on the
+  // calculated one, which is the whole reason they are seeded here beside `race`/`fantastic`
+  // rather than kept on a side object.
+  //
+  // That all three are on *both* arrays is the declaration itself: `BaseUnits, Units : array[..]
+  // of UnitT` (`Typedec.pas:336`), one type for the two. The two consumers below are not that
+  // proof — they show which array a given read selects, which is the separate and equally
+  // load-bearing fact that neither field is a constant of the unit.
+  //
+  // `unittype` is the roster template id, and it is how the engine answers "is this Zombies":
+  // `BaseUnits[i].unittype = inferred_UnitGolem` (`Units.RecalculateUnits.pas:768`),
+  // `B.unittype = ChosenUnitID` (:1611, the id read from `MODDING.INI`) and
+  // `BaseUnits[UnitCaster].unittype = inferred_DemonLordUnitType`
+  // (`Spells.CombatSummonUnit.pas:136`) are three independent integer compares against the one
+  // field. `herotype` is a **separately stored** field, not a projection of `unittype`: they are
+  // sized against different ceilings — `Maxunittypesarraysize = 400` and `MaxMaxherotypes = 85`
+  // (`SharedConstants.pas:16` and `:21`) — and `herotype` indexes the wizard's per-hero ability
+  // array, `Wizards[...].Hero[herotype, HABattlemage]` (`Combat.ApplyAttack.pas:361`). The one
+  // exposed helper converts the other way (`CasApi.pas:164`, `Herotypetounittype`); that fixes
+  // the exposed conversion's direction rather than proving no initialisation path derives one
+  // id from the other, which is why the claim here is the storage and not the derivation.
+  //
+  // Which array a read selects varies within one expression. `Combat.ApplyAttack.pas:351` gates
+  // on the calculated `Units[au].ishero` and :361 then indexes the permanent
+  // `BaseUnits[au].herotype`, while the Charmed resistance step reads
+  // `Wizards[BaseUnits[u].owner].Hero[Units[u].herotype]` — "`owner` is read from `BaseUnits`,
+  // while `ishero` and `herotype` come from the current record"
+  // (`CoM2 binary - resolution helpers.md:208`).
+  //
+  // A custom unit has no roster template and a non-hero no hero type, so both ids seed `null`
+  // rather than a sentinel integer: every modelled reader is an equality test against a stated
+  // id, and `null` is the honest "this record names none". `unittype` is the resolved id rather
+  // than the stated template id alone (`baseUnittypeId`, `stats_identity.js`): a unit stated by
+  // its controls has no roster template, and the `Special unit` selector is how such a unit
+  // states one — so the key resolves to the version's id here and the record carries the
+  // integer, which is all the engine ever has. Six gates read it (F267.3): Golem's Resist
+  // Elements, `weaponEligibleAt`'s Zombies exception, `a:chosen`, `a:constructCatapult` and the
+  // two Night Goblins terms; the first two read it off this seed because they stand ahead of the
+  // sequence, and the rest off the running record.
+  //
+  // This seed's `race`/`fantastic` are the only live pair there is, and since F267.6 the seed is
+  // the only thing the stated identity becomes. There is no identity object beside the record any
+  // more: the constructors (`createUnitIdentity` and its two roster/custom wrappers) still declare
+  // what a caller states, `unitIdentityRecordSeed` folds their result into these five members, and
+  // every gate that used to read the object reads the record instead. A live read names a record
+  // and a position; a permanent one names the record at `template` rank or `ctx.base`.
+  const statRecord = {
+    ...unitIdentityRecordSeed(input),
+    // The stat fields at their zero defaults; the real base values are the base phase's own
+    // writes, which is why these are placeholders rather than the input's numbers.
+    res: 0, def: 0, atk: 0, hp: 0, gaze: 0, doomGaze: 0,
+    toHit: 30, toHitMelee: 0, toBlk: 30, energyCannonToHit: null,
+    // The persistent loadout and veterancy fields, seeded at the roster template's values — a
+    // unit ships unequipped and at Recruit, and every departure from that is a positioned write:
+    // `training:weaponQuality`, `training:armorQuality` and `training:veterancy` for what the
+    // training city left, `training:artificer` and `template:constructCatapult:weapon` for the two
+    // quality writes made elsewhere, `debuffs:rust:material` and `buffs:destiny:level` for what a
+    // cast took back (F244.2).
+    weaponMaterial: 'normal', armorMaterial: 'normal', level: 'normal',
+  };
+  // The eager base-identity scalars, every one of them a read of the record above. At `template`
+  // rank the record *is* the permanent record, so `legacyUnitTypeFromRecord` answers the
+  // permanent unit type here for exactly the same reason `a:baseCopy` can publish `ctx.base`
+  // from it later.
+  const baseUnitType = legacyUnitTypeFromRecord(statRecord);
+  const isHero = statRecord.ishero;
+  const isFantasticBase = statRecord.fantastic;
+  const unittype = statRecord.unittype;
   const isCoM1 = version === 'com_6.08';
   // CoM 1 (the DOS build). Kept distinct from `isCoM2` wherever a mechanic is settled for
   // one engine and open for the other — see the Warp Creature block and the gaze ladder.
@@ -101,16 +177,18 @@ function deriveUnitStats(input) {
   // `Unit rosters/Warlord mod unit data/UNITS.INI`. Custom (hand-entered) units carry neither,
   // so building buffs are inert on them. The display name may be race-prefixed for some
   // units and not others, so name exceptions match with endsWith (always gated by race).
-  // `identity.baseRace` is the permanent record's race, and it is the only race any of these
-  // gates may read: each is either a `CreateUnit.CAS`/`OverlandEndTurn.CAS` training gate — which
-  // runs before combat recalculation exists — or, for Goblin Pox, a block whose own read is
-  // `GETSTAT(U,SRace,1)`, index 1, the permanent slot. Reading the live `identity.race` would let
-  // a realm conversion (Undead, Chaos Channels, Sanctify, Destiny) answer a permanent-record
-  // question with `Life`/`Death`.
-  const baseUnitRace = identity.baseRace;
+  // The record's race as it stands at `template` rank, which is the permanent record's race, and
+  // it is the only race any of these gates may read: each is either a
+  // `CreateUnit.CAS`/`OverlandEndTurn.CAS` training gate — which runs before combat
+  // recalculation exists — or, for Goblin Pox, a block whose own read is `GETSTAT(U,SRace,1)`,
+  // index 1, the permanent slot. Reading the record *later*, after a realm conversion (Undead,
+  // Chaos Channels, Sanctify, Destiny) has written `u.race`, would answer a permanent-record
+  // question with `Life`/`Death`; read here, before any step runs, the seed is the permanent
+  // value (F267.4).
+  const baseUnitRace = statRecord.race;
   const unitName = input.name || '';
   const marionetteDerivation = deriveMarionettePackage(
-    identity, suppliedAbilities, version);
+    statRecord, suppliedAbilities, version);
   const marionette = marionetteDerivation.package;
   // There is no pre-sequence spelling of the permanent Fantastic flag any more. Every gate that
   // stands at or behind `a:baseCopy` reads it off `ctx.base` — `c:level:fantastic`
@@ -120,7 +198,8 @@ function deriveUnitStats(input) {
   // arms and Soul Flay (F244.3h), and the Outlander reform's three region-`b`-or-later states
   // (F262) — and the two `training` loadout gates, which rank four phases ahead of the copy and
   // so have no `ctx.base` to ask, read the permanent flag as it stands at their own rank, which
-  // is `identity.baseFantastic` (F262; `weaponEligibleAt` says why not the running record). The
+  // is `isFantasticBase`, the boundary record's own `fantastic` field at `template` rank (F262,
+  // F267.4; `weaponEligibleAt` says why not the running record). The
   // former snapshot restated `buffs:destiny` and `buffs:spiritLink:fantastic` outside the chain
   // and needed a post-run assertion to keep it honest; both are gone.
   //
@@ -168,21 +247,27 @@ function deriveUnitStats(input) {
   // record and a gate reads whatever stands in them at its own position (F163). There is no
   // pre-pass and no fixed point handed to a gate; the three shapes a read can take are the live
   // record at the reading step (`unitTypeAt` and friends), the permanent record
-  // (`identity.baseRace` / `identity.baseFantastic`, or the record `a:baseCopy` publishes, for a
+  // (`baseUnitRace` / `isFantasticBase`, the boundary record's own fields at `template` rank, or
+  // the record `a:baseCopy` publishes, for a
   // permanent write the pipeline itself makes), and the record the recalculation *leaves*.
-  const identityMeta = { isHero, name: unitName, unittype };
-  const identityConversions = identityConversionSteps(identity, abilities, version, identityMeta);
+  const identityConversions = identityConversionSteps(statRecord, abilities, version);
   // There is no identity *projection* any more. `targetingIdentity` used to replay the conversion
   // list on a scratch record before the sequence, so that a read wanting the record the
   // recalculation leaves could be answered ahead of the run. F246 retired it by classifying every
   // consumer: a cast-time **targeting** gate reads the permanent record `a:baseCopy` publishes,
   // and a **combat-time** classification reads the record the run itself left, resolved below the
   // run from `statUnit`. Nothing needs the finished identity before the sequence has produced it.
-  // The calculated identity as it stands at a step's own position. `u` is the sequence record,
-  // which carries `race` and `fantastic` like any other field.
-  const identityAt = u => ({ ...identity, race: u.race, fantastic: u.fantastic });
-  const unitTypeAt = u => legacyUnitTypeFromLiveIdentity(identityAt(u));
-  const unitRealmAt = u => realmOfUnitType(unitTypeAt(u), identityAt(u));
+  // The calculated identity as it stands at a step's own position, read straight off the
+  // sequence record: `race` and `fantastic` are fields of it like any other, and `ishero` is the
+  // third member the token needs. There is no identity object in the path any more — the two
+  // readers below take `u` itself, so what a gate sees is what the record holds where it runs,
+  // with nothing in between that could hold a different answer (F267.5).
+  const unitTypeAt = u => legacyUnitTypeFromLiveRecord(u);
+  const unitRealmAt = u => realmOfUnitType(unitTypeAt(u), u.race);
+  // The identity pair alone, **copied** off the record. Only the two readers that have to outlive
+  // the position they read at use this: the chain-rank sample below, which would otherwise hold a
+  // record that keeps being written, and the finished pair published for combat resolution.
+  const identityPairAt = u => ({ race: u.race, fantastic: u.fantastic });
   // The Undead enchantment flag as the region-`b` `UnitCalcPre.CAS` blocks further down read it:
   // `GetEnchantmentFlag(U,EncUndead,0)`. It is a flag test, not a realm test, and it stands
   // beside the realm test rather than behind it — which is why those realm reads can move to
@@ -438,7 +523,7 @@ function deriveUnitStats(input) {
   // what its city gave it, while a base-Fantastic unit had no city loadout to begin with and
   // Spirit Link's later `SETSTAT(TU,AFantastic,1,0)` does not hand it one.
   //
-  // **`identity.baseFantastic` and the running `u.fantastic` are the same read here, in all five
+  // **`isFantasticBase` and the running `u.fantastic` are the same read here, in all five
   // versions.** A `training` step's running record *is* the permanent record: nothing writes
   // `fantastic` in any chain's `template` phase past the seed. CoM 1 was the exception until
   // F267.1 — `template:constructCatapult` and `template:summonBranch` wrote the *calculated*
@@ -460,7 +545,7 @@ function deriveUnitStats(input) {
   // To Hit and lets it bypass Weapon Immunity, while an ordinary Catapult remains a normal,
   // non-fantastic siege unit.
   const constructCatapult = isCoM1
-    && isConstructCatapultUnit(identity, abilities, version, identityMeta);
+    && isConstructCatapultUnit(statRecord, abilities, version);
   // What the *training city* leaves in the persistent weapon-quality field, which
   // `training:weaponQuality` writes onto the record. Construct Catapult's own constructor assigns
   // quality 1 outright, so its unit takes nothing from a city: it is a combat summon and has no
@@ -797,7 +882,7 @@ function deriveUnitStats(input) {
   // `Units.RecalculateUnits.pas`. Their sibling gates in the same stretch read `U.*`, so the `B.`
   // selector is deliberate. The record the permanent-record phases leave is `ctx.base`, read at
   // each block's own region-`c` position (F244.3h), which is what separates this from
-  // `identity.baseFantastic`: Destiny writes `B.Fantastic := True` at $0059A390 (F192) and
+  // `isFantasticBase`, the seed: Destiny writes `B.Fantastic := True` at $0059A390 (F192) and
   // Spirit Link's cast clears the same flag ahead of the copy (F245).
   const badMoonActiveAt = runCtx => isCoM2 && !!abilities.badMoon && !runCtx.base.fantastic;
   const goodMoonActiveAt = runCtx => isCoM2 && !!abilities.goodMoon && !runCtx.base.fantastic;
@@ -1962,8 +2047,8 @@ function deriveUnitStats(input) {
   // `statUnit`, instead of from a projection taken ahead of it (F246).
   const effectiveAbilities = {
     ...abilities,
-    baseRace: identity.baseRace,
-    baseFantastic: identity.baseFantastic,
+    baseRace: baseUnitRace,
+    baseFantastic: isFantasticBase,
     doomGaze: baseDoomGazeStat,
     // Inner Power joins the three passthroughs below: `c:innerPower` carries the eligibility as
     // its own `when` now, reading `fireImmunity` and `lightningResist` off the record where its
@@ -2008,7 +2093,7 @@ function deriveUnitStats(input) {
     // The hero flag itself, for the two blocks that test hero-ness rather than unit type
     // (Tactician's branch pair and Rebuild's phase choice). No conversion writes it, so it is
     // one value for the whole derivation and needs no position (F187).
-    isHero: !!identity.isHero,
+    isHero,
     combatSummoned: !!effectiveAbilities.combatSummoned,
     // The Outlander reform block's eligibility record: the gate of `b:battleArmor` and
     // `b:magitekEngine`, neither of which has an ability key any more (F198).
@@ -2453,8 +2538,13 @@ function deriveUnitStats(input) {
     greatUnbindingActive, hasDarkness, hasMeleeAttackAt,
     heavenlyLightActive, heavenlyLightMeleeToHitAt,
     heavenlyLightThrownToHit,
-    holyArmorActive, hurricaneActive, hwMeleeToHit, identity,
+    holyArmorActive, hurricaneActive, hwMeleeToHit,
     input, inputBaseAtk,
+    // The two permanent identity scalars the sequence's own gates read. They used to be taken
+    // off `ctx.identity` (`baseFantastic`, `isHero`); the identity object is gone and these are
+    // the boundary record's own `fantastic`/`ishero` at `template` rank, which is what those
+    // gates meant by the permanent record (F267.6).
+    isHero, isFantasticBase,
     // The permanent unit type, for the one `training` gate that reads it: the Lava Smelter block's
     // `BASEFANTASTIC` test (`lavaSmelterGrantSteps`, `stats_identity.js`). A `training` step runs
     // before `a:baseCopy`, so the permanent record is a closure constant there, not `ctx.base`.
@@ -2542,7 +2632,7 @@ function deriveUnitStats(input) {
       return { ...step,
         when: (u, runCtx) => {
           for (const key of keys) {
-            if (identitySamples.get(key) === null) identitySamples.set(key, identityAt(u));
+            if (identitySamples.get(key) === null) identitySamples.set(key, identityPairAt(u));
           }
           return when ? when(u, runCtx) : true;
         } };
@@ -2605,8 +2695,18 @@ function deriveUnitStats(input) {
     statTrace[traceOrder].traceOrder = traceOrder;
   }
   const statExecutionLedger = createStatExecutionTraceLedger();
-  const statRecord = { res: 0, def: 0, atk: 0, hp: 0, gaze: 0, doomGaze: 0,
-    toHit: 30, toHitMelee: 0, toBlk: 30, energyCannonToHit: null,
+  // The ability half of the seed, onto the record the input boundary above already constructed.
+  // It stands here and not there because `seedNonStatRecordFields` reads the map the pre-sequence
+  // transforms leave, and those transforms are handed the identity fields the boundary seeds; the
+  // channel fields below are the same story one step on, since their slot contexts are built from
+  // that map. Still `template` rank — nothing has run yet — and still the same object (F267.4).
+  //
+  // **This spread stands last, so it would overwrite the boundary seed** where the single literal
+  // F267.2 wrote had the explicit properties overwrite *it*. That makes a type field misfiled as
+  // an ability key cost the value and not only the classification, and
+  // `runSeededRecordTypeFieldChecks`'s list-hygiene family — which asks the question of every
+  // boundary field, not only the three type members — is what stands between.
+  Object.assign(statRecord, {
     // The non-stat ability fields, seeded by origin rather than wholesale (F244.3b). The rule
     // F244 states is that the record starts as the roster template and nothing else, so a key is
     // seeded only where `Calculator/stats_origins.js` gives it a `template` row in this version;
@@ -2634,62 +2734,7 @@ function deriveUnitStats(input) {
     // what a pre-sequence transform wrote, which is the one thing outside the innate half it
     // carries.
     ...seedNonStatRecordFields(version, abilityHalves.innateAbilities,
-      effectiveAbilities, suppliedAbilities),
-    // The calculated identity is part of the record, seeded from the permanent one. Every
-    // conversion is a positioned write to these two fields (F163).
-    race: identity.baseRace, fantastic: identity.baseFantastic,
-    // The three type/hero members of `UnitT`, at their engine names and seeded at `template` rank
-    // (F267.2). `Typedec.pas` keeps one flat record and these are ordinary members of it:
-    // `ishero : boolean` (:203, between `bloodsucker` and `equip`), `unittype : smallint` (:246)
-    // and `herotype : smallint` (:247). `BaseUnits[]` and `Units[]` are both arrays of that
-    // record, so all three stand on the permanent record `a:baseCopy` publishes *and* on the
-    // calculated one, which is the whole reason they are seeded here beside `race`/`fantastic`
-    // rather than kept on a side object.
-    //
-    // That all three are on *both* arrays is the declaration itself: `BaseUnits, Units : array[..]
-    // of UnitT` (`Typedec.pas:336`), one type for the two. The two consumers below are not that
-    // proof — they show which array a given read selects, which is the separate and equally
-    // load-bearing fact that neither field is a constant of the unit.
-    //
-    // `unittype` is the roster template id, and it is how the engine answers "is this Zombies":
-    // `BaseUnits[i].unittype = inferred_UnitGolem` (`Units.RecalculateUnits.pas:768`),
-    // `B.unittype = ChosenUnitID` (:1611, the id read from `MODDING.INI`) and
-    // `BaseUnits[UnitCaster].unittype = inferred_DemonLordUnitType`
-    // (`Spells.CombatSummonUnit.pas:136`) are three independent integer compares against the one
-    // field. `herotype` is a **separately stored** field, not a projection of `unittype`: they are
-    // sized against different ceilings — `Maxunittypesarraysize = 400` and `MaxMaxherotypes = 85`
-    // (`SharedConstants.pas:16` and `:21`) — and `herotype` indexes the wizard's per-hero ability
-    // array, `Wizards[...].Hero[herotype, HABattlemage]` (`Combat.ApplyAttack.pas:361`). The one
-    // exposed helper converts the other way (`CasApi.pas:164`, `Herotypetounittype`); that fixes
-    // the exposed conversion's direction rather than proving no initialisation path derives one
-    // id from the other, which is why the claim here is the storage and not the derivation.
-    //
-    // Which array a read selects varies within one expression. `Combat.ApplyAttack.pas:351` gates
-    // on the calculated `Units[au].ishero` and :361 then indexes the permanent
-    // `BaseUnits[au].herotype`, while the Charmed resistance step reads
-    // `Wizards[BaseUnits[u].owner].Hero[Units[u].herotype]` — "`owner` is read from `BaseUnits`,
-    // while `ishero` and `herotype` come from the current record"
-    // (`CoM2 binary - resolution helpers.md:208`).
-    //
-    // A custom unit has no roster template and a non-hero no hero type, so both ids seed `null`
-    // rather than a sentinel integer: every modelled reader is an equality test against a stated
-    // id, and `null` is the honest "this record names none" (`energyCannonToHit` above takes the
-    // same shape). `unittype` is the resolved id rather than `identity.templateId` alone
-    // (`baseUnittypeId`, `stats_identity.js`): a unit stated by its controls has no roster
-    // template, and the `Special unit` selector is how such a unit states one — so the key
-    // resolves to the version's id at the boundary and the record carries the integer, which is
-    // all the engine ever has. Five gates read it (F267.3): Golem's Resist Elements,
-    // `weaponEligibleAt`'s Zombies exception, `a:chosen`, `a:constructCatapult` and the two Night
-    // Goblins terms. `ishero` still has no reader — `identity.isHero` answers the hero question
-    // until F267.5.
-    unittype, herotype: identity.heroTypeId, ishero: isHero,
-    // The persistent loadout and veterancy fields, seeded at the roster template's values — a
-    // unit ships unequipped and at Recruit, and every departure from that is a positioned write:
-    // `training:weaponQuality`, `training:armorQuality` and `training:veterancy` for what the
-    // training city left, `training:artificer` and `template:constructCatapult:weapon` for the two
-    // quality writes made elsewhere, `debuffs:rust:material` and `buffs:destiny:level` for what a cast
-    // took back (F244.2).
-    weaponMaterial: 'normal', armorMaterial: 'normal', level: 'normal' };
+      effectiveAbilities, suppliedAbilities) });
   for (const context of derivationContexts) {
     statRecord[context.strengthField] = 0;
     statRecord[context.rangedTypeField] = 'none';
@@ -2710,7 +2755,10 @@ function deriveUnitStats(input) {
   // handed, Supreme Light's published eligibility and the `identityAtRank` fallback. It is read
   // off the record the run produced rather than projected ahead of it, so there is nothing left to
   // assert agreement with — the assertion F246 deleted existed only to check that projection.
-  const finishedIdentity = identityAt(statUnit);
+  // It is the record's own `race`/`fantastic` pair, copied: `statUnit` is the live record and
+  // this value is read below the run and published, so it states the pair rather than aliasing
+  // the object that carries it (F267.5).
+  const finishedIdentity = identityPairAt(statUnit);
   const finishedUnitType = unitTypeAt(statUnit);
   // A sample whose rank no emitted step reaches is the finished record: nothing after that rank
   // writes anything, identity included.
@@ -2785,8 +2833,6 @@ function deriveUnitStats(input) {
   const modernEncMagicIndependentOfMaterial = modernEncMagicOtherTermsAt(statUnit, statRunContext)
     || (version.startsWith('com2_') && !!identityAtRank('c:chaosSurge').fantastic);
   const modernEncMagic = modernEncMagicFromMaterial || modernEncMagicIndependentOfMaterial;
-  identity.race = statUnit.race;
-  identity.fantastic = !!statUnit.fantastic;
   const hp = statUnit.hp;
   const effectiveGazeRanged = statUnit.gaze;
   const effectiveDoomGaze = statUnit.doomGaze;
@@ -3190,9 +3236,13 @@ function deriveUnitStats(input) {
       chanceUnit.toBlock, { unit: 'percent' }),
     // The conversions are steps of the one sequence, so their trace entries are in `statTrace`
     // beside every other write rather than in a pre-pass trace of their own (F163).
-    race: projectStatTrace(statTrace, 'race', identity.baseRace, identity.race),
+    // Both ends of each row are record reads now. The base values are the seed the boundary
+    // record carried, read through the scalars that took them off it (F267.4); the finished
+    // values are `finishedIdentity`, the pair the run left on that same record (F267.5). The
+    // identity object no longer carries a live pair for either end to come from.
+    race: projectStatTrace(statTrace, 'race', baseUnitRace, finishedIdentity.race),
     fantastic: projectStatTrace(statTrace, 'fantastic',
-      identity.baseFantastic, identity.fantastic),
+      isFantasticBase, !!finishedIdentity.fantastic),
     modernAttacks: {},
   };
   appendProjectedTraceEntry(modifierTraces.defense, {
@@ -3243,7 +3293,21 @@ function deriveUnitStats(input) {
     encMagic: modernEncMagic,
     encMagicIndependentOfMaterial: modernEncMagicIndependentOfMaterial,
     baseDeathImmunity,
-    identity,
+    // The two type ids, published as the **record's** own members and read off the record the run
+    // left. They are not a restatement of the input: `unittype` is the id `baseUnittypeId`
+    // resolved at the boundary — the roster template id, or the id a `Special unit` key names for
+    // a unit with no template — and taking both off `statUnit` rather than off the seed is the
+    // stronger reading, since no step writes either and this is where that would show.
+    // They exist because "the roster unit's source ids reach the derivation" needs a
+    // derivation-side carrier: the page is the only realm that can witness the storage half of
+    // that claim, and `tests/roster-smoke.spec.js` is where it is made (GPT review of F267.6).
+    unittype: statUnit.unittype,
+    herotype: statUnit.herotype,
+    // There is no `identity` field on the result any more (F267.6). It published the stated input
+    // shape, and every consumer of it wanted a *permanent* fact the derivation already publishes
+    // off the record: `abilities.baseRace` / `abilities.baseFantastic` for the base pair,
+    // `isHero` for the hero flag, and the two ids above. A result field restating the input would
+    // be a second answer to a question the record already answers.
     // The identity conversions no longer have a trace of their own: they are steps of the one
     // sequence, so `identityTrace` is the projection of `statTrace` onto the two identity fields.
     identityTrace: statTrace.filter(event => event.changes

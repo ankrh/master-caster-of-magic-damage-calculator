@@ -137,6 +137,100 @@ test('a hidden enchantment does not leak into the matrix', async ({ page }) => {
   expectNoConsoleErrors(errors);
 });
 
+test('the matrix reader gates on exceptVersions, not the subgroup alone (F261)', async ({ page }) => {
+  const errors = await openCalculator(page);
+
+  // The other half of INV-2 in the matrix. Eye of Heaven above is *subgroup*-gated, which the
+  // matrix's retired filter already caught. These six are gated only by their own
+  // `exceptVersions: ['com2_warlord_']` — the CoM2-named halves of a Warlord rename — and the
+  // retired filter admitted every one of them under Warlord, where each applied its twin's
+  // `calcKey` from a row the card hides. Since F261 all three matrix sites ask
+  // `abilityVersionGated`, so the check is: the CoM2-named row is refused, the Warlord-named twin
+  // is not, and the drawer offers only the twin.
+  const PAIRS = [
+    ['flameBlade', 'flameBladeWarlord'], ['landLinking', 'natureLink'],
+    ['discipline', 'disciplineWarlord'], ['destiny', 'apotheosis'],
+    ['mislead', 'liability'], ['blazingEyes', 'chaosEmbrace'],
+  ];
+
+  // The breadth the retired `KNOWN_GATE_DIVERGENCES` worklist had, restated as behaviour rather
+  // than as a list (GPT review of F261, P3). Six named pairs witness the six that were wrong; this
+  // witnesses every enchantment def in every version, in both directions — a def the matrix hides
+  // while the card offers it is as much a failure as the reverse — and it is what makes a *seventh*
+  // def acquiring an `exceptVersions` need no edit here. Each def is enabled alone, so a twin
+  // cannot mask it through their shared `calcKey`.
+  for (const version of VERSIONS) {
+    await setValue(page, 'gameVersion', version);
+    const mismatches = await page.evaluate(() => {
+      const version = document.getElementById('gameVersion').value;
+      const defs = abilityUiDefs().filter(def => def.source === 'enchantment');
+      const activeValue = def => {
+        if (def.type === 'bool') return true;
+        if (def.type === 'select') {
+          const options = def.options || [];
+          return options.length > 1 ? options[1][0] : options[0][0];
+        }
+        return 1;
+      };
+      const bad = [];
+      for (const def of defs) {
+        matrixPropertyState.b = [{ key: def.uiKey, enabled: true, value: activeValue(def) }];
+        const expected = !abilityVersionGated(def, version);
+        const offered = matrixPropertyCandidates('b').some(row => row.key === def.uiKey);
+        const active = matrixHasActiveEnchantment('b', def.key);
+        const applied = Object.prototype.hasOwnProperty.call(
+          matrixAppliedEnchantments('b'), def.calcKey || def.key);
+        if (offered !== expected || active !== expected || applied !== expected) {
+          bad.push(`${version}|${def.uiKey}: gate says ${expected}, `
+            + `offered ${offered}, active ${active}, applied ${applied}`);
+        }
+      }
+      return { bad, defs: defs.length };
+    });
+    expect(mismatches.bad).toEqual([]);
+    // The sweep had subjects, and enough of them: a def list that stopped being read would make
+    // the empty-mismatch assertion vacuous.
+    expect(mismatches.defs).toBeGreaterThan(50);
+  }
+
+
+  await setValue(page, 'gameVersion', 'com2_warlord_1.5.12.9');
+
+  const result = await page.evaluate(pairs => {
+    const value = key => (key === 'discipline' || key === 'disciplineWarlord') ? 'combat' : true;
+    // Both halves of every pair are stored and enabled, exactly as a version switch would leave
+    // them: nothing clears `matrixPropertyState`, so the reader is the only filter.
+    matrixPropertyState.b = pairs.flatMap(([hidden, twin]) =>
+      [hidden, twin].map(key => ({ key, enabled: true, value: value(key) })));
+    const offered = matrixPropertyCandidates('b').map(def => def.key);
+    return pairs.map(([hidden, twin]) => ({
+      hidden, twin,
+      hiddenActive: matrixHasActiveEnchantment('b', hidden),
+      twinActive: matrixHasActiveEnchantment('b', twin),
+      hiddenOffered: offered.includes(hidden),
+      twinOffered: offered.includes(twin),
+      // Both halves write one calcKey, so `matrixAppliedEnchantments` must still carry it —
+      // from the twin. A reader that dropped both would pass the two flags above and be wrong.
+      applied: matrixAppliedEnchantments('b')[
+        abilityUiDefs().find(a => a.source === 'enchantment' && a.key === twin).calcKey || twin],
+    }));
+  }, PAIRS);
+
+  for (const row of result) {
+    expect({ key: row.hidden, active: row.hiddenActive, offered: row.hiddenOffered })
+      .toEqual({ key: row.hidden, active: false, offered: false });
+    expect({ key: row.twin, active: row.twinActive, offered: row.twinOffered })
+      .toEqual({ key: row.twin, active: true, offered: true });
+    expect(row.applied).toEqual(row.hidden === 'discipline' ? 'combat' : true);
+  }
+
+  // The rows are still stored: it is the reader refusing them, not a cleanup step.
+  const stillStored = await page.evaluate(() => matrixPropertyState.b.length);
+  expect(stillStored).toBe(12);
+
+  expectNoConsoleErrors(errors);
+});
+
 test('gaze inputs follow the selected engine record shape', async ({ page }) => {
   const errors = await openCalculator(page);
 

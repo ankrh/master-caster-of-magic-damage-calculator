@@ -119,7 +119,9 @@ function runTransformWriteChecks(ctx) {
   // The hero flag as well as the hero type: the Marionette region opens on
   // `IF ( ISHERO(U) = 0 ) THEN { GOTO "NOTHERO"; }`, and `deriveMarionettePackage` enforces it
   // since F244.3f. This identity used to state `isHero: false` and still got the package.
-  const identity = { heroTypeId: 48, isHero: true, baseRace: 'High Men', specialUnit: null };
+  // Since F267.6 the package is asked of the **record**: `ishero` and `herotype` are the two
+  // `UnitT` members it reads, not fields of an identity object beside it.
+  const identity = { herotype: 48, ishero: true, race: 'High Men' };
   const marionetteInput = {
     channeler: true, marionettePrimary: 'nature', marionetteAscension: true,
     marionetteNatureBooks: 13, marionetteSorceryBooks: 13, marionetteChaosBooks: 13,
@@ -635,7 +637,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   // why the terms are asserted here rather than through a derivation.
   const derivePackage = read('deriveMarionettePackage');
   const packageFor = isHero => derivePackage(
-    { ...wandererIdentity, isHero }, {}, WARLORD).package;
+    { herotype: 48, ishero: isHero }, {}, WARLORD).package;
   assertEqual(packageFor(true).state, 'strayed',
     'a Wanderer with the hero flag takes the strayed branch');
   assertEqual(packageFor(false), null,

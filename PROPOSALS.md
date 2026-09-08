@@ -36,3 +36,34 @@ Text:
   made a CoM 1 combat summon's realm and Fantastic flag are visible to every region-`c` read
   rather than only to those after `Load_Battle_Unit`.
 
+
+Document: TESTS.md
+Section: 2. node-unit-checks — the family table
+Change: addition
+Text:
+| `worker_boundary` | the matrix worker's source boundary: that the nine `data-worker` sources resolve and run alone, statically and by driving `MATRIX_WORKER_HANDLER` in a realm holding only them |
+
+Document: TESTS.md
+Section: 2. node-unit-checks — the "Only it can fail" paragraph
+Change: deletion
+Text:
+It evaluates no preset itself.
+
+Document: TESTS.md
+Section: 2. node-unit-checks — the "Only it can fail" paragraph, in place of the deleted sentence
+Change: addition
+Text:
+No suite here compares a preset's numbers: the `worker_boundary` family derives fixtures to obtain
+the stats it hands the matrix worker, and checks no value against an `expected` block.
+
+Document: TESTS.md
+Section: 2. node-unit-checks — the family table
+Change: deletion
+Text:
+| `version_gate_divergence` | `applyVersionGating` as the one implementation of the clearing |
+
+Document: TESTS.md
+Section: 2. node-unit-checks — the family table, in place of the deleted row
+Change: addition
+Text:
+| `version_gating` | `abilityVersionGated` as the one gating test, and `applyVersionGating` as the one implementation of the clearing |

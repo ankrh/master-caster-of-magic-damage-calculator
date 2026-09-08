@@ -371,7 +371,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     unitType: 'fantastic_chaos',
     abilities: { spiritLink: true },
   });
-  assertEqual(spiritLinked.identity.fantastic, false,
+  assertEqual(spiritLinked.abilities.liveFantastic, false,
     'Spirit Link clears calculated Fantastic in phase d');
   assertEqual(spiritLinked.encMagic, true,
     'Spirit Link preserves the EncMagic already granted by the phase-c Fantastic rule');
@@ -379,7 +379,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     'Spirit Link EncMagic survives enemy weapon-material suppression');
 
   const spiritLinkedNormalInput = deriveWarlord({ abilities: { spiritLink: true } });
-  assertEqual(spiritLinkedNormalInput.identity.fantastic, false,
+  assertEqual(spiritLinkedNormalInput.abilities.liveFantastic, false,
     'Spirit Link leaves a calculator-reachable normal input non-fantastic after phase d');
   assertEqual(spiritLinkedNormalInput.encMagic, true,
     'Spirit Link phase b makes even that input Fantastic when the standing EncMagic rule runs');

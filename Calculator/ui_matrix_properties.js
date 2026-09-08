@@ -144,11 +144,10 @@ function matrixPropertyCandidates(box) {
   if (versionHasArmorQuality(version)) list.push({ key: 'armor', label: 'Armor type' });
   for (const abil of abilityUiDefs()) {
     if (abil.source !== 'enchantment') continue;
-    // `ABILITY_VERSION_GATES.matrix` (`ability_gating.js`) is the matrix's gating test, named so
-    // the divergence from the card's is visible rather than implicit in a bare subgroup call.
-    // F261 repoints all three matrix sites at `.card`; until then they must agree with each
-    // other, which one shared function is how they do.
-    if (ABILITY_VERSION_GATES.matrix(abil, version)) continue;
+    // `abilityVersionGated` (`ability_gating.js`) is the gating test — the card's, and since
+    // F261 the matrix's too. All three matrix sites call it, so a def the card hides cannot be
+    // offered, read or rendered here.
+    if (abilityVersionGated(abil, version)) continue;
     list.push({ key: abil.uiKey, label: abilityDisplayLabel(abil) });
   }
   return list;
@@ -264,14 +263,36 @@ function matrixGlobalValue(key) {
 // `abilityValueIsActive` is the card's own predicate, so routing through it also makes the two
 // views agree on what "active" means rather than restating it a third time.
 function matrixEnchantmentValue(prefix, abil, version) {
-  if (ABILITY_VERSION_GATES.matrix(abil, version)) return undefined;
+  if (abilityVersionGated(abil, version)) return undefined;
   const row = matrixPropertyRow(prefix, abil.uiKey);
   if (!row || !row.enabled) return undefined;
   if (!abilityValueIsActive(abil, row.value)) return undefined;
   return abil.type === 'bool' ? true : row.value;
 }
 
-// Build the same shape as activeNonInnateUnitEnchantments, but driven by matrix state.
+// The matrix's enchantment rows in the shape a **card state's ability map** takes: one entry per
+// control, keyed by `uiKey`, holding what the control would hold. It is what the roster path
+// overlays onto the card state `applyRosterUnit` produced (F269.2). It is deliberately not folded
+// onto `calcKey`: folding is `cardStateAbilityCalcValues`'s job, and a map keyed by `calcKey`
+// cannot hold both the record's own value and the marked one for a key two controls name.
+//
+// One value reader serves both shapes: `matrixEnchantmentValue` decides whether a row is active
+// and what it holds, so this and `matrixAppliedEnchantments` below cannot disagree about a row.
+function matrixEnchantmentRows(prefix) {
+  const rows = {};
+  const version = document.getElementById('gameVersion').value;
+  for (const abil of abilityUiDefs()) {
+    if (abil.source !== 'enchantment') continue;
+    const value = matrixEnchantmentValue(prefix, abil, version);
+    if (value === undefined) continue;
+    rows[abil.uiKey || abil.key] = value;
+  }
+  return rows;
+}
+
+// Build the same shape as activeNonInnateUnitEnchantments, but driven by matrix state. Its two
+// readers are the custom-unit row and the "open this matchup on the card" action
+// (`ui_matrix.js`); the roster rows take `matrixEnchantmentRows` above.
 function matrixAppliedEnchantments(prefix) {
   const result = {};
   const version = document.getElementById('gameVersion').value;
@@ -327,7 +348,7 @@ function renderMatrixPropList(box) {
     if (!def) return false;
     if (box === 'global' && def.rangedOnly && activeMatrixMode !== 'ranged') return false;
     if (box === 'global' && def.modernOnly && !version.startsWith('com2')) return false;
-    if (def.abil && ABILITY_VERSION_GATES.matrix(def.abil, version)) return false;
+    if (def.abil && abilityVersionGated(def.abil, version)) return false;
     if (row.key === 'armor' && !versionHasArmorQuality(version)) return false; // no armor in MoM
     return true;
   });

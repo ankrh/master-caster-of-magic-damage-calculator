@@ -99,7 +99,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     marionetteLifeBooks: 5,
     marionetteDeathBooks: 5,
   }));
-  assertEqual(ownedMarionette.identity.fantastic, true,
+  assertEqual(ownedMarionette.abilities.liveFantastic, true,
     'Channeler turns Wanderer into a live Fantastic unit');
   assertEqual(ownedMarionette.atk, 8, 'Marionette adds floor(Base Skill / 30) melee');
   assertEqual(ownedMarionette.def, 6, 'Marionette adds floor(Base Skill / 50) armor');
@@ -131,7 +131,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const strayedMarionette = ctx.deriveUnitStats(marionetteUnit({ channeler: false }));
   assertEqual(strayedMarionette.marionette.state, 'strayed',
     'Wanderer without a current Channeler owner takes the strayed branch');
-  assertEqual(strayedMarionette.identity.fantastic, false,
+  assertEqual(strayedMarionette.abilities.liveFantastic, false,
     'Strayed Marionette does not receive the Channeler Fantastic write');
   assertEqual(strayedMarionette.atk, wanderer.melee + 4,
     'Strayed Marionette receives Transmute Equipment and Rebuild melee');
@@ -227,15 +227,15 @@ function runWarlordUnitAbilityChecks(ctx) {
     abilities: { channeler: true, marionetteBaseSkill: 90 },
   }));
   assertEqual(offVersion.marionette, null, 'Marionette package is exact-version scoped');
-  assertEqual(offVersion.identity.fantastic, false,
+  assertEqual(offVersion.abilities.liveFantastic, false,
     'Channeler does not transform Wanderer outside Warlord 1.5.12.7');
   for (const otherVersion of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11']) {
     assertEqual(ctx.deriveMarionettePackage(
-      { heroTypeId: 48 }, { channeler: true, marionetteBaseSkill: 90 }, otherVersion).package,
+      { ishero: true, herotype: 48 }, { channeler: true, marionetteBaseSkill: 90 }, otherVersion).package,
     null, `Marionette controls are inert in ${otherVersion}`);
   }
   assertEqual(ctx.deriveMarionettePackage(
-    { heroTypeId: 47 }, { channeler: true, marionetteBaseSkill: 90 }, version).package,
+    { ishero: true, herotype: 47 }, { channeler: true, marionetteBaseSkill: 90 }, version).package,
   null, 'Marionette controls are inert for every other Warlord hero type');
 
   const armorclad = ctx.deriveUnitStats(warlordUnit({

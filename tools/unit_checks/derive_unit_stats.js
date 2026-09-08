@@ -649,9 +649,9 @@ function runDeriveUnitStatsChecks(ctx) {
   }));
   assertEqual(sanctifiedClergyHero.unitType, 'hero',
     'Sanctify does not apply its clergy Fantastic write to heroes');
-  assertEqual(sanctifiedClergyHero.identity.race, 'Life',
+  assertEqual(sanctifiedClergyHero.abilities.liveRace, 'Life',
     'Sanctify still writes live Life race for heroes');
-  assertEqual(sanctifiedClergyHero.identity.fantastic, false,
+  assertEqual(sanctifiedClergyHero.abilities.liveFantastic, false,
     'Sanctify leaves a Clergy hero non-Fantastic');
   assertEqual(sanctifiedClergyHero.atk, 2,
     'Sanctified hero live Life race reaches later True Light realm gates');

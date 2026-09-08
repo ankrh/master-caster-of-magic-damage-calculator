@@ -382,11 +382,11 @@ function updateTypeVisibility() {
     // value, since those checkboxes carry the unit's innate abilities for the calculation.
     const panelLocked = document.getElementById(prefix + 'Abilities').classList.contains('locked');
     const cardState = collectCardState(prefix);
-    const gatedState = applyVersionGating(cardState, version, ABILITY_VERSION_GATES.card);
+    const gatedState = applyVersionGating(cardState, version);
     for (const abil of abilityUiDefs()) {
       const el = document.getElementById(abilityControlId(prefix, abil));
       if (!el) continue;
-      const versionGated = ABILITY_VERSION_GATES.card(abil, version);
+      const versionGated = abilityVersionGated(abil, version);
       // Recorded on the item because updateAbilityVisibility must tell "impossible in this
       // version" (never shown) apart from "locked by a roster unit" (shown when the group's
       // toggle is on) — both of which merely set the control's disabled attribute.

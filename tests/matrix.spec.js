@@ -239,3 +239,46 @@ test('F43 offers Spell Lock as a matrix defender property in exactly the gated v
   });
   expectNoConsoleErrors(errors);
 });
+
+// --- F267.5 ---
+//
+// The matrix row's class term is read off the **live** Fantastic flag the stat run left, not off
+// the base one. Nothing else witnesses that: the row builder is page scope, so neither
+// `derivation_equivalence` nor a preset fixture executes it, and the GPT review of F267.5 showed
+// that swapping the read for the base flag passes every Node assertion.
+// The term feeds `matchText`, which is what the matrix filter box searches, so a stale read
+// silently mis-files every converted unit.
+test('a matrix row is classed by the live Fantastic flag, not the base one', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const report = await page.evaluate(() => {
+    const select = document.getElementById('gameVersion');
+    select.value = 'com2_warlord_1.5.12.9';
+    select.dispatchEvent(new Event('change'));
+    // Spirit Link clears calculated Fantastic on a base-Fantastic target at the tail of the
+    // derivation, which is exactly a live/base disagreement and the only kind this row can show.
+    const classOf = row => String(row.matchText).split(' ').pop();
+    const plain = predefinedMatrixUnitRows('a', {}, 'melee');
+    const linked = predefinedMatrixUnitRows('a', { spiritLink: true }, 'melee');
+    const linkedById = new Map(linked.map(row => [row.unitId, row]));
+    const flipped = plain.filter(row => classOf(row) === 'Fantastic'
+      && linkedById.has(row.unitId) && classOf(linkedById.get(row.unitId)) === 'Normal');
+    return {
+      rows: plain.length,
+      fantasticRows: plain.filter(row => classOf(row) === 'Fantastic').length,
+      flipped: flipped.length,
+      sample: flipped.length ? flipped[0].label : null,
+      // The base flag the stale read would have used is still true on every flipped row, so the
+      // two answers genuinely differ rather than agreeing by accident.
+      sampleBaseFantastic: flipped.length
+        ? linkedById.get(flipped[0].unitId).stats.abilities.baseFantastic : null,
+    };
+  });
+
+  expect(report.rows, 'the Warlord matrix has attacker rows').toBeGreaterThan(0);
+  expect(report.fantasticRows, 'and base-Fantastic ones among them').toBeGreaterThan(0);
+  expect(report.flipped, 'Spirit Link re-classes every unit whose live Fantastic it clears')
+    .toBeGreaterThan(0);
+  expect(report.sampleBaseFantastic, 'while their base flag still reads Fantastic').toBe(true);
+
+  expectNoConsoleErrors(errors);
+});

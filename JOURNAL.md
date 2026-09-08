@@ -4,6 +4,456 @@
 
 # Journal
 
+## 2026-09-08 — F267.6: the identity object is retired, and F267 closes
+
+`initializeUnitIdentity` is gone. Its replacement, `unitIdentityRecordSeed(input)`
+(`stats_identity.js`), runs the same constructor branch and returns the five-member record fragment
+`{ race, fantastic, unittype, herotype, ishero }`; `deriveUnitStats` spreads it into `statRecord`
+and nothing holds the constructor's result afterwards. `createUnitIdentity`,
+`createRosterUnitIdentity` and `createCustomUnitIdentity` survive untouched in shape — they are the
+declaration of what a *caller* states, and ~90 call sites across `tests/` and `tools/` depend on
+that — minus one member: `version`. It is still a **parameter** of the construction, because the
+malformed-id halt names the version whose identity stated the value; it is no longer a field,
+because the one thing it scoped, the `unittype` resolution, happens at the derivation boundary where
+`input.version` is the only version the run has.
+
+Four predicates changed hands from the object to the record:
+
+| predicate | reads |
+|---|---|
+| `isConstructCatapultUnit(u, abilities, version)` | `u.unittype`, `u.ishero`; the `meta` argument gone |
+| `identityConversionSteps(u, abilities, version)` | `u.unittype` (Call to Arms 113, CoM 1's summon branch 113/54), `u.ishero`, `u.herotype` |
+| `spiritLinkClearsPermanentFantastic(abilities, version, baseFantastic)` | the **permanent** flag, not the running one |
+| `deriveMarionettePackage(u, abilities, version)` | `u.ishero`, `u.herotype` |
+
+`ctx.identity` is gone from the stat run; `ctx.isHero` and `ctx.isFantasticBase` replace its three
+readers in `stats_sequence.js`. **`result.identity` is no longer published**: every remaining reader
+wanted a permanent fact the derivation already publishes off the record — `abilities.baseRace` /
+`abilities.baseFantastic`, and `isHero`.
+
+**Where `templateId` became `unittype`, the two cannot disagree in a way that matters.** `unittype`
+is the stated template id when there is one and otherwise the id the `Special unit` key names, and
+no key names 113 or 54. Measured: 0 of 52,440.
+
+### The finding: `isConstructCatapultUnit`'s `!ishero` term had no witness at all
+
+Deleting the term moved 0 of 52,440 in `derivation_equivalence`, 0 of 2,336 on the card path, and
+left `npm test` green. `constructCatapultRefusedOnHeroCoM` (`presets_curses_and_undead.js`) is the
+witness: a CoM 1 combat-summoned custom **hero** stating the `catapult` type falls to
+`a:summonBranch` instead, keeps a normal weapon and rolls melee at the base 30% for 1.800; admit the
+hero and Magic Weapons' +10 percentage points make it 2.400. Both arms leave the unit Fantastic, so
+what the number reads is the weapon and not the conversion — which is why a realm-sensitive fixture
+would not have worked.
+
+Two other terms were checked the same way and are covered: the Marionette strayed-Transmute
+`isHero` term fails a Node assertion, and the Fiery Fury / Angelic Guardians base-Fantastic read
+fails two fixtures.
+
+### Traps
+
+- **The Bash-tool heredoc collapses backslashes.** `python - <<'PY'` with a JS regex in the patch
+  string arrives as `\s` where the file has `\\s`, so the match silently fails and the `assert`
+  fires instead of the edit. Every patch carrying a regex went through a file written with the Write
+  tool instead. This cost three rounds before it was diagnosed.
+- **A `// STAT-FORMULA[...]` marker must sit immediately above its function.** Putting an
+  explanatory comment between the `PROVENANCE` line and `function deriveMarionettePackage` makes the
+  provenance audit report an *orphan marker*, which reads like a missing formula rather than a
+  displaced comment.
+- `grep -c $'\r'` under Git Bash reports every line whatever the file's endings are, so it cannot
+  tell CRLF from LF. `python -c "d=open(f,'rb').read(); d.count(b'\r\n')"` can. In this tree
+  `Calculator/*.js`, `tools/unit_checks/*.js` and `TASKS.md` are LF; the specs and
+  `tools/derivation_equivalence.js` are CRLF.
+- The card-path probe's corpus must be **unchained** (each fixture applied to a fresh default
+  state). Chaining makes one fixture's throw shift every later fixture's base, so a single early
+  failure turns the whole sweep into noise that still digests to something comparable.
+
+### The review's finding: removing `result.identity` cost a claim the page alone can make
+
+The GPT review's one P2. The roster smoke spec used to read the two source ids off
+`derived.identity`, so it witnessed *page storage -> derivation input -> the derivation*. Reading
+them off `unitIdentity[prefix]` instead witnesses only the storage. The reviewer demonstrated the
+loss by nulling template id 56 between the page's identity and the derivation: the old assertion
+failed, every revised one passed, and neither numeric probe nor any Node assertion saw it (no
+derivation-equivalence case and no fixture states template 56).
+
+The fix is a derivation-side carrier: `unittype` and `herotype` are published on the result, read
+off `statUnit` — the record the run left, not the seed. They are record members rather than a
+restatement of the input, and `unittype` is the resolved id. The spec asserts both against the
+roster source beside the stored ids, and the restored assertion fails the reviewer's own mutation.
+
+### F267 as a whole (F267.1–F267.6, 2026-09-07/08)
+
+The item's premise was that `Typedec.pas` keeps one flat `UnitT` and three of the calculator's
+identity-object fields are ordinary members of it (`ishero` :203, `unittype` :246, `herotype` :247),
+so the calculator's side object had no engine counterpart. What the six subtasks did:
+
+- **F267.1** made CoM 1's two combat-summon conversions region-`a` steps, so `u.fantastic` at
+  `template` rank is the permanent flag in all five versions.
+- **F267.2** seeded `unittype`, `herotype` and `ishero` onto the record with no readers.
+- **F267.3** dissolved the `specialUnit` token into `u.unittype = <id>` compares against the
+  version-scoped `UNITTYPE_IDS`, and made a malformed stated id halt.
+- **F267.4** moved the record's construction to the input boundary, so the eager scalars read the
+  record the sequence runs over rather than a shadow copy.
+- **F267.5** deleted the object's live `race`/`fantastic` pair.
+- **F267.6** retired the object.
+
+Not one of the six moved a number that a product state can reach. F267.3 moved 259 of 52,440
+deliberately — a synthetic identity stating a special template id with no key now takes the
+exception, which is the compare the engine makes.
+
+**Left open by F267.** (a) The seed is still in **two stages** onto one object, because
+`seedNonStatRecordFields` reads the ability map the pre-sequence transforms leave and those
+transforms are handed the identity scalars; F267.4's report puts the fork — two-stage seed, or make
+the transforms positioned steps — to the user, and F267.6 did not touch it. (b) The `specialUnit`
+token survives as the `Special unit` **control's vocabulary** and as a card-state field
+(`specialUnitDerivesResistElements`, `cardStateLoadoutLocks`'s Zombies term, `ui_units.js`,
+`ui_state.js`); it no longer reaches the derivation, and retiring the control itself was never in
+any subtask's scope. (c) Golem's compiled Resist Elements grant is observable only through the
+direct-derivation path, so F269.2 must not delete `runUnittypeIdTableChecks`'s last family as
+redundant (F267.3's flag, still live).
+
+## 2026-09-08 — F267.5: the identity object's live pair is deleted
+
+`initializeUnitIdentity` returns `{ ...base }`. The mutable `race`/`fantastic` copy it carried
+beside `baseRace`/`baseFantastic` is gone, and with it `identityAt`, the closure that rebuilt an
+identity object per read, and the two write-backs (`identity.race = statUnit.race`) below the run.
+
+The four live readers now name a record and a position:
+
+| Reader | Was | Is |
+|---|---|---|
+| `unitTypeAt` | `legacyUnitTypeFromLiveIdentity(identityAt(u))` | `legacyUnitTypeFromLiveRecord(u)` |
+| `unitRealmAt` | `realmOfUnitType(unitTypeAt(u), identityAt(u))` | `realmOfUnitType(unitTypeAt(u), u.race)` |
+| hover trace, finished end | `identity.race` / `identity.fantastic` | `finishedIdentity` |
+| `combat_effects.js`, `ui_matrix.js` | `unit.identity` / `stats.identity.fantastic` | `abilities.liveRace` / `abilities.liveFantastic` |
+
+**The two unit-type projections are not one function and must not be merged.**
+`legacyUnitTypeFromRecord` (F267.4, the permanent reading) routes through `legacyUnitTypeFor`,
+which collapses every non-Fantastic unit to `normal`/`hero`. `legacyUnitTypeFromLiveRecord` keeps
+the `normal_<realm>` tag, which a conversion can produce on a non-Fantastic unit — Sanctify's
+`u.race = 'Life'`. Folding the live reader onto the permanent core loses that: 136 of 52,440
+derivation cases and 52 of 2,334 card cases move.
+
+**`realmOfUnitType`'s second parameter is a race string now, not an identity object.** It was only
+ever read for `.race`, and the two callers hold a record (`u.race`) or a published pair
+(`abilities.liveRace`).
+
+**`identityPairAt` exists for the two readers that outlive their position**: the `c:chaosSurge`
+chain-rank sample and `finishedIdentity`. Aliasing the record instead of copying moves 107 of
+52,440 and 36 of 2,334 — the sample would hold a record that keeps being written.
+
+**The Angelic Guardians live-realm read was measured by nothing.** Replacing
+`unit.abilities.liveRace` with `null` in `combat_effects.js` moved **0** in both probes. The read
+is load-bearing only for a *hero*, whose compact token is `hero` and hides the realm the record
+carries; every other shape's token already begins `normal_`/`fantastic_` and answers by itself, so
+the Sanctify fixture that looks like it covers the Life tier does not.
+`angelicGuardiansLifeHeroTierWarlord` (Warlord, Life-race hero, Angelic Guardians, 6.000 with the
+read and 5.000 without) is the witness, and it fails that mutation. Same hero-token blindness F195
+and F224 found from the other side.
+
+**Numbers.** 0 of 52,440 in `derivation_equivalence` and 0 of 2,334 in a card-path sweep over both
+attack modes. Both comparisons exclude the identity object's own `race`/`fantastic` keys on either
+side, because deleting them is the change; `abilities.liveRace`/`liveFantastic` are compared.
+
+**The probe halts when the corpus throws** (F267.4's finding), and the guard fired for real: the
+first draft omitted `version`/`presetVersions` from `presetToCardState`'s options and 608 of 2,334
+cases threw. Without the guard that would have read as a comfortable 0.
+
+**Line endings in this tree are mixed per file, and `grep -c $''` in Git Bash does not tell you
+which.** Measured with `open(f,'rb').read().count(b'
+')`: `Calculator/stats.js`,
+`stats_identity.js`, `combat_abilities.js`, `combat_effects.js`, `ui_matrix.js`, `test_tree.js`,
+`tools/unit_checks/identity.js`, `TASKS.md` and `JOURNAL.md` are LF;
+`tools/unit_checks/backlog_checks.js`, `derive_unit_stats.js`, `resolution_steps.js`,
+`warlord_abilities.js` and `tests/matrix.spec.js` / `roster-smoke.spec.js` are CRLF; and
+`Calculator/presets_warlord_effects.js` is genuinely mixed (1,247 CRLF, 151 LF). An edit has to
+match the file it is editing — this subtask put one CRLF line into LF `test_tree.js` and had to
+take it back out. F267.4's note that the Node source-text checks assume LF says what they would
+reject, not what the tree is.
+
+**The review found two things nothing measured, and both are now measured.** (1) The absence
+assertion was asked only of the unconverted unit, so a write-back *conditioned on the pair having
+changed* reinstated the copy on converted units alone and passed all 33,005 assertions — and both
+numeric comparisons discard those two properties by construction, so no probe could see it either.
+It is asked of every control now, and fails that mutation. (2) The matrix row's class term is page
+scope: swapping `stats.abilities.liveFantastic` for `stats.identity.baseFantastic` also passed
+everything, and it feeds `matchText`, which the matrix filter box searches. `tests/matrix.spec.js`
+now builds the Warlord attacker rows with and without Spirit Link and requires the units whose live
+Fantastic it clears to change class; that fails the mutation.
+
+**F267.6 inherits** `initializeUnitIdentity` returning `{ ...base }` — a pure pass-through of the
+constructor output, which is exactly the shape that makes it retireable — and `createUnitIdentity`
+still reading `version` for `baseUnittypeId`'s version-scoped lookup, unchanged from F267.3's
+handoff. `result.identity` is still published and still read by `card_state.js`, `ui_card.js`,
+`ui_matrix.js` (the `specialUnit` read) and a dozen checks, all for **base** fields only.
+
+## 2026-09-08 — F267.4: the record is built at the input boundary, in two stages
+
+`deriveUnitStats` constructs `statRecord` immediately after `initializeUnitIdentity` with the five
+identity members (`race`, `fantastic`, `unittype`, `herotype`, `ishero`), and the eager scalars
+`baseUnitType`, `isHero`, `isFantasticBase`, `unittype` and `baseUnitRace` are reads of it. The
+former seed site — ~2,500 lines further down — became `Object.assign(statRecord, { … })` onto the
+same object. No closure over `u` / `runCtx` was converted; the item body said not to and none
+needed it.
+
+**The ability half of the seed cannot stand at the boundary, and the constraint is an ordering
+one, not a cycle** (the first draft said cycle; the review corrected it and the report carries the
+correction). `seedNonStatRecordFields` takes the ability map the pre-sequence transforms leave, and
+those transforms (`applySanctaBasilicaGrant`, `applyPillarOfFaithGrant`,
+`deriveOutlanderReformRecord`) are handed `baseUnitType`, `baseUnitRace` and `isHero` — the very
+fields the boundary seeds. The channel fields need the slot contexts, built from the same map. The
+constant stat and loadout defaults were free to move up and did. Making the three transforms
+positioned steps is what would let the whole record be one literal; that is F244-family work with
+its own numbers, and the fork is in `tmp/REPORT.F267.4.md`.
+
+**The split reverses a precedence F267.2 relied on.** In the single literal the explicit
+`unittype:` / `herotype:` / `ishero:` properties stood *after* the `...seedNonStatRecordFields(...)`
+spread and would have overwritten it. Now the spread stands last and would overwrite the boundary
+seed, so a misfiled type field costs the value and not only the classification.
+`runSeededRecordTypeFieldChecks`'s list-hygiene family is the guard either way.
+
+`legacyUnitTypeFromIdentity` and the new `legacyUnitTypeFromRecord` share a
+`legacyUnitTypeFor(race, fantastic, isHero)` core (`stats_identity.js`). The record spelling reads
+the engine's own member names, so nothing rebuilds an identity object to ask the question.
+
+### The trap: a probe that measured nothing and said zero three times
+
+The card-path probe's first draft passed `origin: 'probe_f267_4'` to `presetToCardState`, which
+halts on an origin the build does not define (`authored`, `ablation-probe`). **All 1,167 fixtures
+threw, every fixture digested to its constant throw message, and three separate one-point mutations
+in a row therefore reported 0 of 1,167 differing.** The zero looked exactly like the zero the
+subtask wanted. Two lessons, both cheap:
+
+- Import `ORIGIN` from `tools/preset_evaluation.js` rather than inventing a caller name.
+- A probe must **halt when most of its corpus throws**, because a uniformly throwing corpus is a
+  constant and compares equal to any other tree. The probe now does.
+
+The mutation battery only exists because of that: it is what turned three fake zeros into a real
+one. Two of its results are worth keeping.
+
+- `unittype: null` in the boundary seed moves **exactly 2** fixtures,
+  `eternalNightNightGoblinsExemptWarlord` and `zombiesToBlockByUnitTypeCoM` — not the Golem one,
+  because the card supplies `elemArmor` from the token before the derivation (F267.3's finding),
+  and not `chosen`/`catapult`, which the conversion assertions pin instead. The corpus's resolution
+  on this field is 2 of 1,167, which is worth knowing before trusting a zero on it.
+- `herotype: null` moves **0**, which is F267.2's "nothing reads it yet" measured rather than
+  assumed. It stays true after F267.4.
+
+### Two dead mutations, if you are testing a record seed
+
+`toBlk: 30 → 31` and `def: 0 → 1` in the second-stage seed both move **0 of 1,167**. Those literals
+are placeholders that later steps overwrite (the base-phase writes; `toBlk` also has the separate
+chance run behind `chanceUnit`). F267.2's report cites a `toBlk` mutation moving 561 fixtures —
+that is no longer true of this tree, so do not reach for it. Live one-point mutations of that
+object are `weaponMaterial`, `energyCannonToHit` and the seeded ability fields.
+
+### `runInputBoundaryRecordChecks`, and which family catches what
+
+Four families (`tools/unit_checks/identity.js`), each verified to bite on its own:
+
+| Mutation | Fails |
+|---|---|
+| `baseUnitType` back to `legacyUnitTypeFromIdentity(identity)` | family 1, the scalar spelling |
+| `legacyUnitTypeFromRecord({ ...statRecord })` — a copy | family 1 (and family 2 if spelled past it) |
+| `baseUnitRace = identity.baseRace` | family 1, the spelling |
+| one `identity.baseRace` read restored far from the boundary | family 1, the stray-read scan |
+| the sequence runs over `{ ...statRecord, … }` instead of the object | **family 2 alone** — every source line family 1 checks is untouched |
+| a pre-sequence transform reached before the record exists | **family 3 alone** |
+
+Family 2 is the one a source regex cannot express: it asserts `===` between the object the eager
+unit-type read is taken from and the object `runStatSteps` runs over. That is the "no shadow
+permanent record" claim itself.
+
+### A latent CRLF trap in the Node suite (pre-existing, not fixed here)
+
+`core.autocrlf` is `true` in this clone, so a fresh `git checkout` writes CRLF working files — but
+the source-text checks assume LF. Converting `Calculator/stats_identity.js` to CRLF fails
+`identityConversionSteps has a closing brace at column 0`, and an `indexOf('… {
+')` anchor stops
+matching. Every source file involved is LF in the working tree today, which is why nothing has
+noticed. `runInputBoundaryRecordChecks` normalises its own read; nothing else does. Not filed.
+
+### Inherited by the rest of F267
+
+- **F267.5**: `identity.race` / `identity.fantastic` are still live — `identityAt`, the two
+  `modifierTraces` *finished* values, and `identity.race = statUnit.race` below the run. Their two
+  *base* counterparts already read the boundary scalars.
+- **F267.6**: unchanged from F267.3's handoff. `createUnitIdentity` still reads `version` for
+  `baseUnittypeId`'s lookup.
+
+## 2026-09-08 — F269.2: the matrix builds its roster row through the card's own path
+
+`buildMatrixUnitStats` (`ui_matrix.js`) no longer assembles a derivation input. It composes
+`presetDefaultCardState` -> `applyRosterUnit` -> the matrix's own side settings ->
+`applyVersionGating` -> `cardStateToDerivationInput`, and `matrixGlobalsForSide` states the
+battlefield in the shape the projection takes. The matrix's enchantment rows arrive as *controls*
+(`matrixEnchantmentRows`, keyed by `uiKey`) instead of as calc values, so a key an ability and an
+enchantment both name keeps two values and they contend at the derivation boundary (F252.1)
+instead of the enchantment overwriting the record.
+
+**53 roster records moved, not the 41 the item predicted, and the extra 12 are the same defect.**
+Measured through the real reader (a probe outside the repo loading `ui_matrix_properties.js` +
+`ui_matrix.js` into a core `vm` context with a stub DOM), every roster record of every version,
+before and after:
+
+| Version | Records that differed | Of |
+|---|---|---|
+| MoM 1.31 | 16 | 184 |
+| MoM CP 1.60 | 16 | 184 |
+| CoM 1 6.08 | 17 | 192 |
+| CoM2 1.05.11 | 4 | 194 |
+| Warlord 1.5.12.9 | 0 | 345 |
+
+F260.4's 13 / 13 / 15 counted the six **flagged** consumers of the DOS shared byte
+(`DOS_SPECIAL_CONSUMERS`) and not the **gaze** consumers, which read the same byte through
+`ranged_type` and carry no flag (`dosGazeAbilityValues`). Adding them gives 3 + 3 + 2 = 8 more
+records — MoM's Night Stalker, Basilisk and Gorgons, CoM 1's Night Stalker and Gorgons — for 49 in
+the DOS family. The remaining four are CoM2's ships (Trireme, Galley, Warship, Lizardman Carrack),
+carrying a `sailing` row the card hides outside Warlord: the matrix passed `parseAbilitiesFromUnit`
+straight through and gated no innate row at all. That one is an INV-2 hole, and it moves no number
+in CoM2 because Warlord is the only version whose Sailing arm computes anything.
+
+After: **0 of 1,099** records differ, in all five versions.
+
+**Which gating rule is authoritative, F261's open question.** The reader is, for enchantment rows —
+`matrixEnchantmentValue` refuses a gated row, so a version-hidden enchantment never enters the card
+state. `applyVersionGating` is authoritative for the innate rows, which the reader never sees.
+Neither is the other's second opinion, so they cannot disagree.
+
+**Loadout locks are deliberately not applied.** A matrix side setting is written after the roster
+statement and is not put back by `cardStateLoadoutLocks`, which is exactly how `presetToCardState`
+treats a fixture's own `level`/`weapon`: the setting is a statement about the whole filter, made
+after the record was named, not a control the record locks.
+
+**Where the claim lives.** No new suite. `tools/unit_checks/card_state_projection.js` gained a
+section that loads the two matrix page sources into a stub-DOM `vm` context and compares the
+matrix's projected derivation input against **`presetToCardState`'s**, for every roster record of
+every version (1,099), plus a stride pass with six enchantment drawer rows enabled, Golem by name in
+its three versions, and nine named witness records through `buildMatrixUnitStats` itself. The
+comparison target matters: the preset applier reaches a roster card by a different route, and
+`tests/preset-equivalence-gate.spec.js` ties that route to the real page's card, so the chain
+asserted is matrix == preset applier == page card. It costs ~4.6 s and 26 assertions.
+
+**The review found one thing the enumeration could not.** A matrix drawer row naming `elemArmor`
+overwrote the value a Golem's *identity* owns (`specialUnitDerivesResistElements`), because the rows
+went on after `applyRosterUnit` and nothing restated the derive — where the card restates it in
+`refreshAbilityFieldVisibility` and `presetToCardState` restates it after its own overlay. It moved
+no number, since `deriveUnitStats` corrects Elemental Armor to Resist Elements on a Golem anyway, so
+no fixture could have caught it; the input comparison is what does. Fixed by restating the derive
+after the rows, and the case is named in the check.
+
+Four mutations bite, each naming its mechanism: `applyVersionGating` dropped (MoM Draconian's
+`flying`), the rows keyed by `calcKey` again (`markedAbilities.holyBonus` 0 vs 2), the DOS byte
+zeroed (Assassin's `poison` 0 vs 5), the Golem derive dropped (CoM 1 Golem's `elemArmor`). `tools/derivation_equivalence.js` is 0 of 52,440 and is blind
+by construction — it loads core sources only, and this row changed no core source.
+
+**Two stale things noticed, not fixed here.** `TASKS.md` F146 ("the seven roster facts the card and
+matrix decode separately") names `buildMatrixUnitStats` as the second reader; it no longer decodes
+a roster field at all, so the matrix half of that item is closed. And `presetDefaultCardState` is
+now called by the matrix as well as by the preset applier, so its name is narrower than its job.
+
+## 2026-09-07 — F261: the matrix stops asking a weaker version question than the card
+
+`ABILITY_VERSION_GATES`, `abilityGatedForCard` and `abilityGatedForMatrix` are gone. All three
+matrix gating sites in `ui_matrix_properties.js` — the candidate list, `matrixEnchantmentValue`,
+the row render filter — call `abilityVersionGated`, and `applyVersionGating(state, version)` lost
+the gate parameter that existed only because two gates did.
+
+**Numbers move, and by exactly the shape the twin predicts.** A probe outside the repo loaded the
+real `ui_matrix_properties.js` + `ui_matrix.js` before and after into a core `vm` context with a
+stub DOM, then ran `buildMatrixUnitStats` → `resolveCombat` → the worker handler's own ratio.
+Over six Warlord matchups × the six controls, **22 of 36 matchups moved**, and in every one of the
+36 the "after" value equalled the value with no row enabled while enabling the **Warlord-named
+twin** reproduced the "before" value to the last digit. So the ghost rows were duplicates, not
+capability: a Warlord user expresses each effect through Apotheosis / Nature Link / Chaos Embrace /
+Liability / the Warlord Flame Blade / the Warlord Discipline instead. Sample, Paladins vs Great
+Drake with the `destiny` row on: mean damage to B 10.4006 → 3.8348, ratio 0.5145 → 0.0998,
+`apotheosis` 10.4006 / 0.5145.
+
+**The `blur` exception was already dead** when it was written down (F260.3 measured it and said
+so): `blur` carries `subgroup: '_All versions bools'` and no version overrides, so the disjunct it
+guarded could never be true. Retired, not ported.
+
+**What replaced `KNOWN_GATE_DIVERGENCES`.** The worklist could only be emptied, and an empty list
+asserts nothing. `version_gate_divergence.js` now asserts *structurally* that a second gate cannot
+come back — none of the three retired names is defined, `applyVersionGating.length === 2`, and
+`ui_matrix_properties.js` calls `abilityVersionGated` three times and `subgroupAllowedForVersion`
+zero times — plus a `WARLORD_RENAME_PAIRS` table stating each of the six gated, its twin ungated
+and the pair sharing one `calcKey`. Both halves were mutation-tested: reverting one matrix site to
+the bare subgroup test, and appending a second `abilityGatedForMatrix`, each fail the family by
+name.
+
+The page-level witness is one new test in `tests/version-gating.spec.js`. The existing matrix test
+uses `eyeOfHeaven`, which is *subgroup*-gated — the retired filter caught that one already, so it
+never witnessed the `exceptVersions` half at all.
+
+**Measurement note.** `derivation_equivalence` is **0 of 52,440** here and could not have been
+anything else: it walks the card's derivation path, which this change does not touch. The digest is
+not the measurement for a matrix-reader change; the probe above is.
+
+## 2026-09-07 — F269.1: the worker boundary gets a mechanical check
+
+`tools/unit_checks/worker_boundary.js`, inside `node tools/node_unit_checks.js`. Two halves, and
+the second is the one the item asked for.
+
+**Measurements, worth keeping.**
+
+- The realm/context gap that F260.9 measured for the corpus reproduces here: the same worker sample
+  costs ~84 ms per matchup cell inside a `vm` context and ~7.6 ms in a realm's own global. That is
+  why the executed half runs in a child process (`runInThisContext` populates the realm it runs in,
+  so it may not be the runner's).
+- The probe is **7.8 s**, of which **~6.1 s is one fixture**, `hasteComplexThrownDefenderGaze160`;
+  everything else in the 146-case preset stride costs well under a second together. `node
+  tools/node_unit_checks.js` measures 102.7 s with it (≈95 s without, by subtraction); assertions
+  32,363 → 32,381.
+- Coverage of the worker realm's own global functions (308 of them, `const`-declared helpers
+  invisible to the count): the roster grid alone reaches 164; the preset stride alone reaches 216;
+  a roster grid eight times larger reaches 203. **Configuration breadth beats matchup count**, by a
+  lot — the preset fixtures carry enchantments and a bare roster record does not.
+- Uncalled, and expected to be: the whole of `steps.js` and the stat-step machinery inside
+  `combat_abilities.js`. The worker is handed finished stats and never derives any, so that code is
+  present but unreachable there.
+
+**The one cross-scope reference that exists today.** `combat_abilities.js` (a `data-worker` source)
+names `outlanderBattleArmorAt`, which only `stats_identity.js` declares. It is real, and it is
+harmless: the reference is inside a region-`b` stat step's `when`, which only `deriveUnitStats`
+runs. `DERIVATION_ONLY_REFERENCES` declares it, and the declaration is checked in both directions
+so a stale exemption fails.
+
+**There was nothing to delete from `TESTS.md`.** The item body says to remove the prose mitigation
+that routed manifest and file-scope changes to the UI suite; F268's rewrite of `TESTS.md` had
+already dropped that sentence, and the surviving routing line ("a task that changes page code runs
+`test:all`") is correct and untouched by this row. Note that it never covered the F268.6 case
+anyway — relocating `convolveDists` between two core files changes no page code. What is open
+instead is a `PROPOSALS.md` addition of the `worker_boundary` row to entry 2's family table, which
+that entry's own rule ("an aggregate entry cannot see its own contents grow") requires.
+
+**What the GPT review changed, and why the findings are worth keeping.**
+
+- **A silent 35-case loss.** `presetVersionsFromTestTree()` returns an empty map when called
+  without `TEST_TREE`, and the first cut called it that way and then `continue`d past every fixture
+  whose version comes from the tree — 35 of 146, `stoningTouchBasic` and `doomGazeKill` among them.
+  The sample reported 111 cases and looked healthy. Selection now halts on an unresolved version,
+  and the parent asserts *selected === run* rather than a floor.
+- **A regex inventory of top-level bindings cannot be complete**, and it drove both halves. It is
+  now measured instead: a name is a non-worker binding when a core-only `vm` context defines it and
+  the worker realm does not. Over-broad candidates (every identifier-shaped token in the core
+  sources) plus two `typeof` probes give the set exactly — and it came back as the same 196 names
+  the regex had found, so nothing was hiding, but the method no longer has to be trusted.
+- **Three real gaps in the lexical scan**, each reproduced by the reviewer against the shipped
+  functions: a string literal inside a template interpolation ended the interpolation early; a
+  spread's third dot read as a property access and erased the call after it; a regular expression
+  after `return` read as division and produced a false hit. Fixed, and the five inputs are pinned
+  in `STRIPPER_CASES` — the scan is checked against them rather than described in prose. It remains
+  a lexical scan, not a parse: `this`, computed members and `eval` are the executed half's to
+  cover, and a parser would be a new dependency in a project that ships none.
+
+**The demonstration.** In a scratch copy outside the repo, `convolveDists` moved from `engine.js`
+to `data.js`: `node tools/preset_checks.js` green on all 1,167 fixtures, `node
+tools/node_unit_checks.js` green at exactly 32,363 assertions with the new family unregistered —
+and red with it, from either half alone. The executed half's failure names the chain
+(`calcAreaDamageDist` → `calcDamageSpellDist` → `applyWallOfFirePhase`).
+
 ## 2026-09-07 — F267.2: `unittype`, `herotype` and `ishero` become record fields
 
 Three lines in the `statRecord` literal (`Calculator/stats.js`), beside `race`/`fantastic` and the
@@ -645,7 +1095,8 @@ makes the worker throw `ReferenceError: convolveDists is not defined`. The only 
 `chaos-conjunction-f39`'s worker-boundary test, in Playwright. So the boundary in `TESTS.md` names
 manifest and file-scope changes explicitly — a prose mitigation for a mechanical gap. **A Node
 check that loads the nine worker sources alone and calls the matrix handler would close it, and
-does not exist.**
+does not exist.** (Closed 2026-09-07 by F269.1: `tools/unit_checks/worker_boundary.js`. The
+`TESTS.md` sentence this describes was already gone by then, dropped in F268's own rewrite.)
 
 ## 2026-09-06 - F268.3: a second moment for the preset corpus
 
@@ -1182,7 +1633,8 @@ Measured, not assumed (probe over `abilityUiDefs()` × `ENGINE_VERSIONS`):
 - The `blur` exception at the matrix render filter is **dead**: the only `blur` def carries
   `subgroup: '_All versions bools'` and no version overrides, so `abilityVersionGated` is false for
   it in all five versions. It was preserved verbatim inside `abilityGatedForMatrix` so this subtask
-  moved no number; F261 deletes it with the rest.
+  moved no number; F261 deleted it with the rest on 2026-09-07, along with the six-def worklist and
+   the gate parameter.
 
 Two hazards found while reading the code they replace, both **pre-existing and both carried, not
 fixed**:
@@ -1508,7 +1960,7 @@ conclusion (“version grouping saves 4%”) and had to be redone. On this suite
 is not merely slower, it is wrong.
 
 **Found while mapping F260.** The card and the matrix use different version-gating tests, and six
-Warlord enchantments sit in the gap. Filed as F261; detail there.
+Warlord enchantments sit in the gap. Filed as F261, closed 2026-09-07; detail in that entry.
 
 ## 2026-09-04 — F258.2: the gaze zeroing becomes a region-`d` step, and the DOS cases go to zero
 
@@ -6352,7 +6804,7 @@ Light" was wrong on three of five. Node Aura (`stats.js:554-558`), Darkness and 
 (`:676`, `:705`) and Supreme Light (`combat_abilities.js:290-306`) gate on the unit's **realm**,
 and Spirit Link writes `fantastic` only — the realm is untouched, so none of them moves either way.
 For a mundane-race unit the b-write does make the realm read `arcane` (Q28's path through
-`legacyUnitTypeFromLiveIdentity`), but the Node aura control offers only chaos/nature/sorcery, so
+`legacyUnitTypeFromLiveRecord`), but the Node aura control offers only chaos/nature/sorcery, so
 still nothing moves. Supreme Light's `def` does move by +1 for a Life-race unit — that is
 `floor(res/3)` reading the +2 Resistance, not the flag. Same for Pneuma Field's `trunc(res/2)`.
 
@@ -7262,7 +7714,8 @@ family. No existing check family gained a case.
 The one kept is the split: `tests/exorcise-f43-matrix.spec.js` holds F43's claim that the matrix's
 property list offers Spell Lock in exactly the gated versions. `matrixPropertyCandidates` is
 `data-scope="page"`, reads `#gameVersion` and assembles the list itself; no Node context loads a
-`page` source, and restating the claim against `ABILITY_VERSION_GATES.matrix` would still pass with
+`page` source, and restating the claim against the shared gate (`ABILITY_VERSION_GATES.matrix`
+then; `abilityVersionGated` since F261) would still pass with
 the matrix's own `enchantment` filter or `uiKey` push broken. The gate is asserted in Node, the
 list following the gate in the browser.
 

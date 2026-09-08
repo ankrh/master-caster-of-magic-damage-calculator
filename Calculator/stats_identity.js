@@ -148,12 +148,21 @@ function statedUnitId(value, field, context) {
   return value;
 }
 
+// The **input shape**: what a caller states about a unit before anything is derived from it.
+// `version` is a parameter of the construction and not a member of the result (F267.6). It was on
+// the object only to scope `specialUnit` against the version's defs; F267.3 turned that into the
+// version-scoped id lookup `baseUnittypeId` makes, and the resolution happens where the version is
+// already in hand — at `deriveUnitStats`'s boundary, whose `input.version` is the only version the
+// run has. A stated identity that travelled with a `version` of its own was a second place the
+// answer could be given, and `initializeUnitIdentity` had to reconcile the two.
+//
+// What is left of `version` here is the error context, which is why the parameter stays: a halt
+// naming a malformed id says which version's identity stated it.
 function createUnitIdentity(values = {}) {
   const version = typeof values.version === 'string' && values.version ? values.version : null;
   const context = `Unit identity for ${version || 'an unstated version'}`;
   const integerOrNull = (value, field) => statedUnitId(value, field, context);
   return {
-    version,
     templateId: integerOrNull(values.templateId, 'templateId'),
     heroTypeId: integerOrNull(values.heroTypeId, 'heroTypeId'),
     isHero: !!values.isHero,
@@ -249,13 +258,39 @@ function createCustomUnitIdentity(version, values = {}) {
 // The same `|| 'arcane'` also absorbs Fantastic + a mundane base race, a control pair the UI
 // allows and `UNITS.INI` cannot express. F113 left it rather than converting a live UI path into
 // a crash with no sourced answer to replace it; the question is BACKLOG Q28.
-function legacyUnitTypeFromIdentity(identity) {
-  if (!identity || !identity.baseFantastic) return identity && identity.isHero ? 'hero' : 'normal';
+function legacyUnitTypeFor(race, fantastic, isHero) {
+  if (!fantastic) return isHero ? 'hero' : 'normal';
   const realm = {
     Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
     Sorcery: 'sorcery', Arcane: 'arcane', 'No Heal': 'unaligned',
-  }[identity.baseRace] || 'arcane';
+  }[race] || 'arcane';
   return 'fantastic_' + realm;
+}
+
+function legacyUnitTypeFromIdentity(identity) {
+  if (!identity) return 'normal';
+  return legacyUnitTypeFor(identity.baseRace, identity.baseFantastic, identity.isHero);
+}
+
+// The same token read off a **record** rather than off an identity object. `race`, `fantastic`
+// and `ishero` are the engine's own member names (`Typedec.pas:203`, and the realm/Fantastic pair
+// `Units.RecalculateUnits.pas` writes), so a caller holding `B` or `U` asks this one and nothing
+// has to rebuild an identity object to be asked the other (F267.4). Read at `template` rank the
+// answer is the permanent unit type, because that is what the record carries there.
+//
+// No missing-record fallback, deliberately: `legacyUnitTypeFromIdentity` above answers `'normal'`
+// for a falsy argument because the page's control readers legitimately have no identity yet, and
+// this one has no such caller — its whole contract is that a record has been constructed. A
+// fallback here would answer a missing-record boundary error with a plausible token instead of
+// halting, which is the shape `CLAUDE.md` *Architecture* forbids (GPT review of F267.4).
+function legacyUnitTypeFromRecord(u) {
+  if (!u || typeof u !== 'object') {
+    throw new TypeError('legacyUnitTypeFromRecord: the unit record is '
+      + `${describeStatedValue(u)}, not a record. This reads a constructed record's own `
+      + '`race`/`fantastic`/`ishero` members; a caller holding an identity object rather than a '
+      + 'record asks legacyUnitTypeFromIdentity.');
+  }
+  return legacyUnitTypeFor(u.race, u.fantastic, u.ishero);
 }
 
 function legacyBaseRace(input) {
@@ -264,10 +299,26 @@ function legacyBaseRace(input) {
   return match ? match[1][0].toUpperCase() + match[1].slice(1) : '';
 }
 
-function initializeUnitIdentity(input) {
+// **The identity half of the boundary record's seed** (F267.6). The engine has no identity object:
+// `Typedec.pas` keeps one flat `UnitT`, and the five members below — `race`, `fantastic`
+// (`Units.RecalculateUnits.pas`'s own conversion writes), `unittype` (:246), `herotype` (:247) and
+// `ishero` (:203) — are ordinary fields of it. The constructors above stay as the declaration of
+// what a *caller* states, because that is a real boundary with ~90 call sites; what they no longer
+// produce is a live object the derivation keeps beside the record. Their result is folded into the
+// record here and does not survive the call.
+//
+// `initializeUnitIdentity` stood here and returned the stated shape unchanged. Everything that
+// read it now reads the record: the five members are seeded from this fragment, the eager scalars
+// are reads of the record, and the four predicates that used to take an identity object
+// (`isConstructCatapultUnit`, `identityConversionSteps`, `spiritLinkClearsPermanentFantastic`,
+// `deriveMarionettePackage`) take the record or the permanent scalar it carries.
+//
+// The `unittype` resolution is the one place `version` is still needed, and it is applied here
+// rather than carried on the object: `input.version` is the version the run has.
+function unitIdentityRecordSeed(input) {
   const supplied = input.identity;
-  const base = supplied
-    ? createUnitIdentity({ ...supplied, version: input.version || supplied.version })
+  const stated = supplied
+    ? createUnitIdentity({ ...supplied, version: input.version })
     : createCustomUnitIdentity(input.version, {
         // Legacy callers can still provide unitType while the UI migrates to independent
         // identity controls. It is translated only at this boundary.
@@ -276,22 +327,35 @@ function initializeUnitIdentity(input) {
         baseFantastic: String(input.unitType || '').startsWith('fantastic_'),
       });
   return {
-    ...base,
-    // These are deliberately copied values, not aliases to a base sub-record. Each
-    // deriveUnitStats invocation receives a new mutable calculated identity.
-    race: base.baseRace,
-    fantastic: base.baseFantastic,
+    race: stated.baseRace,
+    fantastic: stated.baseFantastic,
+    unittype: baseUnittypeId(input.version, stated),
+    herotype: stated.heroTypeId,
+    ishero: stated.isHero,
   };
 }
 
-function legacyUnitTypeFromLiveIdentity(identity) {
-  if (!identity) return 'normal';
-  if (identity.isHero && !identity.fantastic) return 'hero';
+// The compact token off the **calculated** record — `u.race`/`u.fantastic` as the conversions
+// have left them at the reading step, and `u.ishero`, which no step writes. It is a separate
+// projection from `legacyUnitTypeFromRecord` above and the difference is deliberate: the
+// permanent reading collapses every non-Fantastic unit to `normal`/`hero`, while this one keeps
+// the `normal_<realm>` tag a conversion can produce on a non-Fantastic unit (Sanctify's
+// `u.race = 'Life'`), which is the shape `realmOfUnitType`'s callers ask about.
+//
+// Same fail-loud contract as the permanent reader: a falsy argument is a boundary error here,
+// not a unit with no identity yet, because the only caller holds the sequence record.
+function legacyUnitTypeFromLiveRecord(u) {
+  if (!u || typeof u !== 'object') {
+    throw new TypeError('legacyUnitTypeFromLiveRecord: the unit record is '
+      + `${describeStatedValue(u)}, not a record. This reads the running record's own `
+      + '`race`/`fantastic`/`ishero` members at the position it is called from.');
+  }
+  if (u.ishero && !u.fantastic) return 'hero';
   const realm = {
     Life: 'life', Death: 'death', Chaos: 'chaos', Nature: 'nature',
     Sorcery: 'sorcery', Arcane: 'arcane', 'No Heal': 'unaligned',
-  }[identity.race];
-  if (!identity.fantastic) return realm ? 'normal_' + realm : 'normal';
+  }[u.race];
+  if (!u.fantastic) return realm ? 'normal_' + realm : 'normal';
   return 'fantastic_' + (realm || 'arcane');   // Fantastic + a mundane race: BACKLOG Q28
 }
 
@@ -306,16 +370,18 @@ function legacyUnitTypeFromLiveIdentity(identity) {
 // token into the record's `unittype` at the boundary collapses the two arms into the compare the
 // engines make. The version guard stays: it is the *block*'s scope, not the id's — Warlord
 // inherits base CoM2's id 37 and has no such block.
-function isConstructCatapultUnit(identity, abilities, version, meta = {}) {
+// Since F267.6 the unit half is the **record** — `u.unittype` and `u.ishero`, the two `UnitT`
+// members the test reads — rather than an identity object plus a `meta` restating the same two
+// values. Both are seeded at the boundary and no step writes either, so reading them off the
+// record before the sequence runs is the same answer at every position.
+function isConstructCatapultUnit(u, abilities, version) {
   const isCoM1 = version === 'com_6.08';
   const isBaseCoM2 = !!(version && version.startsWith('com2_')
     && !version.startsWith('com2_warlord'));
-  const unittype = meta.unittype === undefined
-    ? baseUnittypeId(version, identity) : meta.unittype;
   return !!(!!(abilities && abilities.combatSummoned)
-    && !meta.isHero
+    && !(u && u.ishero)
     && (isBaseCoM2 || isCoM1)
-    && unittypeIs(version, unittype, 'catapult'));
+    && unittypeIs(version, u && u.unittype, 'catapult'));
 }
 
 // Spirit Link's cast (Warlord) writes the **permanent** record with selector 1 — `ABase`
@@ -336,10 +402,14 @@ function isConstructCatapultUnit(identity, abilities, version, meta = {}) {
 // to travel as the `spiritLinkSentience` argument of `deriveOutlanderReformRecord` and is
 // `buffs:spiritLink:sapiens` now, ranked *ahead* of the clear where the script writes it, so it
 // reads the record at its own position like any other step (F245, F244.3h, F262, F263).
-function spiritLinkClearsPermanentFantastic(identity, abilities, version) {
+// The third parameter is the **permanent** Fantastic flag — `isFantasticBase`, the boundary
+// record's own `fantastic` field at `template` rank — and not the running record's, which this
+// step's own sibling falsifies (F267.6). Handing it the live record would be wrong for exactly the
+// reason the latch exists.
+function spiritLinkClearsPermanentFantastic(abilities, version, baseFantastic) {
   return !!(version && version.startsWith('com2_warlord'))
     && !!(abilities && abilities.spiritLink)
-    && !!(identity && identity.baseFantastic);
+    && !!baseFantastic;
 }
 
 // The identity conversions, as steps of the one derivation sequence. They write the record's
@@ -365,21 +435,29 @@ function spiritLinkClearsPermanentFantastic(identity, abilities, version) {
 // reaches too; CoM 1's `c:mysticSurge:race` is that build's own Mystic Surge realm write.
 // `c:chaosChannels:armor:race` ($0059F4A3, 0x8F6FE) and `c:blackChannels:race` (0x8F4A1) are
 // the two the address map puts inside their stat block, and each is chain-adjacent to it.
-function identityConversionSteps(identity, abilities, version, meta = {}) {
-  const sourceTemplateId = identity.templateId;
+// The unit is the **record** since F267.6, read once here rather than from an identity object
+// beside it. Every field this list reads — `unittype`, `ishero`, `herotype` — is seeded at the
+// boundary and written by no step, so the eager read is the same answer the record gives at any
+// position. The `meta` object this took beside the identity is gone with it: it restated
+// `isHero` and `unittype`, which are record members, and a display name no conversion reads.
+function identityConversionSteps(u, abilities, version) {
+  const sourceUnitType = u.unittype;
   const isCoM1 = version === 'com_6.08';
   const isModern = version && version.startsWith('com2_');
   const isBaseCoM2 = isModern && !version.startsWith('com2_warlord');
   const combatSummonedValue = !!(abilities && abilities.combatSummoned);
-  const isConstructCatapult = isConstructCatapultUnit(identity, abilities, version, meta);
+  const isConstructCatapult = isConstructCatapultUnit(u, abilities, version);
   const isCoM1SummonBranch = isCoM1 && combatSummonedValue && !isConstructCatapult;
   // Call to Arms is the only shipped base-CoM2 combat summon for Paladins. Infer that spell
   // result from the retained Paladins template (STypeID 113) plus Combat Summoned; display names
   // and custom units do not establish the identity. The spell itself is sourced on
   // PROVENANCE[callToArmsPaladins] below, which lies outside this block's anchor window.
+  // The template test is a `unittype` compare like every other type exception (F267.3): for a
+  // roster unit the record's `unittype` **is** its template id, and a unit with no template
+  // carries whatever id its `Special unit` key names, which is never 113.
   const isCallToArmsPaladins = !!(isBaseCoM2
     && combatSummonedValue
-    && sourceTemplateId === 113);
+    && sourceUnitType === 113);
   // Fiery Fury and Sanctify read the permanent record, not the running one: `BASEFANTASTIC(U)`
   // and `ISHERO(U)` are base-record predicates in UnitCalcPre.CAS. `BASEFANTASTIC(U)` is the base
   // unit data "before applying continuous effects such as buffs or curses"
@@ -390,7 +468,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
   // re-asserts it per pass, so the answer is the record those two `buffs` writes leave — which is
   // what `a:baseCopy` publishes as `ctx.base`, read at `b:fieryFury:race`'s own position rather
   // than restated as a constant here (F244.3h, F245).
-  const isHero = typeof meta.isHero === 'boolean' ? meta.isHero : !!identity.isHero;
+  const isHero = !!u.ishero;
   // One predicate for Spirit Link's two conversions: both blocks gate on the same
   // `GetEnchantmentFlag(U,EncSpiritLink,1)`, and neither tests the unit's realm or Fantastic
   // state, so the pair is a set/clear of one flag rather than two separately conditioned writes.
@@ -504,8 +582,8 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     statStep({ id: 'summonBranch', phase: 'a', writes: ['race', 'fantastic'],
       when: () => isCoM1SummonBranch,
       apply: u => {
-        if (sourceTemplateId === 113) u.race = 'Life';
-        if (sourceTemplateId === 54) u.race = 'Nature';
+        if (sourceUnitType === 113) u.race = 'Life';
+        if (sourceUnitType === 54) u.race = 'Nature';
         u.fantastic = true;
       } }),
     // PROVENANCE[callToArmsPaladins]: VERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Spells.CombatSummonUnit.pas@span:21:1650fe50059f7cde525a29fd | TABLE=Reference docs/Script source/CoM2 1.05.11 base/spells.ini@span:13:fff6a55971377c87264d2e0d | TABLE=Reference docs/Script source/Warlord 1.5.12.9/spells.ini@span:13:5f2ec3d006ad08bc02189c7b
@@ -537,7 +615,7 @@ function identityConversionSteps(identity, abilities, version, meta = {}) {
     // PROVENANCE[marionetteChanneler]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:18:7fc6696ac3aab07e8d549913
     statStep({ id: 'marionetteChanneler', phase: 'b', writes: ['fantastic'],
       when: () => version === MARIONETTE_VERSION
-        && identity.heroTypeId === MARIONETTE_HERO_TYPE_ID
+        && u.herotype === MARIONETTE_HERO_TYPE_ID
         && !!(abilities && abilities.channeler),
       apply: u => { u.fantastic = true; } }),
     // The THEN arm of Fiery Fury's one `IF (BASEFANTASTIC(U))`; `b:fieryFury` is its ELSE arm.
@@ -1572,11 +1650,13 @@ function marionetteOwnedGrantLabels(pkg) {
 // being satisfied syntactically does not make the citation true, so the span is gone (F244.3g
 // review, finding 3). What the two `SCHARGE` assignments the citations *do* carry establish is the
 // value; where the engine puts it is a mention.
+// The unit is the **record** since F267.6: `ishero` and `herotype` are the two `UnitT` members
+// this gate reads (`Typedec.pas:203`, `:247`), and neither is written by a step.
 // STAT-FORMULA[marionettePackage]
 // PROVENANCE[marionettePackage]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:39:58a1f4eccd319a76072204a6 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:40:278fa1f3acca365b536cf823 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:19:55ebed8c65ed05b617bc2a17 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4
-function deriveMarionettePackage(identity, abilities, version) {
-  if (version !== MARIONETTE_VERSION || !identity.isHero
-      || identity.heroTypeId !== MARIONETTE_HERO_TYPE_ID) {
+function deriveMarionettePackage(u, abilities, version) {
+  if (version !== MARIONETTE_VERSION || !(u && u.ishero)
+      || u.herotype !== MARIONETTE_HERO_TYPE_ID) {
     return { abilities, package: null };
   }
 

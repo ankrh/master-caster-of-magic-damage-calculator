@@ -141,6 +141,7 @@ const TEST_TREE = [
         keys: [
           'angelicGuardiansGrantsExorciseRegularWarlord',
           'angelicGuardiansLifeTierWarlord',
+          'angelicGuardiansLifeHeroTierWarlord',
           'angelicGuardiansImprovesExistingExorciseWarlord',
           'angelicGuardiansFantasticChaosNotBuffedWarlord',
           'angelicGuardiansImprovesExistingExorciseOnChaosWarlord',
@@ -1047,6 +1048,7 @@ const TEST_TREE = [
           'eternalNightAfterSupremeLightCoM1',
           'zombiesToBlockByUnitTypeCoM',
           'golemResistElementsByUnitTypeCoM2',
+          'constructCatapultRefusedOnHeroCoM',
           'ccFireBreathSeparatesThrownWarlord',
           'weaponToHitReadsOwnRangedChannelWarlord',
           'weaponToHitSkipsMagicRangedChannelWarlord',

@@ -182,7 +182,7 @@ function runDerivationStageChecks(ctx) {
       rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
       abilities: { combatSummoned: true, mislead: true },
     }));
-    assertEqual(fantastic.identity.fantastic, true,
+    assertEqual(fantastic.abilities.liveFantastic, true,
       `${modernVersion}: the test subject becomes Fantastic before the aura gate`);
     assertEqual(fantastic.atk, 2,
       `${modernVersion}: Misfortune remains inert on a live Fantastic unit`);
@@ -194,7 +194,7 @@ function runDerivationStageChecks(ctx) {
     rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
     abilities: { spiritLink: true, mislead: true },
   }));
-  assertEqual(linkedMisfortune.identity.fantastic, false,
+  assertEqual(linkedMisfortune.abilities.liveFantastic, false,
     'Warlord Spirit Link clears Fantastic before the Misfortune aura gate');
   assertEqual(linkedMisfortune.atk, 1,
     'A base-Fantastic unit qualifies for Misfortune after Spirit Link makes it live non-Fantastic');

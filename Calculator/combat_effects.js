@@ -162,11 +162,13 @@ function applyTacticianWarlordEffects(unit, version) {
 function applyFieryFuryEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord')) return unit;
   if (!hasAbil(unit.abilities, 'fieryFury')) return unit;
-  const baseFantastic = unit.identity && typeof unit.identity.baseFantastic === 'boolean'
-    ? unit.identity.baseFantastic
-    : typeof unit.abilities.baseFantastic === 'boolean'
-      ? unit.abilities.baseFantastic
-      : (unit.unitType || '').startsWith('fantastic_');
+  // The permanent Fantastic flag, off the pair the derivation publishes from the boundary
+  // record. It used to prefer `unit.identity.baseFantastic`; there is no identity object on a
+  // derived unit any more (F267.6) and `abilities.baseFantastic` is the same boundary field.
+  // The token fallback stays for a caller that hand-builds a combat unit without one.
+  const baseFantastic = typeof unit.abilities.baseFantastic === 'boolean'
+    ? unit.abilities.baseFantastic
+    : (unit.unitType || '').startsWith('fantastic_');
   if (!baseFantastic && !destinyActiveForUnit(unit.abilities, version)) return unit;
   return Object.assign({}, unit, {
     abilities: Object.assign({}, unit.abilities, { firstStrike: true }),
@@ -329,13 +331,18 @@ function applyWarlordTouchFlagPlacement(unit, version) {
 // PROVENANCE[angelicGuardiansAbilityDerivation]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalc.CAS@span:9:f742373b8f5966edd2fa5c3b
 function applyAngelicGuardiansEffects(unit, version) {
   if (!version || !version.startsWith('com2_warlord') || !hasAbil(unit.abilities, 'angelicGuardians')) return unit;
-  const realm = realmOfUnitType(unit.unitType, unit.identity);
+  // The live realm comes from `liveRace`, the record's own `race` as the stat run left it and
+  // published for combat resolution — not from the identity object, which no longer carries a
+  // live pair (F267.5).
+  const realm = realmOfUnitType(unit.unitType, (unit.abilities || {}).liveRace);
   const isLife = realm === 'life';
-  const baseFantastic = unit.identity && typeof unit.identity.baseFantastic === 'boolean'
-    ? unit.identity.baseFantastic
-    : typeof unit.abilities.baseFantastic === 'boolean'
-      ? unit.abilities.baseFantastic
-      : (unit.unitType || '').startsWith('fantastic_');
+  // The permanent Fantastic flag, off the pair the derivation publishes from the boundary
+  // record. It used to prefer `unit.identity.baseFantastic`; there is no identity object on a
+  // derived unit any more (F267.6) and `abilities.baseFantastic` is the same boundary field.
+  // The token fallback stays for a caller that hand-builds a combat unit without one.
+  const baseFantastic = typeof unit.abilities.baseFantastic === 'boolean'
+    ? unit.abilities.baseFantastic
+    : (unit.unitType || '').startsWith('fantastic_');
   let val;
   if (abilDefined(unit.abilities, 'exorcise')) {
     val = abilVal(unit.abilities, 'exorcise', 0) + (isLife ? -3 : -2);
