@@ -1471,6 +1471,46 @@ function curseCastSteps(version, marked, eyeOfHeaven) {
 // no pre-sequence transform writes any ability key these steps name (`ABILITY_ORIGIN_TRANSFORMS`,
 // `stats_origins.js`), and the marked half is pre-transform in any case — it is the card's own
 // `ENCHANTMENT_DEFS` reading, which no transform touches.
+// **The Discipline cast's target gate** (F254.2), from
+// `Reference docs/Caster binary/F254.1 Discipline eligibility.md`.
+//
+// The exclusion both tooltips used to claim is a spell-*targeting* rule and not an effect rule.
+// `Reference docs/Caster binary/Units.RecalculateUnits.pas` applies Discipline's whole stat package
+// with no `ishero`, `Fantastic`, `race` or `unittype` term — one compiled routine shared by both
+// modern builds — so `c:discipline` is right to be ungated and stays so. Every refusal lives in
+// `@Spelltargeting@ValidUnitSpellTarget` (`$0053DB78`, reconstructed for F264.1 in
+// `Reference docs/Caster binary/F264.1.evidence.md`) at cast time, which is this step.
+//
+// Two arms of that routine bear on Discipline, selected by its `spells.ini` row:
+//   * `SpellTypeGroup=15` (`SGUnitBuffNormalUnit`) takes the group-15 arm at `$0053DC9A`, which
+//     refuses a target whose **permanent** `Fantastic` is set (`SPTMustBeNormal`). Both builds:
+//     base CoM2's `[221] Discipline` and Warlord's `[221] Tactical Drill` / `[271] Discipline` all
+//     carry group 15.
+//   * `NonHero=True` takes the table-driven arm at `$0053DF46`, which refuses a hero on the
+//     **permanent** `ishero` (`SPTNoHeroes`). **Base CoM2 only** — neither Warlord Discipline row
+//     carries `NonHero`, and Warlord's Discipline demonstrably reaches heroes by other routes
+//     (Power of Life, Mystic Surge), so a hero term there would be a defect and not a refinement.
+//
+// Both reads are positional, not hoisted. `ctx.base` does not exist at this rank — `a:baseCopy`
+// (`stats_sequence.js`) publishes it four phases later — and is not what the engine reads anyway:
+// `buffs` *is* the permanent-record phase, so the running `u.fantastic` here **is**
+// `BaseUnits[u].Fantastic` as of this cast. The precedent is `naturalSelectionEligibleAt`
+// (`stats.js`), not F263's `ctx.base` gates. `buffs:destiny` sets the flag and ranks *after* this
+// step in both modern manifests (`stats_manifests.js`); `buffs:spiritLink:fantastic` clears it and
+// ranks after it in the Warlord manifest, the only one that carries it (`SCOPE_WARLORD`,
+// `steps.js`). Under the chain's declared cast order a Discipline cast that precedes
+// Apotheosis therefore lands, which is the ruling and not an accident. `u.ishero` is written by no
+// step, so its position is immaterial.
+//
+// `training:militaryDrilling` (`combat_abilities.js`) is deliberately untouched by this: none of
+// Warlord's five non-cast routes to the flag tests hero, and its Fantastic term is F245's declared
+// hybrid rather than a match for either entrance.
+function disciplineCastTargetAdmitted(u, version) {
+  const isWarlord = !!(version && version.startsWith('com2_warlord'));
+  if (u.fantastic) return false;
+  return isWarlord ? true : !u.ishero;
+}
+
 function permanentCastFlagSteps(version, marked) {
   const isWarlord = !!(version && version.startsWith('com2_warlord'));
   const isCoM2 = !!(version && version.startsWith('com2'));
@@ -1485,10 +1525,11 @@ function permanentCastFlagSteps(version, marked) {
     statStep({ id: 'trueSight:cast', phase: 'buffs', ...flag('trueSight', 'True Sight') }),
     // PROVENANCE[resistMagic:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=Warlord does reconstruct a Resist Magic cast writing the permanent flag, at `OLSpell.CAS!NOPERMENCHANT!-59 "SETENCHANTMENTFLAG(TU,EncResistMagic,1,1)"`, and `Reference docs/Caster binary/Units.RecalculateUnits.pas` reconstructs the modern aggregation the flag is then read through. Neither covers this step's claim. The script write stands behind the Tattoo Magic research gate at `OLSpell.CAS!NOPERMENCHANT!-74 "IF (SPELLSTATE(W,STattooMagic)<>2) THEN { GOTO"` while the step is unconditional, the four other engines have no reconstructed writer at all, and no source makes the card's mark evidence that the cast landed - which is the calculator's own assumption, stated in SPEC.md under Deliberate deviations; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
     statStep({ id: 'resistMagic:cast', phase: 'buffs', ...flag('resistMagic', 'Resist Magic') }),
-    // PROVENANCE[discipline:cast]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; gap=Warlord does reconstruct a Tactical Drill cast writing the permanent flag, at `OLSpell.CAS!NOPERMENCHANT!-5 "SETENCHANTMENTFLAG(TU,EncDiscipline,1,1)"`, and `Reference docs/Caster binary/Units.RecalculateUnits.pas` reconstructs the modern aggregation the value is read through. Neither covers this step's claim. The script write stands behind the Tattoo Magic research gate at `OLSpell.CAS!NOPERMENCHANT!-74 "IF (SPELLSTATE(W,STattooMagic)<>2) THEN { GOTO"` while the step is unconditional, base CoM2 has no reconstructed writer of its own, and overland-versus-combat is a calculator distinction the single EncDiscipline flag does not carry, so the card states it; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
+    // PROVENANCE[discipline:cast]: UNVERIFIED versions=com2_1.05.11,com2_warlord_1.5.12.9; gap=Warlord does reconstruct a Tactical Drill cast writing the permanent flag, at `OLSpell.CAS!NOPERMENCHANT!-5 "SETENCHANTMENTFLAG(TU,EncDiscipline,1,1)"`, and `Reference docs/Caster binary/Units.RecalculateUnits.pas` reconstructs the modern aggregation the value is read through. Neither covers this step's claim. The script write stands behind the Tattoo Magic research gate at `OLSpell.CAS!NOPERMENCHANT!-74 "IF (SPELLSTATE(W,STattooMagic)<>2) THEN { GOTO"` while the step is unconditional, base CoM2 has no reconstructed writer of its own, and overland-versus-combat is a calculator distinction the single EncDiscipline flag does not carry, so the card states it. What is *not* left unverified is the step's target gate, `disciplineCastTargetAdmitted` above: the permanent-Fantastic refusal and base CoM2's hero refusal are read off the spell rows' SpellTypeGroup=15 and NonHero=True by `@Spelltargeting@ValidUnitSpellTarget`, stated in `Reference docs/Caster binary/F254.1 Discipline eligibility.md`; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
     ...(isCoM2 ? [statStep({ id: 'discipline:cast', phase: 'buffs',
       sourceId: 'discipline', sourceLabel: 'Discipline', writes: ['discipline'],
-      when: () => cast.discipline === 'overland' || cast.discipline === 'combat',
+      when: u => (cast.discipline === 'overland' || cast.discipline === 'combat')
+        && disciplineCastTargetAdmitted(u, version),
       apply: u => { u.discipline = disciplineValue(); } })] : []),
     // PROVENANCE[rebuild:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=this entry's old text said the write is reconstructed nowhere and that was wrong. `OLSpell.CAS!NOTMARKOFCONQUEROR!+5 "SETENCHANTMENTFLAG(TU,EncRebuild,1,1)"` is the Rebuild cast writing the permanent flag, unconditionally and in this step's one version, inside the block PROVENANCE[rebuildEffectDerivation] already cites for the package it confers. What is left unverified is only the calculator's own assumption that a marked flag means the cast landed, which is shared by every buffs cast step. This looks promotable to VERIFIED on that span and F250 owns the decision; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
     ...(isWarlord ? [statStep({ id: 'rebuild:cast', phase: 'buffs', ...flag('rebuild', 'Rebuild') })] : []),

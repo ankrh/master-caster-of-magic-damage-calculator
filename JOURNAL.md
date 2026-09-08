@@ -4,6 +4,56 @@
 
 # Journal
 
+## 2026-09-08 — F259.1: the digest states its own scope, and a refusing corpus cannot report a zero
+
+`tools/derivation_equivalence.js` now prints, and writes into the digest under `__scope`, exactly
+what the run varied. The statement is computed from the cases the run actually yields, and its
+denominator is the shipped input boundary — `cardStateToDerivationInput` projected per version from
+`presetDefaultCardState` / `presetGlobals` — so nothing about it is a hand list that can drift.
+
+What the tool's own scope block says about the tree of 2026-09-08 (52,440 cases):
+
+- **10,500 cases (20.0%) already refuse**, in 38 distinct messages, all F253.1's version-scope halt:
+  the case list states every control in every version. A refusing case digests to its message, which
+  is a constant, so those cases can never show a value moving. The comparable population is 41,940.
+- **24 top-level fields varied, 6 held** (`dmg`, `prefix`, `toBlkMod`, `toHitMod`, `toHitRtbMod`,
+  `unitType`). Every case derives side `a`; nothing varies starting damage or a To-Hit modifier.
+- **17 boundary fields the run never states**: `innateAbilities` and `markedAbilities` (the F252.1
+  blindness, now derived from the boundary rather than asserted in prose — the tool builds a merged
+  `abilities` map instead), `enemyEyeOfHeaven`, `wallOfFire`, `hurricane`, `poxHost`, `name`,
+  `generic`, `irrecoverableDamage`, `undeadDamage`, `baseBonusHp`, `noHealing`, and the five modern
+  To-Hit fields `hitChance`/`hitMelee`/`hitRanged`/`hitThrown`/`hitBreath`.
+- **3 fields it states that the boundary does not**: `abilities`, `unitType` — the legacy input
+  shape — and `chaosChannels`, which is the `ENVS` row F182 already suspects of being dead: the card
+  path produces no such field at all.
+- **27 of the 229 `ABILITY_KEY_ORIGINS` keys are never stated**, because the case list enumerates
+  controls and those keys have none. That is F253.2's blind spot, counted by the tool itself.
+
+The guard is `assertCorpusCanSpeak`: the run halts when any version's cases all refuse, or when the
+corpus-wide refusal share exceeds `REFUSAL_SHARE_BUDGET = 0.35`. `derivation_equivalence_diff.js`
+applies the same budget to the files it reads, measuring the share from the digests so a file
+written before this change is guarded too, and it now prints the population its zero ranges over
+(shared cases, and how many refuse on both sides). Both halts were exercised: the budget lowered to
+10% halts the real run and writes no file; a fabricated all-throwing pair exits 2 from the diff.
+
+Numbers: 0 of 52,440 against the pre-change tree. The instrument still bites — `mithril`'s attack
+bonus 1 → 2 in `combat_abilities.js` moves 1,331 cases, 5,534 field differences.
+
+The GPT review found the guard leaking in two ways, both fixed: a refusal was detected by testing
+`__throw` for truthiness, so `throw new Error()` with an empty message counted as a comparable
+case, and the diff applied only the corpus-wide share, so a wholly refusing *version* passed at 25%.
+The census and the guard now live in one place (`refusalCensus`, `isRefusal`,
+`assertCorpusCanSpeak`) and the diff calls them, reading the version off the case name. The budget
+is applied to the exact ratio rather than the rounded one it reports (7,001 of 20,000 rounds to
+0.35 and was admitted), an empty corpus is refused, and the distinct count is taken over a
+canonical rendering with sorted keys that keeps `undefined` apart from `null`. The printed text no
+longer says a held field means its gate is unexercised — it says this run never tests changing it —
+and the scope block carries that reading in the JSON.
+`runF259Checks` in `tools/unit_checks/backlog_checks.js` carries the claim: the classification is a
+partition of what the cases stated, every boundary field lands on exactly one side of the
+never-stated list, the printed text names each unstated field, and the two halts fire. It feeds the
+collector 300 cases and fabricated scope objects, so it costs nothing near a real run.
+
 ## 2026-09-08 — F253.2: the origin table records which input key admits each write
 
 The other half of F253's erasure, and the one F253.1 could not see. A key can have an origin row in
@@ -8321,3 +8371,126 @@ predicted. Unfiled.
   (thunk 15 not 13, handler 33 not 34). Both derivations caught it independently and repaired it
   differently — a one-byte and a fourteen-byte extension — which is the only material difference
   between them and changes no finding.
+
+
+## 2026-09-08 — F259.2: the digest states its top-level inputs, and F259 closes
+
+Method A, one GPT review round. Tooling only; no calculator source changed.
+
+**What the corpus now ranges over.** 52,440 -> 63,686 cases; comparable 41,940 -> 49,468. Five added
+blocks, all *new* case names, so every pre-F259.2 digest still diffs against a new run: `bnd` and
+`bnd-combo` state the boundary's top-level fields (each only in the versions whose boundary carries
+it), and `halves`, `halves-swap` and `halves-combo` state `innateAbilities`/`markedAbilities` — the
+shape the card actually hands the derivation — instead of the merged `abilities` map.
+
+**The scope block now reads 45 varied, 1 held (`unitType`, a legacy token the boundary does not
+carry), 1 never stated (`wallOfFire`, declared).** `wallOfFire` has no `deriveUnitStats` read at
+all: `combat.js` takes it as an attack option, so stating it would have been coverage the digest
+does not have — the `chaosChannels` pathology this same block reports about itself (F182).
+
+**Three probes, each reverted, each showing the old corpus was blind where the new one is not.**
+Deleting the `enemyEyeOfHeaven` read moves 472 new cases and 0 of the old 52,440; deleting the
+`input.name` and `input.hitChance` reads moves 724 (all five `unitName.endsWith` gates, plus
+hitChance) and 0 of the old 52,440; dropping the marked half in `deriveUnitStats` moves 3,795 and 0
+of the old 52,440. Shared-case diff before/after: **0 differing, 0 field differences over 52,440.**
+
+**Refusals rose 20.0% -> 22.3%**, still under the 0.35 budget, and every one of the 3,718 new-case
+refusals is a deliberate halt already known: 3,619 F253.1 version-scope, 99 F252's marked half with
+no positioned cast step. A first cut of `halves-combo` split the drawn controls randomly between the
+halves and refused in 87% of its cases on that second halt — measured, then replaced by the
+card-faithful split, with the cross-half statement left to the smaller `halves-swap` block.
+
+**The name axis is read out of the source.** Every `unitName.endsWith('X')` in `Calculator/stats.js`
+becomes a case value, and each name is paired with the race and control its block also reads; an
+unpaired name halts, so a gate added later cannot be "covered" by a case that can only take its
+false arm.
+
+**The lesson the review round paid for.** `prefix` was about to be recorded as a *held* field with
+the reason "read only to name the side in halt messages", on a probe that moved 0 of 30 cases. It is
+an arithmetic gate: `distancePenaltyFor` returns 0 for any side but `a`, and the probe stated no
+ranged distance. A field measured inert by a probe that does not state the gate's prerequisites is
+the same error F259 exists to prevent, made inside the fix for it — which is why the two damage
+categories and `prefix` now carry `with` companions rather than being stated bare.
+## F254.1 — Discipline's hero and Fantastic exclusion, read (2026-09-08)
+
+Reading only; no `Calculator/` file changed. The statement is
+`Reference docs/Caster binary/F254.1 Discipline eligibility.md`.
+
+The thing that took the time and is worth not re-discovering: **the exclusion is not in the
+recalculation at all.** `Units.RecalculateUnits.pas:1541-1558` applies Discipline's whole package
+with no `ishero`, `Fantastic`, `race` or `unittype` term, in one shared executable for both modern
+builds. Every exclusion lives in `@Spelltargeting@ValidUnitSpellTarget` (`$0053DB78`) at *cast
+time*, which F264.1 had already reconstructed — so this subtask reduced to reading which arms
+Discipline's `spells.ini` row selects, not to a new derivation.
+
+Base CoM2 `[221]` takes both arms: the group-15 `SGUnitBuffNormalUnit` arm (`BaseUnits[u].Fantastic`
+→ `SPTMustBeNormal`) and the table-driven `NonHero` arm (`BaseUnits[u].ishero` → `SPTNoHeroes`).
+Warlord's `[221] Tactical Drill` and `[271] Discipline` keep group 15 and drop `NonHero`, so heroes
+are admitted there — the Centurion, itself a hero, carries `Spellability=271`.
+
+`ValidUnitSpellTarget` is **not combat-only**, which is what makes the cast gate load-bearing for an
+overland cast too. Five callers, found by scanning `.text` for `E8` calls: `ValidCombatSpellTarget`,
+`AIOverlandBuffTargeting`, `Uispell.ValidSpellTargeting` and two sites in `Ui.SpellTargetingUI`.
+`IsOverlandUnitTargetingSpell` (`$0053D820`) admits `SpellGroup` in {1, 15}.
+
+Warlord's five non-cast routes to `EncDiscipline` (Military Drilling at creation and at the
+every-turn pass, the Air Support Doctrine summon, Power of Life, Mystic Surge `R=27`) test hero
+nowhere and Fantastic only in the every-turn pass. So Warlord's tooltip is false on the hero half
+and overstated on the Fantastic half.
+
+**The review round corrected the record-selection advice, and it was worth the round.** The first
+draft told F254.2 to read a base/template `fantastic` snapshot "the way F263's `NOTSAPIENS` gate
+reads `ctx.base`". Wrong twice: `ctx.base` is published by `a:baseCopy`, four phases *after*
+`buffs`, so it does not exist at `buffs:discipline:cast`; and it is not needed, because `buffs` *is*
+the permanent-record phase, so the running `u.fantastic` there **is** `BaseUnits[u].Fantastic` as of
+that cast. The precedent that fits is `naturalSelectionEligibleAt` in `stats.js`. The manifest
+ordering (`buffs:discipline:cast` ahead of `buffs:destiny` and `buffs:spiritLink:fantastic`) is the
+chain's declared cast order and is therefore a ruling with intended consequences, not a coincidence
+to be defended against.
+
+The review also caught that "no hero test in the block" is not "a hero can get it there":
+`CreateUnit.CAS` is entered with a city-produced unit and the Air Support Doctrine block writes its
+own summon. Warlord's hero and Fantastic conclusions rest on Power of Life (`SpellTypeGroup=1`) and
+Mystic Surge, which take an arbitrary own unit.
+
+**Left open, deliberately.** Military Drilling's two entrances disagree: `CreateUnit.CAS` has no
+Fantastic test, the every-turn `OverlandEndTurn.CAS` pass has `BASEFANTASTIC`.
+`training:militaryDrilling` runs the every-turn gate against the creation-time record — F245's
+declared hybrid. F254.1 records it; it is not F254.2's to settle either.
+
+## F254.2 — the Discipline cast gate, implemented (2026-09-08)
+
+`disciplineCastTargetAdmitted` (`stats_identity.js`) is the whole change: `buffs:discipline:cast`
+refuses a target whose running `u.fantastic` is set, in both modern builds, and additionally a
+target whose `u.ishero` is set in base CoM2 only. `c:discipline` stays ungated and
+`training:militaryDrilling` is untouched, per F254.1.
+
+**Measured movement, `tools/derivation_equivalence.js` before/after (gate neutralised in place for
+the baseline, so no second tree was made): 95 differing cases of 63,686 — 49,468 comparable, 14,218
+refusing (22.3%).**
+
+- `com2_1.05.11|solo|…|id:hero` — 36, exactly the figure F244.3d measured for a hero gate in the
+  solo block. The rest of base CoM2 is 30 `combo` hero cases plus 14 from the three combination
+  blocks (`hero`, `heroType:48`, `hero-fantastic`, `baseFantastic`).
+- `com2_warlord_1.5.12.9` — 15, and **every one is `baseFantastic` or `hero-fantastic`; not one is
+  a plain `hero`.** That is the reading's prediction holding: Warlord's rows carry no `NonHero`.
+
+So "expect ~36 and zero in Warlord" was right about the hero half and silent about the Fantastic
+half, which the digest does reach through its roaming identity pool — 15 Warlord cases and some of
+base CoM2's 14. The Fantastic half was *unmeasured*, not absent.
+
+**The five fixtures were mutation-tested, not just written green.** Removing the gate fails the
+three refusal fixtures; extending the hero arm to Warlord fails `disciplineCastReachesHeroWarlord`;
+making the Fantastic read consult the Destiny mark — a finished-record read — fails
+`disciplineCastPrecedesDestinyCoM2`, which is the fixture that pins the positional ruling.
+
+**Incidental:** `tools/cas_citation_audit.js` gained `tmp/` in `OUT_OF_SCOPE`. The audit walks the
+whole tree, and `tmp/REPORT.F254.1.md` quotes a `.CAS` citation, so `npm test` was already red on
+an unclassified citation-bearing source before this subtask touched anything. Scratchpad reports
+are where the protocol puts them; they are not a home for citations.
+
+**Review (GPT-6 Astra, one round, `.reviews/F254.2.review-of-Claude.log`):** no blocking or
+substantive findings; three minor ones, all acted on — the two tooltip lines exceeded the style
+guide's 75 characters and were wrapped, the gate comment said Spirit Link ranks after the step "in
+both modern manifests" when `buffs:spiritLink:fantastic` is `SCOPE_WARLORD`, and this entry was
+missing. The reviewer could not write its own file (read-only session); its text is the `.log`.

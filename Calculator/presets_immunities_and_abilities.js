@@ -859,6 +859,57 @@ definePresets({
     },
   },
 
+  // The cast's target gate (F254.2). `buffs:discipline:cast` (`stats_identity.js`) is where the
+  // exclusion lives: `Units.RecalculateUnits.pas` applies the stat package with no identity term,
+  // and `@Spelltargeting@ValidUnitSpellTarget` refuses the target instead. Each fixture below is
+  // one arm of that gate, on `overlandDisciplineDefenseNormalCoM2`'s card — the same 2-missile
+  // shot at 100% into def 0 with a 100% block, which pins 1 when the +1 defense lands and 2 when
+  // the cast is refused.
+  disciplineCastRefusedOnHeroCoM2: {
+    desc: 'Discipline (CoM2): the cast is refused on a hero. spells.ini [221] carries NonHero=True, which takes ValidUnitSpellTarget’s table-driven arm at $0053DF46 and returns SPTNoHeroes off the permanent BaseUnits[u].ishero, so the flag never reaches the record and the +1 defense is never applied; base CoM2 has no other route to EncDiscipline. Admit the hero and the defender blocks one of the two hits for 1.000.',
+    version: V_COM2,
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, identity: { isHero:true, baseRace:'High Men', baseFantastic:false },
+      abilities: { discipline: 'overland' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
+  },
+  disciplineCastRefusedOnPermanentFantasticCoM2: {
+    desc: 'Discipline (CoM2): the cast is refused on a permanently fantastic unit. SpellTypeGroup=15 (SGUnitBuffNormalUnit) takes the group-15 arm at $0053DC9A, which returns SPTMustBeNormal off the permanent BaseUnits[u].Fantastic; the step reads the running u.fantastic at its own rank, which in the buffs phase is that record. Admit the unit and it blocks one of the two hits for 1.000.',
+    version: V_COM2,
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, identity: { isHero:false, baseRace:'Life', baseFantastic:true },
+      abilities: { discipline: 'overland' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
+  },
+  disciplineCastReachesHeroWarlord: {
+    desc: 'Discipline (Warlord): a hero does receive it. Neither Warlord Discipline row carries NonHero — [221] Tactical Drill and [271] Discipline both omit it, and Warlord’s four NonHero rows are Possession, Lycanthropy, Apotheosis and Blaze of Glory — so the hero arm never fires and the +1 defense lands, blocking one of the two hits. This is the half on which the two builds differ: the same card in base CoM2 is disciplineCastRefusedOnHeroCoM2, at 2.000.',
+    version: V_WARLORD,
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, identity: { isHero:true, baseRace:'High Men', baseFantastic:false },
+      abilities: { disciplineWarlord: 'overland' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
+  },
+  disciplineCastRefusedOnPermanentFantasticWarlord: {
+    desc: 'Discipline (Warlord): the Fantastic half survives the rename. Both Warlord rows keep SpellTypeGroup=15, so the group-15 arm refuses a permanently fantastic target exactly as in base CoM2 and the +1 defense is never applied.',
+    version: V_WARLORD,
+    a: { modernAttacks: { ranged: { strength:2, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, identity: { isHero:false, baseRace:'Life', baseFantastic:true },
+      abilities: { disciplineWarlord: 'overland' } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 2.000, sdDmgToB: 0.000 },
+  },
+  disciplineCastPrecedesDestinyCoM2: {
+    desc: 'Discipline (CoM2): the Fantastic read is positional, not final. buffs:destiny sets fantastic and ranks after buffs:discipline:cast in both modern manifests (stats_manifests.js), which is the chain’s declared cast order, so a Discipline cast that precedes Destiny lands: def 0 + Destiny 4 + Discipline 1 = 5, blocking five of the six hits. Reading the finished record instead would refuse the cast for def 4 and 2.000.',
+    version: V_COM2,
+    a: { modernAttacks: { ranged: { strength:6, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10 },
+    b: { def:0, toBlkMod:70, hp:10, abilities: { discipline: 'overland', destiny: true } },
+    rangedCheck: true, rangedDist: 1,
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
+  },
+
   // --- Destiny ---
   destinyDefenseAndHealthCoM2: {
     desc: 'Destiny (CoM2): defender gets +4 defense and doubled HP. 24 atk vs def 4 at 100% block leaves 20 damage, which now fits under the 20 HP cap',

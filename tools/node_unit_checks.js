@@ -59,7 +59,7 @@ const {
   runResolutionStepChecks, runModernWeaponImmunityMappingChecks, runDefenseCapBlessF32F34Checks,
 } = require('./unit_checks/resolution_steps');
 const {
-  runF19Checks, runF23Checks, runF50F51F53Checks, runR9G1eChecks,
+  runF19Checks, runF23Checks, runF50F51F53Checks, runR9G1eChecks, runF259Checks,
   runPriorityPrerequisitesChecks,
 } = require('./unit_checks/backlog_checks');
 const { runCanonicalVersionScopeChecks } = require('./unit_checks/version_scope');
@@ -232,6 +232,7 @@ function main() {
   runF23Checks(ctx);
   runF50F51F53Checks(ctx);
   runR9G1eChecks(ctx);
+  runF259Checks(ctx);
   runCanonicalVersionScopeChecks(ctx);
   runHiddenControlGatingChecks(ctx);
   runCardStateProjectionChecks(ctx);

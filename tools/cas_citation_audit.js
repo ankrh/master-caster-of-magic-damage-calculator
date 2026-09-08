@@ -64,6 +64,7 @@ const OUT_OF_SCOPE = new Map([
   ['JOURNAL.md', 'working notes; never authoritative'],
   ['TASKS.md', "the backlog quotes stale citations as F227's own evidence"],
   ['PROPOSALS.md', 'pending text the user owns'],
+  ['tmp/', 'untracked scratchpad: per-subtask status and report files, not a home for citations'],
 ]);
 // The scripts are the target of a citation, not a source of one.
 const NOT_SCANNED = ['Reference docs/Script source/'];

@@ -970,7 +970,297 @@ function runPriorityPrerequisitesChecks(ctx) {
     '[PP-17] F55 the Warlord Paladins are still combat-summoned Fantastic');
 }
 
+// F259.1 — the digest states its own scope, and a refusing corpus cannot report a zero.
+//
+// `tools/derivation_equivalence.js` is the instrument every subtask's "nothing moved" is read off,
+// and its zeros have been over-read repeatedly (F204, F244.3i, F253.2). What is asserted here is
+// the part a reader has to be able to trust: the scope block *partitions* the input boundary
+// rather than restating a hand list, and the guard halts a corpus that has collapsed to throws.
+// The checks are cheap by construction — the scope machinery is fed a slice of the case list and
+// a fabricated scope object, never a 52,440-case run.
+function runF259Checks(ctx) {
+  const {
+    enumerateCases, scopeCollector, assertCorpusCanSpeak, boundaryFieldVersions, formatScope,
+    refusalCensus, isRefusal, canonicalValue, digest, REFUSAL_SHARE_BUDGET,
+  } = require('../derivation_equivalence');
+  const vm = require('vm');
+
+  // A slice is enough: the claim is about how the collector classifies what it saw, not about
+  // how many cases there are.
+  const collector = scopeCollector(ctx);
+  let seen = 0;
+  const statedFields = new Set();
+  for (const testCase of enumerateCases(ctx)) {
+    collector.case(testCase);
+    for (const field of Object.keys(testCase.input)) statedFields.add(field);
+    seen += 1;
+    if (seen >= 300) break;
+  }
+  const scope = collector.report();
+
+  const varied = new Set(scope.topLevelVaried.map(row => row.field));
+  const held = new Set(scope.topLevelHeld.map(row => row.field));
+  const never = new Set(scope.boundaryFieldsNeverStated.map(row => row.field));
+  assertEqual(varied.size + held.size, statedFields.size,
+    '[F259.1] every field the cases state is classified as varied or held, and none twice');
+  for (const field of statedFields) {
+    assert(varied.has(field) || held.has(field),
+      `[F259.1] the scope block classifies the stated field ${field}`);
+    assert(!never.has(field),
+      `[F259.1] a field the cases state is not reported as never stated (${field})`);
+  }
+  // The blind list is the boundary minus what was stated, so it is a derivation and not a list
+  // that can drift: every boundary field is on exactly one side of it.
+  const boundary = boundaryFieldVersions(ctx);
+  assert(boundary.size > 0, '[F259.1] the card-path boundary supplies the denominator');
+  for (const field of boundary.keys()) {
+    assert(statedFields.has(field) === !never.has(field),
+      `[F259.1] boundary field ${field} is either stated by the cases or reported as never stated`);
+  }
+  assert(scope.abilityKeyOriginRows > scope.abilityKeysStated.length,
+    '[F259.1] the scope block counts the record keys the case list cannot state (F253.2)');
+
+  const text = formatScope(scope);
+  for (const row of scope.boundaryFieldsNeverStated) {
+    assert(text.includes(row.field),
+      `[F259.1] the printed scope names the unstated boundary field ${row.field}`);
+  }
+  assert(text.includes(String(scope.refusals)) && text.includes(String(scope.comparable)),
+    '[F259.1] the printed scope states the comparable and refusing case counts');
+
+  // The guard. A corpus that has collapsed to throws compares equal to any tree, which is how
+  // F267.4's probe reported 0 three times running, so the run halts rather than printing it.
+  const healthy = {
+    versions: ['v1', 'v2'], casesPerVersion: { v1: 100, v2: 100 },
+    refusalsPerVersion: { v1: 5, v2: 5 }, cases: 200, refusals: 10, refusalShare: 0.05,
+    distinctRefusalMessages: 3,
+  };
+  assertCorpusCanSpeak(healthy);
+  assert(true, '[F259.1] a corpus below the refusal budget is compared rather than halted');
+  let halted = null;
+  try {
+    assertCorpusCanSpeak({ ...healthy, refusals: 150, refusalShare: 0.75,
+      refusalsPerVersion: { v1: 75, v2: 75 } });
+  } catch (err) {
+    halted = String(err.message);
+  }
+  assert(halted && halted.includes('budget'),
+    '[F259.1] a corpus throwing above the budget halts instead of reporting a zero');
+  assert(REFUSAL_SHARE_BUDGET > 0 && REFUSAL_SHARE_BUDGET < 1,
+    '[F259.1] the refusal budget is a share');
+  let versionHalt = null;
+  try {
+    assertCorpusCanSpeak({ ...healthy, refusalsPerVersion: { v1: 100, v2: 5 },
+      refusals: 105, refusalShare: 0.05 });
+  } catch (err) {
+    versionHalt = String(err.message);
+  }
+  assert(versionHalt && versionHalt.includes('v1'),
+    '[F259.1] a version whose every case refuses halts even under the corpus-wide budget');
+  // The guard reads the exact ratio: 7,001 of 20,000 rounds to the budget and would have been
+  // admitted by a comparison against the rounded reporting value (GPT review, finding 5).
+  let roundingHalt = null;
+  try {
+    assertCorpusCanSpeak({ versions: ['v1'], casesPerVersion: { v1: 20000 },
+      refusalsPerVersion: { v1: 7001 }, cases: 20000, refusals: 7001, refusalShare: 0.35,
+      distinctRefusalMessages: 2 });
+  } catch (err) {
+    roundingHalt = String(err.message);
+  }
+  assert(roundingHalt && roundingHalt.includes('7001'),
+    '[F259.1] the budget is applied to the unrounded share, not to the reported one');
+  let emptyHalt = null;
+  try {
+    assertCorpusCanSpeak({ versions: [], casesPerVersion: {}, refusalsPerVersion: {},
+      cases: 0, refusals: 0, refusalShare: 0, distinctRefusalMessages: 0 });
+  } catch (err) {
+    emptyHalt = String(err.message);
+  }
+  assert(emptyHalt && emptyHalt.includes('nothing for a zero to range over'),
+    '[F259.1] an empty corpus is refused rather than compared');
+
+  // The census the diff guards on, over a digest object rather than a live run. A refusal is the
+  // presence of `__throw`, not a truthy message: `throw new Error()` states an empty one, and
+  // reading it for truthiness counted that case as comparable (GPT review, finding 1).
+  const census = refusalCensus({
+    'v1|solo|a': { __throw: '' },
+    'v2|solo|a': { atk: 1 },
+    'v2|solo|b': { atk: 1 },
+  });
+  assertEqual(census.refusals, 1, '[F259.1] an empty refusal message is still a refusal');
+  assertEqual(census.comparable, 2, '[F259.1] the census counts the comparable cases');
+  assert(isRefusal({ __throw: '' }) && !isRefusal({ atk: 1 }),
+    '[F259.1] the refusal predicate reads the key, not the message');
+  assertEqual(census.versions.length, 2,
+    '[F259.1] the census reads each version off the case name');
+  let censusHalt = null;
+  try {
+    assertCorpusCanSpeak(census, 'probe');
+  } catch (err) {
+    censusHalt = String(err.message);
+  }
+  assert(censusHalt && censusHalt.includes('v1'),
+    '[F259.1] a digest whose one version wholly refuses is refused at 33%, under the budget');
+
+  // Two maps stating the same thing are one value, and a stated null is not an absent field.
+  assertEqual(canonicalValue({ x: 1, y: 2 }), canonicalValue({ y: 2, x: 1 }),
+    '[F259.1] the distinct count is insensitive to key order');
+  assert(canonicalValue(null) !== canonicalValue(undefined),
+    '[F259.1] a field stated as null is not the same value as a field not stated');
+
+  // --- F259.2: the boundary fields are stated, or the run says why not ---
+  const {
+    BOUNDARY_FIELD_PLAN, NAME_GATE_PAIRINGS, ABILITY_HALF_FIELDS, boundaryPlanValues,
+    nameGateValues, parseNameGateCalls, assertBoundaryFieldsAccountedFor,
+  } = require('../derivation_equivalence');
+
+  // The plan is one decision per field, in exactly one of three shapes: values, a reason it is
+  // stated nowhere, or a reason it is stated at one value.
+  for (const [field, entry] of Object.entries(BOUNDARY_FIELD_PLAN)) {
+    const shapes = [boundaryPlanValues(field).length > 0, !!entry.notVaried, !!entry.heldReason]
+      .filter(Boolean).length;
+    assertEqual(shapes, 1,
+      `[F259.2] ${field} is varied, declared unvaried, or declared held — exactly one of the three`);
+    for (const reason of [entry.notVaried, entry.heldReason]) {
+      if (reason) {
+        assert(reason.length > 20, `[F259.2] the reason stated for ${field} says why, not just that`);
+      }
+    }
+  }
+
+  // The name axis is read out of `stats.js` rather than listed, and every gate it finds is paired
+  // with the race and control that open it — an unpaired name is a case that could only exercise
+  // the false arm, so the tool halts instead.
+  const gates = nameGateValues();
+  assert(gates.length >= 4, '[F259.2] the unit-name gates are read out of Calculator/stats.js');
+  for (const name of gates) {
+    assert(NAME_GATE_PAIRINGS[name], `[F259.2] the name gate ${name} is paired with a race and a control`);
+  }
+  for (const name of Object.keys(NAME_GATE_PAIRINGS)) {
+    assert(gates.includes(name),
+      `[F259.2] the pairing for ${name} still names a gate Calculator/stats.js has`);
+  }
+
+  // The gate reader takes both quote styles and whitespace, and refuses a call it cannot read
+  // rather than skipping it while the gates it can read keep the run looking healthy.
+  assertEqual(parseNameGateCalls("x = unitName . endsWith ( 'A' ) || unitName.endsWith(\"B\")").join(','),
+    'A,B', '[F259.2] the name-gate reader takes both literal spellings');
+  let gateHalt = null;
+  try {
+    parseNameGateCalls('if (unitName.endsWith(SOME_CONSTANT)) return 1;');
+  } catch (err) {
+    gateHalt = String(err.message);
+  }
+  assert(gateHalt && gateHalt.includes('SOME_CONSTANT'),
+    '[F259.2] a name gate this reader cannot read halts instead of going uncovered');
+
+  // One whole version of the case list — 12,750 cases, ~0.1s, because nothing is derived here.
+  // The claims are about what the list *states*, and they cannot be read off a 300-case prefix:
+  // the boundary blocks come after the solo, environment and combination blocks.
+  const firstVersion = [];
+  let firstVersionName = null;
+  for (const testCase of enumerateCases(ctx)) {
+    if (firstVersionName === null) firstVersionName = testCase.version;
+    if (testCase.version !== firstVersionName) break;
+    firstVersion.push(testCase);
+  }
+  const statedInVersion = new Set();
+  for (const testCase of firstVersion) {
+    for (const field of Object.keys(testCase.input)) statedInVersion.add(field);
+  }
+  const boundaryHere = [...boundary.entries()]
+    .filter(([, versions]) => versions.includes(firstVersionName)).map(([field]) => field);
+  for (const field of boundaryHere) {
+    assert(statedInVersion.has(field) || (BOUNDARY_FIELD_PLAN[field] || {}).notVaried,
+      `[F259.2] ${firstVersionName} states the boundary field ${field}, or the plan says why not`);
+  }
+  // Every value the plan carries reaches a case, so a value added to it cannot sit unused.
+  for (const field of boundaryHere) {
+    for (const value of boundaryPlanValues(field)) {
+      assert(firstVersion.some(testCase => testCase.input[field] === value),
+        `[F259.2] some case states ${field} = ${JSON.stringify(value)} in ${firstVersionName}`);
+    }
+  }
+  // Version scope, which is what keeps this axis out of the refusal budget: a DOS version states
+  // the DOS To-Hit pair and never the modern five, because stating the other family's field is a
+  // halt (`stats.js`, foreignHitInputs).
+  const modernHit = ['hitChance', 'hitMelee', 'hitRanged', 'hitThrown', 'hitBreath'];
+  const dosVersion = !firstVersionName.startsWith('com2');
+  for (const field of modernHit) {
+    assertEqual(statedInVersion.has(field), !dosVersion,
+      `[F259.2] ${firstVersionName} states ${field} only if it is the version's own record`);
+  }
+  for (const field of ['toHitMod', 'toHitRtbMod']) {
+    assertEqual(statedInVersion.has(field), dosVersion,
+      `[F259.2] ${firstVersionName} states ${field} only if it is the version's own record`);
+  }
+
+  // The ability boundary's own shape (F252.1). A case stating the halves states no merged map:
+  // `deriveUnitStats` halts on an input carrying both, so this is the difference between a block
+  // that runs and a block that refuses.
+  const halvesCases = firstVersion.filter(testCase =>
+    ABILITY_HALF_FIELDS.some(field => testCase.input[field] !== undefined));
+  assert(halvesCases.length > 100,
+    '[F259.2] the case list states the innate/marked halves the card boundary produces');
+  const halvesStatingBoth = halvesCases.filter(testCase => testCase.input.abilities !== undefined);
+  assert(!halvesStatingBoth.length,
+    '[F259.2] a case stating the halves states no merged map beside them'
+    + `${halvesStatingBoth.length ? ` (${halvesStatingBoth[0].name})` : ''}`);
+  const mergedCases = firstVersion.filter(testCase => testCase.input.abilities !== undefined);
+  assert(mergedCases.length > 100,
+    '[F259.2] the merged-map cases survive beside them, so old digests still diff');
+  // The cross-half statement the merged map cannot make at all.
+  assert(firstVersion.some(testCase => testCase.name.includes('|halves-swap|')),
+    '[F259.2] a control is also stated in the half the def lists would not put it in');
+
+  // A companion is what a value needs before a reader can take it: the two damage categories are
+  // clamped to `dmg`, so a case stating one against `dmg` 0 exercises the clamp and nothing else.
+  const damageCases = firstVersion.filter(testCase => testCase.name.includes('|bnd|undeadDamage='));
+  assert(damageCases.length > 0 && damageCases.every(testCase => testCase.input.dmg > 0),
+    '[F259.2] a case stating a damage category also states the damage it is taken out of');
+
+  // `prefix` is an arithmetic gate, not a label: `distancePenaltyFor` returns 0 for any side but
+  // `a`. A bare probe of it moved nothing, which is how it nearly entered the plan as a held field
+  // with a reason (GPT review, finding 1), so the witness carries the ranged state that gate reads.
+  const rangedCase = firstVersion.find(testCase =>
+    testCase.name.includes('|bnd|prefix=b|') && testCase.input.rtbType === 'missile');
+  assert(rangedCase && rangedCase.input.rangedCheck && rangedCase.input.rangedDist > 1,
+    '[F259.2] a case stating side b also states the ranged distance its gate reads');
+  const deriveUnitStats = vm.runInContext('deriveUnitStats', ctx);
+  const sideB = JSON.stringify(digest(deriveUnitStats(rangedCase.input)));
+  const sideA = JSON.stringify(digest(deriveUnitStats({ ...rangedCase.input, prefix: 'a' })));
+  assert(sideB !== sideA,
+    '[F259.2] the side the case derives moves the digest, so varying it is coverage and not a label');
+
+  // The second guard: a boundary field on neither list halts, and a declared one does not.
+  const declared = { field: 'wallOfFire', versions: ['v1'], reason: 'no derivation read exists' };
+  assertBoundaryFieldsAccountedFor({ boundaryFieldsNeverStated: [{ field: 'wallOfFire', versions: ['v1'] }],
+    boundaryFieldsDeclaredUnvaried: [declared] });
+  assert(true, '[F259.2] a declared unvaried boundary field is not a halt');
+  let blindHalt = null;
+  try {
+    assertBoundaryFieldsAccountedFor({
+      boundaryFieldsNeverStated: [{ field: 'someNewField', versions: ['v1'] }],
+      boundaryFieldsDeclaredUnvaried: [declared] });
+  } catch (err) {
+    blindHalt = String(err.message);
+  }
+  assert(blindHalt && blindHalt.includes('someNewField'),
+    '[F259.2] a boundary field that is neither varied nor declared halts the run');
+  // The same for a field stated at one value: held with no reason is the state F259.1 measured.
+  let heldHalt = null;
+  try {
+    assertBoundaryFieldsAccountedFor({ boundaryFieldsNeverStated: [],
+      boundaryFieldsDeclaredUnvaried: [],
+      topLevelHeld: [{ field: 'quietField', distinct: 1, samples: ['0'], reason: null }] });
+  } catch (err) {
+    heldHalt = String(err.message);
+  }
+  assert(heldHalt && heldHalt.includes('quietField'),
+    '[F259.2] a field held at one value with no stated reason halts the run');
+}
+
 module.exports = {
   runF19Checks, runF23Checks, runF50F51F53Checks, runR9G1eChecks,
-  runPriorityPrerequisitesChecks,
+  runPriorityPrerequisitesChecks, runF259Checks,
 };
