@@ -14,11 +14,9 @@
 // `tests/preset-equivalence-gate-f260.8.spec.js`.
 //
 // So a Node script may evaluate a preset — through those functions and no other way.
-// `tools/preset_checks.js` is the one that compares a fixture's numbers (F260.9); the
-// `worker_boundary` family runs the same two functions to obtain stats to hand the matrix worker
-// and checks no value against an `expected` block (F269.1). Reconstructing the translation a
-// second time, here or anywhere, is still prohibited, and so is reading the card off anything but
-// a card state.
+// `tools/preset_checks.js` is the one that evaluates a preset (F260.9). Reconstructing the
+// translation a second time, here or anywhere, is still prohibited, and so is reading the card off
+// anything but a card state.
 //
 // Which suite carries which claim over the corpus is `TESTS.md`'s to say, and asking there rather
 // than restating it here is deliberate: the claim used to have five homes in the code and drifted
@@ -73,7 +71,6 @@ const {
   runDamageSpellF35F37Checks,
 } = require('./unit_checks/damage_spell_f35_f37');
 const { runExorciseF43Checks } = require('./unit_checks/exorcise_f43');
-const { runWorkerBoundaryChecks } = require('./unit_checks/worker_boundary');
 
 // Suites migrated out of Playwright by F268, keyed by the name their `TESTS.md` section still
 // carries. Each of these was a `tests/*.spec.js` that used Chrome only as a JavaScript runtime,
@@ -208,7 +205,6 @@ function main() {
   // The manifest's other half: what the *worker* can see. This one runs its executed half in a
   // child process, so it is placed with the manifest checks rather than among the suites that
   // share `ctx`.
-  runWorkerBoundaryChecks();
   runCrossBoundaryIdentityReadChecks();
   runPresetGroupingChecks();
   const ctx = loadCalculatorContext();

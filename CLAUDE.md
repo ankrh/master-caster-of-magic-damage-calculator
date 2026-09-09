@@ -188,6 +188,12 @@ Fail-loud on out-of-range values. Halt with an error naming the offending value,
 Fail-loud is a code-design principle, verified by inspection. Individual halt sites are not each a
 test; what the rule exists to prevent is unjustified clamping or defaulting of values.
 
+Compatibility-only code is not kept. A second code path that exists solely so an older call shape,
+input map or stored value keeps working is part of the migration that introduced it, and it is
+deleted in the change that finishes that migration. Where it cannot be deleted immediately, its
+removal is a TASKS item rather than a permanent second path: a shim left in place obliges every
+later change to keep re-establishing that it is still safe.
+
 A new numeric claim enters as preset fixtures. A new test file is written only where the claim
 cannot be a fixture: page-layer behaviour, layout, or console errors. A reproduced game bug and a
 named deliberate deviation are each carried by fixtures, not by a suite of their own.
@@ -203,8 +209,6 @@ Stat derivation is an ordered list of individually cited steps, not formulas. Ea
 Each supported version is a first-class rule set, independently correct, and Warlord is not a flavour of CoM2. Version is a dimension of the model, not a set of conditionals added at each point of need; the latter makes "what does version Y do here" unanswerable without reading everything.
 
 The calculation layer holds no DOM references and loads headlessly. `index.html`'s `<script>` tags are the single source manifest, and each tag's scope marks whether the source is calculation or page.
-
-Spell targeting is assumed to read the permanent (base) record.
 
 Each step in the sequence of calculating unit stats carries a **phase**: which region of the engine makes that write. Phase is a provenance label — it records where the evidence for the write was found. The chain is stored in the calculator code and for the most part corresponds to the order in which effects are applied in the binaries.
 

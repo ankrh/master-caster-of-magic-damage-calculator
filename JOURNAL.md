@@ -8832,3 +8832,30 @@ these two flags gate a normalisation and derive no ability field of their own, u
 dual-source booleans that set a bit on the template. That cost real binary reading, and its home is
 the comment above `INNATE_CONDITION_FLAG_KEYS` in `Calculator/ability_gating.js`, which now says so
 instead of pointing at an open proposal.
+
+## 2026-09-09 — F269.1's worker-boundary check removed on the user's ruling
+
+Filed and executed as F269.1, then removed the same week. `tools/unit_checks/worker_boundary.js`
+and its registration are gone; the `node_unit_checks.js` header note reverts to `preset_checks.js`
+being the one Node script that evaluates a preset. Assertions 33,928 → 33,910.
+
+**Why it was built.** The matrix worker `importScripts` only the nine `data-worker` sources of the
+24 core sources. Node loads the whole manifest and the page loads everything, so moving a function
+between two core files leaves every Node assertion and every fixture green while the worker throws
+`ReferenceError`. F268.6 demonstrated it with `convolveDists`.
+
+**Why it went.** The claim that only this check could fail that class was wrong, and checking it
+settled the question: `renderMatrixTable` returns early when `matrixCache` is null, `matrixCache` is
+populated only after `renderMatrixSnapshot()` awaits the worker, and `tests/matrix.spec.js` waits on
+`#matrixTableWrap table` — so a worker `ReferenceError` times that wait out. **The browser suite
+already fails the class.** What the check bought was failing it in `npm test`, which is the suite the
+routing rule selects for a change touching no page code; without it the mistake surfaces at the next
+`test:all` instead. The user ruled that later discovery is acceptable and the suite cost is not.
+
+**The hazard itself is untouched and still real.** It is not the worker but the hand-picked
+nine-of-24 subset: nothing in a core source says whether the worker loads it. Making the worker
+import all core sources would remove the class outright rather than guard it. Not filed — measure
+the blob and parse cost first.
+
+Three `PROPOSALS.md` blocks were withdrawn with the check. Note the deletion of "It evaluates no
+preset itself" went with them: that sentence is true again now.
