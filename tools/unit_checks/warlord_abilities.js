@@ -148,7 +148,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertEqual(strayedMarionette.abilities.charmed, true,
     'Strayed Marionette receives persistent Charmed');
   const strayedTraceIds = strayedMarionette.statTrace.map(step => step.id);
-  assert(strayedTraceIds.indexOf('marionette:strayedTransmute')
+  assert(strayedTraceIds.indexOf('transmuteEquipment:heroAugment')
       < strayedTraceIds.indexOf('rebuild'),
   'Strayed Transmute Equipment stats precede Rebuild');
   assert(!strayedTraceIds.includes('outlanderXenoveterinary'),

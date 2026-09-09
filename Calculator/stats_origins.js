@@ -1258,7 +1258,56 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       producers: ['input:the side holds the Temporal Twist combat global; the block tests '
         + 'HASCOMBATGLOBAL(W,CGTemporalTwist,2) and reads no per-unit flag'] },
   ],
+  // **The key is not write-only and is not a redundant second home** (F256.1). Since F244.3f
+  // `b:transmuteEquipment:heroAugment` gates on `u.transmuteEquipment`, so the record field is
+  // that step's only input. Seven further engine **grant** paths write the same permanent flag,
+  // and each is Warlord's alone — the `CoM2 1.05.11 base` script set names `EncTransmuteEquipment`
+  // nowhere and has no such spell. **The cast, site 1, is modelled since F256.2** and is the row's
+  // `buffs` origin below; the six sites of the equip rule are F256.3's and have no control.
+  // This is the one home for that enumeration; the citations elsewhere point here rather than
+  // restating it:
+  //
+  //   1. the **cast** (`spells.ini` `[264]`, `EnchantmentID=69`), at
+  //      `OLSpell.CAS!NOTTRANSMUTEEQUIPMENT!-10..-9 "SETOLENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,0);" "SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,1);"`,
+  //      whose nonhero arm at
+  //      `OLSpell.CAS!NOTTRANSMUTEEQUIPMENT!-8..-5 "IF ((ISHERO(TU))=0) THEN {" "SETENCHANTMENTFLAG(TU,EncOrihalcon,1,1);"`
+  //      writes the three material flags too. F256.2 models both arms:
+  //      `buffs:transmuteEquipment:cast` and `buffs:transmuteEquipment:materials`
+  //      (`permanentCastFlagSteps`, `stats_identity.js`).
+  //   2. the Caravanserai retrain, at
+  //      `OverlandEndTurn.CAS!NOCARAVANSERAI!-20..-9 "SETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase,1);" "SETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase,1);"`
+  //   3. the Outlander re-equip of an existing unit, at
+  //      `OverlandEndTurn.CAS!NOOUTLANDERWEAPON!-20..-9 "SETENCHANTMENTFLAG(U,EncTransmuteEquipment,1,1);" "SETENCHANTMENTFLAG(U,EncTransmuteEquipment,1,1);"`
+  //   4. the same equip block on a newly created unit, at
+  //      `OLSpell.CAS!NOOUTLANDERWEAPON!-22..-9 "SETENCHANTMENTFLAG(NEWU,EncTransmuteEquipment,1,1);" "SETENCHANTMENTFLAG(NEWU,EncTransmuteEquipment,1,1);"`
+  //   5. the same equip block on a unit created by a **combat** spell, at
+  //      `COSpell.CAS!NOOUTLANDERWEAPON!-22..-9 "SETENCHANTMENTFLAG(NEWU,EncTransmuteEquipment,1,1);" "SETENCHANTMENTFLAG(NEWU,EncTransmuteEquipment,1,1);"`
+  //   6. the training write, at
+  //      `CreateUnit.CAS~": give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :"+1..+2 "IF GETENCHANTMENTFLAG(U,EncAdamant,ABase) %AND GETENCHANTMENTFLAG(U,EncOrihalcon,ABase) THEN {" "SETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase,1);"`
+  //   7. the tail of Mystic Surge's random-grant loop, at
+  //      `SpellMysticSurge.CAS~"IF GETENCHANTMENTFLAG(TU,EncAdamant,ABase)"+0..+4 "IF GETENCHANTMENTFLAG(TU,EncAdamant,ABase)" "SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,ABase,1);"`
+  //
+  // 2–7 are one rule with six sites, not six rules: each carries the same
+  // `: give transmutes equipment flag … :` idiom and the same `EncAdamant %AND EncOrihalcon`
+  // gate, and sets the flag so the two material enchantments are not granted twice — a
+  // bookkeeping consequence of the materials rather than a cast. F256.3 rules on them.
+  //
+  // One further site **clears** the permanent flag: Rust's cast, at
+  // `COSpell.CAS!NOTRUST!-9 "SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,0);"`, one of the nine
+  // flags that block clears. **F242 owns it**, and it is a second reason the key must survive:
+  // a clear needs something to clear.
+  //
+  // Not every site that names the flag is a writer of this field. The recast/dispel guard at
+  // `UnitCalcPre.CAS!NOSPIRITLINK!+3 "IF (GetEnchantmentFlag(U,EncTransmuteEquipment,1)=0) THEN { GOTO"`
+  // reads the permanent flag and then toggles only the *overland* one, leaving this field alone,
+  // and `DisAbil.CAS` reads it to print the hero's "Body Augmented" ability line. The augmentation
+  // gate this table's step feeds is a reader too; these are examples, not a closed list.
   transmuteEquipment: [
+    // The cast's own permanent write, site 1 of the enumeration above (F256.2). Its target gate
+    // is the `spells.ini` [264] row's `SpellTypeGroup=15`, so the row's key admits it and a
+    // permanently Fantastic target refuses it.
+    { origin: 'buffs', versions: SCOPE_WARLORD,
+      producers: ['step:buffs:transmuteEquipment:cast'] },
     { origin: 'regionB', versions: SCOPE_WARLORD,
       producers: ['step:b:marionette:strayedPackage'],
       // The branch, not the key: `UnitCalcPre.CAS!STRAYEDMARIONETTE!` is entered by a Wanderer

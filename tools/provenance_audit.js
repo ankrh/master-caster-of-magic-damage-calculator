@@ -137,8 +137,25 @@ function normalizeRepoPath(value) {
   return value.replace(/\\/g, '/');
 }
 
+// The CAS write verbs, documented in `Reference docs/Script source/CAS reference/Scripts.TXT`.
+// The paired readers (`GETSTAT`, `GETHEAB`, `GETOLENCHANTMENTFLAG`, ...) are deliberately absent,
+// so a span that only reads still resolves as citing no write. The shipped scripts use two
+// spellings, `VERB(U,...)` and the argument form `VERB U,...` the reference documents; requiring
+// an argument either way keeps a bare mention of the verb's name out.
+const casWriteVerbs = [
+  'SETSTAT', 'SETENCHANTMENTFLAG', 'SETCOMBATENCHANTMENTFLAG', 'SETOLENCHANTMENTFLAG', 'SETHEAB',
+];
+const casWriteCall = new RegExp(`\\b(?:${casWriteVerbs.join('|')})\\s*(?:\\(|[A-Za-z_]\\w*\\s*,)`);
+
+// A `.CAS` comment is enclosed between two `:` characters and may sit inside a line of code
+// (Scripts.TXT, "Basic Information"), so a comment can carry a call-shaped write that never runs.
+function stripCasComments(excerpt) {
+  return excerpt.split(':').filter((part, index) => index % 2 === 0).join(' ');
+}
+
 function hasImplementationWrite(excerpt) {
-  return /:=|\+=|-=|\*=|\/=|<<=|>>=|\|=|&=|\^=|\b[A-Za-z_]\w*\s*=(?!=)|(?:->|\.)[A-Za-z_]\w*\s*(?:=(?!=)|\+\+|--)|\]\s*(?:\+\+|--)|\b(?:Inc|Dec|SETSTAT|SetStat|SetUnitStat|SETENCHANTMENTFLAG|SETCOMBATENCHANTMENTFLAG)\s*\(|\boverlay_0388_0039\s*\(/.test(excerpt);
+  return /:=|\+=|-=|\*=|\/=|<<=|>>=|\|=|&=|\^=|\b[A-Za-z_]\w*\s*=(?!=)|(?:->|\.)[A-Za-z_]\w*\s*(?:=(?!=)|\+\+|--)|\]\s*(?:\+\+|--)|\b(?:Inc|Dec|SetStat|SetUnitStat)\s*\(|\boverlay_0388_0039\s*\(/.test(excerpt)
+    || casWriteCall.test(excerpt);
 }
 
 function excerptDigest(excerpt) {
@@ -327,8 +344,10 @@ function validateSourceCitation(comment, citation) {
     }
     return;
   }
-  const hasGate = /\b(if|case|while|for)\b|\?\s*[^:]+:|\b(and|or)\b/i.test(excerpt);
-  const hasWrite = hasImplementationWrite(excerpt);
+  // A commented-out call is not the write it looks like, so a script excerpt is read as code only.
+  const code = sourcePath.toLowerCase().endsWith('.cas') ? stripCasComments(excerpt) : excerpt;
+  const hasGate = /\b(if|case|while|for)\b|\?\s*[^:]+:|\b(and|or)\b/i.test(code);
+  const hasWrite = hasImplementationWrite(code);
   if (!hasGate || !hasWrite) {
     fail(`${comment.file}:${comment.line} source range lacks ${!hasGate ? 'an eligibility gate' : 'a stat write/arithmetic'}: ${citation}`);
   }
@@ -446,5 +465,5 @@ if (require.main === module) {
 
 module.exports = {
   calculatorFiles, computeVerifiedBinding, discoverFormulaSites, hasImplementationWrite,
-  makeStableSpanCitation, parseSourceCitation, readProvenanceComments, runAudit,
+  makeStableSpanCitation, parseSourceCitation, readProvenanceComments, runAudit, stripCasComments,
 };

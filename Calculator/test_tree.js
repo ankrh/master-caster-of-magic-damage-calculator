@@ -1131,6 +1131,16 @@ const TEST_TREE = [
         ],
       },
       {
+        name: 'Transmute Equipment',
+        keys: [
+          'transmuteEquipmentHeroMeleeWarlord',
+          'transmuteEquipmentHeroRangedWarlord',
+          'transmuteEquipmentNonHeroAdamantiumWarlord',
+          'transmuteEquipmentNonHeroOrihalconResWarlord',
+          'transmuteEquipmentFantasticRefusedWarlord',
+        ],
+      },
+      {
         name: 'Type precedence',
         keys: [
           'bloodLustUndeadFlagRecoversChaosCoM2',

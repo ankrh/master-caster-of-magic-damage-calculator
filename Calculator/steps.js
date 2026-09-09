@@ -182,6 +182,10 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'buffs:discipline:cast': SCOPE_MODERN,
   'buffs:haste:cast': SCOPE_ALL,
   'buffs:rebuild:cast': SCOPE_WARLORD,
+  // The Transmute Equipment cast's two writes (F256.2): the permanent flag, and the non-hero
+  // arm's material re-equip. Warlord's alone — base CoM2's script set has no such spell.
+  'buffs:transmuteEquipment:cast': SCOPE_WARLORD,
+  'buffs:transmuteEquipment:materials': SCOPE_WARLORD,
   'buffs:spellLock:cast': SCOPE_COM_PLUS,
   'buffs:bless:cast': SCOPE_ALL,
   'buffs:invisibility:cast': SCOPE_ALL,
@@ -279,7 +283,11 @@ const STEP_VERSION_SCOPES = Object.freeze({
   'b:marionette:stats': SCOPE_WARLORD,
   'b:marionette:spellLock': SCOPE_WARLORD,
   'b:marionette:strayedPackage': SCOPE_WARLORD,
-  'b:marionette:strayedTransmute': SCOPE_WARLORD,
+  // `UnitCalcPre.CAS`'s `: Hero augmentation effect of transmute equipment spell :` block. It was
+  // `b:marionette:strayedTransmute` until F256.2, when the cast got a control and the block became
+  // reachable by a hero carrying no Marionette branch at all; the block's own gate never named the
+  // branch, so the Marionette-flavoured id and source label had become wrong on the card.
+  'b:transmuteEquipment:heroAugment': SCOPE_WARLORD,
   'b:natureLink': SCOPE_WARLORD,
   'b:sanctify': SCOPE_WARLORD,
   'b:outlanderBallisticsTraining': SCOPE_WARLORD,

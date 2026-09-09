@@ -767,9 +767,13 @@ const POSITIONED_GRANT_FIELDS = [
   // The strayed Marionette package's own read side. `UnitCalcPre.CAS` writes the permanent
   // `EncTransmuteEquipment` in the strayed block at line 371 and the hero augmentation 298 lines
   // later opens on `GetEnchantmentFlag(U,EncTransmuteEquipment,1)` — the permanent flag, read at
-  // its own rank — so `b:marionette:strayedTransmute`'s gate is a record read and the two ranks
-  // are what order it (F244.3f). `rebuild` above is the same shape one block further on.
-  'transmuteEquipment', // `b:marionette:strayedPackage`  ->  `b:marionette:strayedTransmute`
+  // its own rank — so `b:transmuteEquipment:heroAugment`'s gate is a record read and the two ranks
+  // are what order it (F244.3f). `rebuild` above is the same shape one block further on. Since
+  // F256.2 the flag also arrives from the cast's own control, at `buffs:transmuteEquipment:cast`,
+  // so the augmentation is reachable by a hero that is no Marionette at all — which is what
+  // retired the step's Marionette-flavoured id.
+  'transmuteEquipment', // `b:marionette:strayedPackage`, `buffs:transmuteEquipment:cast`
+                        //   ->  `b:transmuteEquipment:heroAugment`
   // The block's own skip: `IF (GETOLENCHANTMENTFLAG(U,EncSpellLock,1)>0) THEN { GOTO
   // "NOLONGERSTRAYEDMARIONETTE" }` refuses the seven writes on a Wanderer that already carries
   // Spell Lock, and `b:marionette:spellLock` is the write that sets it, one rank later. Since
@@ -871,13 +875,15 @@ const POSITIONED_GRANT_WRITES = [
   'lightningResist',  // `b:insulation`
   'coldImmunity',     // `b:insulation`
   // The strayed Marionette package's two flag writes and the Spell Lock write that follows it
-  // (F244.3f). `transmuteEquipment` has no control in any version, so the step is its only
-  // source; `charmed` is a template ability in all five and its seed carries the card's mark,
+  // (F244.3f). `transmuteEquipment` has a cast enchantment control in Warlord since F256.2 and no
+  // `template` row, so `buffs:transmuteEquipment:cast` carries the card's mark the way
+  // `buffs:haste:cast` and `buffs:spellLock:cast` carry theirs, and this region-`b` write adds
+  // the strayed branch's on top; `charmed` is a template ability in all five and its seed carries the card's mark,
   // with this write adding the branch's on top; `spellLock` is a cast enchantment in all three
   // CoM-era engines, so its `buffs` origin covers them and this region-`b` write is Warlord's
   // alone — the two can meet, and the cast one wins the package gate. `rebuild` is on the list
   // above already — `buffs:rebuild:cast` writes it too.
-  'transmuteEquipment', // `b:marionette:strayedPackage`
+  'transmuteEquipment', // `b:marionette:strayedPackage`, `buffs:transmuteEquipment:cast`
   'charmed',            // `b:marionette:strayedPackage`
   'spellLock',          // `b:marionette:spellLock`
   // The owned Marionette branch's flag grants (F244.3g). Eleven keys join here; the fourteen the list
@@ -1533,6 +1539,48 @@ function permanentCastFlagSteps(version, marked) {
       apply: u => { u.discipline = disciplineValue(); } })] : []),
     // PROVENANCE[rebuild:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=this entry's old text said the write is reconstructed nowhere and that was wrong. `OLSpell.CAS!NOTMARKOFCONQUEROR!+5 "SETENCHANTMENTFLAG(TU,EncRebuild,1,1)"` is the Rebuild cast writing the permanent flag, unconditionally and in this step's one version, inside the block PROVENANCE[rebuildEffectDerivation] already cites for the package it confers. What is left unverified is only the calculator's own assumption that a marked flag means the cast landed, which is shared by every buffs cast step. This looks promotable to VERIFIED on that span and F250 owns the decision; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
     ...(isWarlord ? [statStep({ id: 'rebuild:cast', phase: 'buffs', ...flag('rebuild', 'Rebuild') })] : []),
+    // Transmute Equipment joined them in F256.2. The block is two writes, not one, and they are
+    // two steps for that reason: the permanent flag is written for every admitted target, and a
+    // second arm behind `IF ((ISHERO(TU))=0)` re-equips a non-hero with the three material flags.
+    // The flag is what the hero augmentation `b:transmuteEquipment:heroAugment` reads at its own
+    // rank 298 lines later in `UnitCalcPre.CAS`, so a hero takes the stat package and a non-hero
+    // takes the materials — the two arms are disjoint by construction, as the script has them.
+    //
+    // **The target gate is the spell row's, read exactly as F254 read Discipline's.**
+    // `spells.ini` `[264] Transmute Equipment` carries `SpellTypeGroup=15`
+    // (`SGUnitBuffNormalUnit`), so `@Spelltargeting@ValidUnitSpellTarget`'s group-15 arm refuses a
+    // target whose **permanent** `Fantastic` is set, and it carries no `NonHero`, so a hero is
+    // admitted — which is the whole point of the augmentation block. `u.fantastic` here is the
+    // permanent record at this rank for the reason `disciplineCastTargetAdmitted` above states:
+    // `buffs` *is* the permanent-record phase, and `ctx.base` does not exist yet.
+    //
+    // The cast's other write, `SETOLENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,0)`, clears the
+    // **overland** flag the recast/dispel guard at
+    // `UnitCalcPre.CAS!NOSPIRITLINK!+3 "IF (GetEnchantmentFlag(U,EncTransmuteEquipment,1)=0) THEN { GOTO"`
+    // toggles. The calculator carries no overland flag, so that half is modelled by nothing and
+    // the tooltip says so rather than the record pretending to hold it.
+    // PROVENANCE[transmuteEquipment:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=the write itself is reconstructed: `OLSpell.CAS!NOTTRANSMUTEEQUIPMENT!-10..-9 "SETOLENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,0)" "SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,1)"` is the Transmute Equipment cast writing the permanent flag, unconditionally and in this step's one version. What is left unverified is the same thing every buffs cast step leaves unverified - that the card's mark is evidence the cast landed - plus the target gate, which is read off the `spells.ini` [264] row's `SpellTypeGroup=15` through `@Spelltargeting@ValidUnitSpellTarget` rather than off any line of the script, and F254.1's evidence file is where that routine is reconstructed and F250 owns the promotion decision; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
+    ...(isWarlord ? [statStep({ id: 'transmuteEquipment:cast', phase: 'buffs',
+      sourceId: 'transmuteEquipment', sourceLabel: 'Transmute Equipment',
+      writes: ['transmuteEquipment'],
+      when: u => !!cast.transmuteEquipment && !u.fantastic,
+      apply: u => { u.transmuteEquipment = true; } })] : []),
+    // The non-hero arm. Three material flags in one block —
+    // `SETENCHANTMENTFLAG(TU,EncMagic,1,1)`, `EncAdamant`, `EncOrihalcon` — and the calculator's
+    // record carries the weapon half as one quality field rather than three flags, so the pair of
+    // writes here is what those three flags come to. `Units.RecalculateUnits.pas` reads the
+    // weapon quality as separate tests in which `EncAdamant` overrides `EncMithril` and `EncMagic`
+    // alone keeps 0 ($00598ED9..$00598F43), so all three flags standing together *is*
+    // `weaponMaterial = 'adamantium'`; `EncOrihalcon` is `armorMaterial` outright
+    // (`training:armorQuality`, `stats_sequence.js`). Both are assignments rather than the floor
+    // `training:artificer` makes of its lone `EncMagic`, because adamantium and orihalcon are the
+    // top of their ladders: no material the card can already state survives them.
+    // PROVENANCE[transmuteEquipment:materials]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=the three flag writes are reconstructed at `OLSpell.CAS!NOTTRANSMUTEEQUIPMENT!-8..-5 "IF ((ISHERO(TU))=0) THEN {" "SETENCHANTMENTFLAG(TU,EncOrihalcon,1,1)"`, and the quality ladder they resolve to is reconstructed at `Reference docs/Caster binary/Units.RecalculateUnits.pas` ($00598ED9..$00598F43). What is unverified is the cast-landed assumption and the same group-15 target gate PROVENANCE[transmuteEquipment:cast] names; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
+    ...(isWarlord ? [statStep({ id: 'transmuteEquipment:materials', phase: 'buffs',
+      sourceId: 'transmuteEquipment', sourceLabel: 'Transmute Equipment: re-equip',
+      writes: ['weaponMaterial', 'armorMaterial'],
+      when: u => !!cast.transmuteEquipment && !u.fantastic && !u.ishero,
+      apply: u => { u.weaponMaterial = 'adamantium'; u.armorMaterial = 'orihalcon'; } })] : []),
     // Haste joined them in F244.3e for the same reason Resist Magic and Discipline joined in
     // F244.3d: the Anti-Gravity Drive reform's permanent `EncHaste` write became
     // `training:temporalDrive`, so `haste` is a record field, and its only control is a cast

@@ -4,6 +4,175 @@
 
 # Journal
 
+## 2026-09-08 — F256.2: the Transmute Equipment cast becomes a control, and one step loses a name it never earned
+
+The cast is `spells.ini` `[264]`, Realm 1 (Nature), `EnchantmentID=69`, and its `OLSpell.CAS` block
+is **two** writes: the permanent `EncTransmuteEquipment` for every admitted target, and, behind
+`IF ((ISHERO(TU))=0)`, `EncMagic` + `EncAdamant` + `EncOrihalcon`. Both are steps now,
+`buffs:transmuteEquipment:cast` and `buffs:transmuteEquipment:materials`, Warlord-scoped, in
+`permanentCastFlagSteps` beside Rebuild's and Haste's.
+
+The three material flags come to two record fields because the compiled quality ladder reads them
+as three separate tests in which Adamant overrides Mithril and Magic alone keeps 0
+(`Units.RecalculateUnits.pas`, $00598ED9..$00598F43) — so all three together *is* adamantium, and
+`EncOrihalcon` is the armour material outright. Both are assignments rather than the floor
+`training:artificer` makes of its lone `EncMagic`, because each is the top of its ladder.
+
+**The target gate came from the row, not from the script.** `SpellTypeGroup=15` and no `NonHero`,
+read through F254.1's reconstruction of `@Spelltargeting@ValidUnitSpellTarget`: a permanently
+Fantastic target is refused, a hero is admitted. Reading it any other way would have been a guess —
+no line of `OLSpell.CAS`'s own block tests either.
+
+### The step that was never a Marionette block
+
+`b:marionette:strayedTransmute` is now `b:transmuteEquipment:heroAugment`, sourceId
+`transmuteEquipment`. The script block is `: Hero augmentation effect of transmute equipment spell :`
+and sits in `UnitCalcPre.CAS`'s hero region, 298 lines after the strayed package; its gate has read
+the record flag rather than the branch constant since F244.3f. While the strayed package was the
+flag's only writer nobody could see the difference. With a control, an ordinary hero reaches the
+block, and the hover chain would have told the user a Marionette did it — the modifier-chain
+contract in `CLAUDE.md` is what makes the rename obligatory rather than cosmetic. One provenance
+anchor moved with it (`tools/rebind_provenance_anchors.js --write`, hash unchanged).
+
+### The `SRanged` defect F244.3f reported
+
+The block's `SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2))` has no strength and no type test, and
+the apply walked `ctx.channels` writing only where `marionetteRangedSlot` was true — a slot flag
+carrying the *branch* terms. So the +2 would have vanished for exactly the heroes the new control
+creates. It is `addToSlot(u, ctx, 'rangedField', 2)` now, the same gate `training:artificer`
+(`combat_abilities.js`) already models the identical `SETSTAT(U,SRanged,…)` line with.
+`marionetteRangedSlot` had no other reader and went with it; `marionetteOwnsThisRangedSlot`, the
+owned branch's, stays.
+
+That change moves one existing number, and only one: a strayed Wanderer whose **shared** slot
+states no ranged type used to publish `rtb` 2 and now publishes 0 — the shared byte is the DOS
+record's ranged/thrown/breath/gaze projection, and `rangedField` asks whether it currently *is* the
+ranged field. Where the shared slot states a type, and on every modern `ranged` channel, nothing
+moved.
+
+### What the corpus says, and what it cannot
+
+`tools/derivation_equivalence_diff.js` reports 15,976 differing cases, and **every one of them is a
+`combo*` case**: those blocks pick their abilities by index over the def lists, so adding one def
+re-rolls their membership. Over the 63,686 shared cases with no `combo` in the name the diff is
+zero, and 150 cases are new (30 per version — the corpus reached `transmuteEquipment` for the first
+time, so the "keys the corpus never states" count fell from 27 to 26 and the stated-key count rose
+from 202 to 203). The single existing move above was measured by direct A/B probe instead, which is
+what a combo-reshuffling corpus makes necessary.
+
+## 2026-09-08 — F255.2: the CAS citations widened past their write are narrowed back
+
+F255.1 bounded the sweep: 238 of the 753 `PROVENANCE` citations resolve into a `.CAS` file and
+25 sites over 6 distinct spans carry `SETHEAB` or `SETOLENCHANTMENTFLAG`. Re-verified here from
+the same script (`tmp/f255_scan.js` while it existed): the six spans and their site counts are
+exactly what F255.1 reported.
+
+The test applied to each span was mechanical, not editorial: enumerate every contiguous sub-range
+that passes the audit today (gate + write) and would have failed it before F255.1, i.e. whose only
+write is one of the two verbs. Two spans had such a sub-range that also still carries the claim.
+
+- **The ascension gate, 255-259 → 255-257**, on the 16 `marionette:ascension:*` formulas in
+  `stats_sequence.js`. The gate is `IF (SPELLSTATE(W,SMarionetteAscension)<>2) …` and the write it
+  controls is `SETHEAB(W,48,HAArcanePower,2)` two lines down. The fifth line, the `SCHARGE`
+  recompute, was the only thing the old recogniser could see, and none of the 16 claims it.
+  `marionettePackage` (`stats_identity.js`) keeps 255-259, because its own comment names the
+  `SCHARGE` recompute as part of what it decides — the span is wide there for a real reason.
+- **Spell Lock, 374-394 → 368-394**, on `marionette:spellLock`. The old span began mid-block on
+  line 374’s `SETENCHANTMENTFLAG(U,EncRebuild,1,1)`, a write belonging to the neighbouring
+  `marionette:strayedPackage` step, reached for solely because `SETOLENCHANTMENTFLAG` at 394 was
+  invisible; the step’s own comment said so. The replacement runs from the skip at 368 to the write
+  at 394, so it holds both ends of the jump and shows that both paths reach the write — which is
+  the claim. **This is not the narrowest window, and the first pass got it wrong**: 388-394 also
+  passes the audit and is 20 lines shorter, but its only `IF` is the other step’s Arcane Ward skip,
+  which gates nothing for this write. The GPT review named that as the same defect F244.3g deleted
+  a span for, and it is right — disclosing that a gate is satisfied syntactically does not make it
+  relevant. The test F255.2 applies is "does the span evidence the claim", not "is it short".
+
+Four spans stay wide, each for a stated reason rather than for the recogniser:
+
+- `OLSpell.CAS` 489-498 (Spirit Link, 4 sites) and 581-593 / 581-594 (Rebuild, 2 sites). The
+  newly-citable sub-span in each is the 3-line head — the `IF (SP<>S…)` dispatch plus the
+  `SETOLENCHANTMENTFLAG` clear — which does **not** contain the writes those formulas make
+  (`SResist`, the `BASEFANTASTIC` block; the non-hero stat block). Three of the four Spirit Link
+  formulas cite nothing else at all. Narrowing would have left them citing a block without their
+  write.
+- `UnitCalcPre.CAS` 364-390 (`marionette:strayedPackage`). Every newly-citable sub-range is 2-3
+  lines and carries one of the seven writes the step makes; the span is the package.
+- `UnitCalcPre.CAS` 255-259 for `marionettePackage`, above.
+
+What the sweep does **not** establish, and should not be read as establishing: the audit pairs a
+gate and a write positionally, so a narrowed span is not proof the gate found controls the write
+found. Both narrowings were checked by reading, not by the tool. Untouched and still true: CAS `=`
+is equality and the recogniser’s bare-identifier branch counts `IF (R=3)` as a write, and
+`DEALCOMBATDAMAGE` (39 sites) and `APPLYCHAOSCHANNEL` (7) are shipped mutators the recogniser
+still does not know. Neither was in F255’s scope.
+
+Verification: audit totals unchanged at 365 formulas / 346 verified / 19 UNVERIFIED, so no
+narrowing was load-bearing. `tools/rebind_provenance_anchors.js` rehashed exactly the 17 changed
+ids, none added or removed. Every changed line in `Calculator/stats_sequence.js` is a `//`
+comment, and `tools/derivation_equivalence.js` is byte-identical to a run over the same tree with
+the two span strings reverted (sha256 `56c930aef435f16a29eaa51650a99e6e128f7011bf85c996c478929a209bf90c`,
+the same digest F255.1 recorded).
+
+## 2026-09-08 — F255.1: the provenance audit recognises `SETHEAB` and `SETOLENCHANTMENTFLAG`
+
+`hasImplementationWrite` (`tools/provenance_audit.js`) now lists both verbs alongside `SETSTAT`,
+`SETENCHANTMENTFLAG` and `SETCOMBATENCHANTMENTFLAG`. Their readers `GETHEAB` and
+`GETOLENCHANTMENTFLAG` are deliberately absent, and `tools/provenance_audit_tests.js` asserts both
+halves rather than only the positive one.
+
+Measured before and after, on the shipped `Warlord 1.5.12.9/UnitCalcPre.CAS`:
+
+- the three lines around the first `SETHEAB` (a `SPELLSTATE` gate, a blank, the write) and
+- the one line carrying the first `SETOLENCHANTMENTFLAG` (gate and write on the same line)
+
+both resolved `write: false` under the old regex and `true` under the new one. That is the F244.3f
+finding reproduced from a different span, and it is what the tests encode: the window is found by
+searching for the verb, not by a line number, because a bare `<script>.CAS:<line>` citation is
+deprecated by the CAS citation grammar and `tools/cas_citation_audit.js` budgets it at 0.
+
+The GPT review round found two things the first pass missed, both fixed here.
+
+- **The shipped scripts use two call spellings.** `Scripts.TXT` documents the argument form
+  (`SETSTAT U,S,B,V`), and the scripts use it as well as `VERB(...)`: 41 `SETSTAT`, 29
+  `SETCOMBATENCHANTMENTFLAG`, 8 `SETENCHANTMENTFLAG` and 2 `SETOLENCHANTMENTFLAG` sites, across
+  6 base-CoM2 and 3 Warlord scripts, are written without parentheses; `SETHEAB` has none. The
+  recogniser required the paren, so 80 shipped write sites were invisible. It now accepts either
+  spelling for all five CAS verbs, still requiring an argument so a bare mention of the name is not
+  a write. Applying it to the three pre-existing verbs as well as the two new ones is a scope
+  choice, taken because the alternative is a recogniser where two verbs have two spellings and
+  three have one.
+- **A CAS comment could carry a call-shaped write.** Comments sit between two `:` characters and
+  may be mid-line, so `IF (R>3) THEN { :SETHEAB W,1,2,3;: }` read as gate + write. A `.CAS`
+  excerpt is now read as code only, for the gate test as well as the write test. No existing
+  citation depended on comment text: the audit still reports 365 formulas, 346 verified.
+
+Left alone, and both worth knowing before F255.2: `DEALCOMBATDAMAGE` and `APPLYCHAOSCHANNEL` are
+documented, shipped mutators the recogniser still does not know, and the gate/write pair is
+positional only — nothing checks that the gate found in a span controls the write found in it.
+
+**Sizing for F255.2.** Probe over the 753 `PROVENANCE` citations in the formula-bearing sources:
+238 resolve into a `.CAS` file, 237 of those span more than one line, and 25 citation sites — over
+**6 distinct spans** — contain one of the two new verbs:
+
+| span | sites |
+|---|---|
+| `UnitCalcPre` @span:5 (marionette ascension) | 17 |
+| `OLSpell` @span:10 (Spirit Link) | 4 |
+| `UnitCalcPre` @span:27 (marionette strayed) | 1 |
+| `UnitCalcPre` @span:21 (marionette spell lock) | 1 |
+| `OLSpell` @span:13 (rebuild) | 1 |
+| `OLSpell` @span:14 (rebuild derivation) | 1 |
+
+Every one of the 25 also carries an already-recognised verb, which is what the old gate forced. The
+two 21- and 27-line spans are the sharpest narrowing candidates. Nothing outside these 6 spans can
+have been widened *for this reason*, so F255.2's search is bounded by them; a span widened for some
+other reason is a different question.
+
+Not fixed here, and noted only as a lead: `hasImplementationWrite`'s
+bare-identifier-assignment alternative treats a CAS *comparison* such as `IF (ABase=1)` as a
+write, because CAS uses `=` for equality. That predates F255 and was not touched.
+
 ## 2026-09-08 — F259.1: the digest states its own scope, and a refusing corpus cannot report a zero
 
 `tools/derivation_equivalence.js` now prints, and writes into the digest under `__scope`, exactly
@@ -2951,7 +3120,7 @@ step could not carry two different gates.
 
 Two blocks 298 lines later open on the permanent flags the package wrote:
 `GetEnchantmentFlag(U,EncTransmuteEquipment,1)` at 669 and `EncRebuild` at 683. So
-`b:marionette:strayedTransmute` reads `u.transmuteEquipment` off the record now instead of the
+`b:transmuteEquipment:heroAugment` reads `u.transmuteEquipment` off the record now instead of the
 branch constant, and `b:rebuild` already read `u.rebuild`.
 
 The first revision of this subtask recorded those reads as unfalsifiable, on F244.3e's
@@ -2971,7 +3140,7 @@ that passed every derivation-level assertion now fail:
 
 The limit is on the reachable **inputs**, not on the claim. Rank mutations are a fallback, not a
 substitute. 20 mutations run in total across both rounds, all reverted; **18 fail a check**, and the
-two that do not (the hero-region terms on `deriveMarionettePackage` and `b:marionette:strayedTransmute`)
+two that do not (the hero-region terms on `deriveMarionettePackage` and `b:transmuteEquipment:heroAugment`)
 are covered by their own predicate assertions instead.
 
 ### Three things the first revision got wrong
@@ -3124,12 +3293,16 @@ evidence claim had to be narrowed after review.
 
 Found while checking the premise, and relevant to whoever takes F244.3g and F147:
 
-- `transmuteEquipment` has three writers besides the package — the Transmute Equipment **cast**
-  (`OLSpell.CAS` 817-820, an enabled unit enchantment at `spells.ini` [Transmute Equipment]), the
-  Caravanserai retrain (`OverlandEndTurn.CAS` 161-193), and an Adamant-plus-Orihalcon training write
-  (`CreateUnit.CAS` 75-77). None has a control. **This makes F147's premise wrong**: it calls the
-  flag "a redundant second home" for `b:marionette:strayedTransmute`, and the flag is now that
-  step's only input as well as a real cast target.
+- `transmuteEquipment` has writers besides the package, none with a control. **This makes F147's
+  premise wrong**: it called the flag "a redundant second home" for
+  `b:transmuteEquipment:heroAugment`, and the flag is now that step's only input as well as a real
+  cast target. F256.1 (2026-09-08) corrected F147's body and re-read the scripts: the three-writer
+  count above was low. The cited enumeration lives on the `transmuteEquipment` entry in
+  `Calculator/stats_origins.js` and is not repeated here — the grep that found it must range over
+  **all** shipped scripts, not the four files the earlier reading happened to open; the GPT review
+  round is what caught that, in `COSpell.CAS` and `SpellMysticSurge.CAS`. Rust's clear of the same
+  flag is one of the eight and belongs to F242, which is a second reason F147 must not delete the
+  key: a clear needs something to clear.
 - The ascension block's retort tail (`UnitCalcPre.CAS` 303-356) writes `HASage`,
   `HAMechanicalMaster`, `HARitualMaster`, `HACharmed` and `EncSpellLock` again behind five wizard
   retorts. F244.3g's, with the rest of the owned branch.
@@ -4381,7 +4554,7 @@ training, cast and region-`b` writes at once, which is exactly the problem F244.
 | `permanentFantastic` | 81 | `b:fieryFury:race[when]` | `isFantasticBase \|\| destinyActive` | **template or cast**: the permanent `Fantastic` flag, which `a:baseCopy` now publishes as `ctx.base.fantastic`; the post-run assertion at `stats.js:2400` checks the two agree | Warlord |
 | `marionette` | 67 | `b:marionette:rangedType[apply]`, `b:marionette:ascensionRangedType[when]+[apply]` | `deriveMarionettePackage(identity, markIntrinsicLucky(suppliedAbilities), version)` | **region `b`**, not cast: the `UnitCalcPre.CAS` Marionette package. Its 30+ ability grants are merged into `abilities` pre-sequence | Warlord |
 | `marionetteOwned` | 203 | three `b:marionette:*[when]` | `marionette.state` | the owned branch's gate | Warlord |
-| `marionetteStrayed` | 204 | `b:marionette:strayedTransmute[when]` | `marionette.state` | `UnitCalcPre.CAS!STRAYEDMARIONETTE!+0..+28 "!STRAYEDMARIONETTE!" "!NOLONGERSTRAYEDMARIONETTE!"` | Warlord |
+| `marionetteStrayed` | 204 | `b:transmuteEquipment:heroAugment[when]` | `marionette.state` | `UnitCalcPre.CAS!STRAYEDMARIONETTE!+0..+28 "!STRAYEDMARIONETTE!" "!NOLONGERSTRAYEDMARIONETTE!"` | Warlord |
 | `marionetteAttackBonus` | 205 | `b:marionette:stats[apply]` | `marionette.attackBonus` | magnitude | Warlord |
 | `marionetteDefenseBonus` | 206 | `b:marionette:stats[apply]` | `marionette.defenseBonus` | magnitude | Warlord |
 | `outlanderReform` | 92 | four `b:outlander*[when]` | `applyOutlanderReformGrants(…, permanentFantastic, isHero)` | **training / overland / region `b`, mixed**: the reform block's own eligibility, from four `BASEFANTASTIC(U)` sites (F198). Its ability grants are merged into `abilities` pre-sequence | Warlord |

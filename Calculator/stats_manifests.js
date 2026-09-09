@@ -409,6 +409,11 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   // `training:temporalDrive` has made `haste` a record field (F244.3e).
   'buffs:rebuild:cast', 'buffs:trueSight:cast', 'buffs:resistMagic:cast',
   'buffs:discipline:cast', 'buffs:haste:cast', 'buffs:spellLock:cast', 'buffs:bless:cast',
+  // Transmute Equipment's two writes are one block of `OLSpell.CAS`, in its own line order:
+  // the permanent flag first, then the non-hero arm's material re-equip (F256.2). The flag is
+  // what `b:transmuteEquipment:heroAugment` reads 298 lines into `UnitCalcPre.CAS`, and the
+  // materials are what `a:baseCopy` hands the compiled quality ladder.
+  'buffs:transmuteEquipment:cast', 'buffs:transmuteEquipment:materials',
   // Invisibility is the odd one among the cast writes: it is a dual-source calc key with a
   // `template` row, and this is where the *marked* control's write lands now that the seed
   // reads the innate half alone (F252.3).
@@ -456,7 +461,7 @@ const CHAIN_COM2_WARLORD_1_5_12_9 = versionChain('com2_warlord_1.5.12.9', [
   // writes, then the Spell Lock write outside their skip, and only 298 lines later Transmute
   // Equipment's hero augmentation and Rebuild's, each reading the permanent flag the package set.
   'b:marionette:strayedPackage', 'b:marionette:spellLock',
-  'b:marionette:strayedTransmute', 'b:rebuild', 'b:tactician', 'b:fieryFury:race',
+  'b:transmuteEquipment:heroAugment', 'b:rebuild', 'b:tactician', 'b:fieryFury:race',
   'b:fieryFury', 'b:insulation', 'b:divineProtection', 'b:natureLink',
   'b:outlanderXenoveterinary', 'b:magitekEngine', 'b:bombsGrenades',
   'b:upgradedExplosive:ranged', 'b:upgradedExplosive:fireBreath',

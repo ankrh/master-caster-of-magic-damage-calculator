@@ -715,17 +715,17 @@ function precalcScriptStatSteps(ctx) {
     statStep({ id: 'marionette:books:deathImmunity', ...marionetteOwnedGrantStep('deathImmunity', marionette, marionetteOwned) }),
     // PROVENANCE[marionette:books:weaponImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:1c2e8a605f513b6d57e807e0
     statStep({ id: 'marionette:books:weaponImmunity', ...marionetteOwnedGrantStep('weaponImmunity', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:poison]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ed65171994183ea86738f1c6
+    // PROVENANCE[marionette:ascension:poison]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ed65171994183ea86738f1c6
     statStep({ id: 'marionette:ascension:poison', ...marionetteOwnedGrantStep('poison', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:stoningTouch]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ed65171994183ea86738f1c6
+    // PROVENANCE[marionette:ascension:stoningTouch]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ed65171994183ea86738f1c6
     statStep({ id: 'marionette:ascension:stoningTouch', ...marionetteOwnedGrantStep('stoningTouch', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:counterImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:1298176c625f84071d1711d2
+    // PROVENANCE[marionette:ascension:counterImmunity]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:1298176c625f84071d1711d2
     statStep({ id: 'marionette:ascension:counterImmunity', ...marionetteOwnedGrantStep('counterImmunity', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:illusion]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:1298176c625f84071d1711d2
+    // PROVENANCE[marionette:ascension:illusion]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:1298176c625f84071d1711d2
     statStep({ id: 'marionette:ascension:illusion', ...marionetteOwnedGrantStep('illusion', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:wallCrusher]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
+    // PROVENANCE[marionette:ascension:wallCrusher]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
     statStep({ id: 'marionette:ascension:wallCrusher', ...marionetteOwnedGrantStep('wallCrusher', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:armorPiercing]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
+    // PROVENANCE[marionette:ascension:armorPiercing]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
     statStep({ id: 'marionette:ascension:armorPiercing', ...marionetteOwnedGrantStep('armorPiercing', marionette, marionetteOwned) }),
     // The ascension block's own retype, on the **third line of the Chaos arm**: the five spell arms
     // wrote `SRangedType` at `UnitCalcPre.CAS!NOVAMPIRISM!+26..+98 "SETSTAT(U,SRangedType,0,37);" "SETSTAT(U,SRangedType,0,33);"`, the fifteen book blocks follow, and only
@@ -739,7 +739,7 @@ function precalcScriptStatSteps(ctx) {
     // write. The first two are what the step's `when` carries beyond `PRIMARY=3` —
     // `marionetteOwned` and, through `marionette.ascensionRangedType` being null otherwise,
     // the ascension test — and neither is inside the arm (F244.3g review, finding 4).
-    // PROVENANCE[marionette:ascensionRangedType]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
+    // PROVENANCE[marionette:ascensionRangedType]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:7452b4dcbe1df6aa43cdb7a0
     statStep({ id: 'marionette:ascensionRangedType', sourceId: 'marionetteChanneler',
       sourceLabel: 'Marionette (Channeler)', phase: 'b', writes: rangedTypeFields,
       when: () => marionetteOwned && !!marionette.ascensionRangedType,
@@ -750,23 +750,23 @@ function precalcScriptStatSteps(ctx) {
           }
         }
       } }),
-    // PROVENANCE[marionette:ascension:exorcise]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:2d1af45a3798d4da1eed770a
+    // PROVENANCE[marionette:ascension:exorcise]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:2d1af45a3798d4da1eed770a
     statStep({ id: 'marionette:ascension:exorcise', ...marionetteOwnedGrantStep('exorcise', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:bless]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:2d1af45a3798d4da1eed770a
+    // PROVENANCE[marionette:ascension:bless]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:2d1af45a3798d4da1eed770a
     statStep({ id: 'marionette:ascension:bless', ...marionetteOwnedGrantStep('bless', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:bloodSucker]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ae1848acfc2d2719280b398c
+    // PROVENANCE[marionette:ascension:bloodSucker]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ae1848acfc2d2719280b398c
     statStep({ id: 'marionette:ascension:bloodSucker', ...marionetteOwnedGrantStep('bloodSucker', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:createUndead]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ae1848acfc2d2719280b398c
+    // PROVENANCE[marionette:ascension:createUndead]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:4:ae1848acfc2d2719280b398c
     statStep({ id: 'marionette:ascension:createUndead', ...marionetteOwnedGrantStep('createUndead', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:regeneration]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:6620a3426b88e50747a69f0a
+    // PROVENANCE[marionette:ascension:regeneration]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:6620a3426b88e50747a69f0a
     statStep({ id: 'marionette:ascension:regeneration', ...marionetteOwnedGrantStep('regeneration', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:invisibility]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:62742dfecf522ecc0db41d4c
+    // PROVENANCE[marionette:ascension:invisibility]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:62742dfecf522ecc0db41d4c
     statStep({ id: 'marionette:ascension:invisibility', ...marionetteOwnedGrantStep('invisibility', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:destruction]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:ee6d9fdf8bc302149fcf5af8
+    // PROVENANCE[marionette:ascension:destruction]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:ee6d9fdf8bc302149fcf5af8
     statStep({ id: 'marionette:ascension:destruction', ...marionetteOwnedGrantStep('destruction', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:healingAura]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:7c4bf594f3a8b64b45b78ffd
+    // PROVENANCE[marionette:ascension:healingAura]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:7c4bf594f3a8b64b45b78ffd
     statStep({ id: 'marionette:ascension:healingAura', ...marionetteOwnedGrantStep('healingAura', marionette, marionetteOwned) }),
-    // PROVENANCE[marionette:ascension:lifeSteal]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:5:87ea1b34ea4f73c02d6092e4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:7361d4897743a0409ae48b72
+    // PROVENANCE[marionette:ascension:lifeSteal]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:cd40ae4b9b680af078e89413 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:3:7361d4897743a0409ae48b72
     statStep({ id: 'marionette:ascension:lifeSteal', ...marionetteOwnedGrantStep('lifeSteal', marionette, marionetteOwned) }),
     // **What follows the five ascension book blocks in the script and is deliberately not modelled**:
     // the retort tail, `UnitCalcPre.CAS!ENDOFMARIONETTESPELLSELECT!+111..+164 "IF RETORT(W,Alchemist) THEN {" "}"`. Sixteen `IF RETORT(W,…)` blocks holding
@@ -842,17 +842,13 @@ function precalcScriptStatSteps(ctx) {
     //
     // **Read the two citations in order, because neither is "this write and its own gate".** The
     // first is the entrance: `ISHERO`, hero type 48, and no Channeler retort — the three tests
-    // that admit this step, and the whole of its `when`. The second shows the write itself
-    // standing *after* `!NOLONGERSTRAYEDMARIONETTE!`, which is the claim that separates it from
-    // the seven above; the `IF`s inside that second span are **the other step's** per-write skips
-    // and gate nothing here. The span is wider than the write needs because
-    // `hasImplementationWrite` (`tools/provenance_audit.js`) does not recognise `SETHEAB` or
-    // `SETOLENCHANTMENTFLAG` — two verbs the shipped scripts use — so a citation carrying only
-    // those is rejected as writing nothing, and it has to reach back to line 374's
-    // `SETENCHANTMENTFLAG` to be accepted. Reported with F244.3f rather than fixed here: teaching
-    // the detector those two verbs is a change to the gate every provenance citation in the repo
-    // passes through.
-    // PROVENANCE[marionette:spellLock]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:21:cd89ef04350bd3d82d4cb25c
+    // that admit this step, and the whole of its `when`. The second is the skip and its
+    // destination: the `IF (GETOLENCHANTMENTFLAG(U,EncSpellLock,1)>0)` jump, the seven writes it
+    // jumps over, the `!NOLONGERSTRAYEDMARIONETTE!` label it lands on, and this write standing
+    // *after* that label. The claim is that **both** paths reach the write, so the span has to
+    // hold both ends of the jump; the `IF`s between them are **the other step's** per-write skips
+    // and gate nothing here.
+    // PROVENANCE[marionette:spellLock]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:13:54bbc38ee124177d63ae69f4 | Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:27:e930818917f52e5ec1ff1849
     statStep({ id: 'marionette:spellLock', sourceId: 'marionetteStrayed',
       sourceLabel: 'Marionette (strayed): Spell Lock', phase: 'b',
       writes: ['spellLock'],
@@ -860,34 +856,40 @@ function precalcScriptStatSteps(ctx) {
       apply: u => { u.spellLock = true; } }),
     // Transmute Equipment's hero augmentation block, 298 lines further down the same hook and
     // still ahead of Rebuild and the Outlander research block. Its gate is
-    // `GetEnchantmentFlag(U,EncTransmuteEquipment,1)` — the **permanent** flag the strayed block
-    // above wrote — so it is a record read at this step's own rank rather than the branch
-    // constant it used to be (F244.3f). The two ranks are what make the reading order observable;
-    // `b:rebuild` one block later is the same shape.
+    // `GetEnchantmentFlag(U,EncTransmuteEquipment,1)` — the **permanent** flag, read at this
+    // step's own rank rather than the branch constant it used to be (F244.3f). The two ranks are
+    // what make the reading order observable; `b:rebuild` one block later is the same shape.
     //
-    // The `isHero` term is the block's enclosing region, not a second copy of the branch test:
-    // the augmentation sits between `UnitCalcPre.CAS!NOVAMPIRISM!+3 "IF ( ISHERO(U) = 0 ) THEN { GOTO"` and `UnitCalcPre.CAS!NOTHERO!`,
-    // so it reaches heroes alone. The branch constant this gate used to be carried that term
-    // implicitly; a record read does not, and the flag has writers outside the Marionette package
-    // the calculator does not model yet — the Transmute Equipment cast at
-    // `OLSpell.CAS!NOTTRANSMUTEEQUIPMENT!-9 "SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,1);"`, the Caravanserai retrain in `OverlandEndTurn.CAS`, and the
-    // Adamant-plus-Orihalcon training write at `CreateUnit.CAS~": give transmutes equipment flag to any unit with both adamantium and orihalcon to prevent redundent enchantment :"+1..+2 "IF GETENCHANTMENTFLAG(U,EncAdamant,ABase) %AND GETENCHANTMENTFLAG(U,EncOrihalcon,ABase) THEN {" "SETENCHANTMENTFLAG(U,EncTransmuteEquipment,ABase,1);"`. None has a control, so none
-    // can reach this gate today, which is exactly why the term has to be written rather than
-    // inherited.
+    // **The id and source label stopped naming the Marionette in F256.2.** The block never named
+    // it: it is the `: Hero augmentation effect of transmute equipment spell :` block, and it sits
+    // in the hook's hero region rather than in the strayed branch. While the strayed package was
+    // the flag's only writer that was invisible, but the cast now has a control
+    // (`buffs:transmuteEquipment:cast`, `stats_identity.js`), so an ordinary hero reaches this
+    // block and the modifier chain would have told the user a Marionette did it.
     //
-    // Not corrected here, and reported with F244.3f: the `SRanged` half of this block is
-    // `SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2))`, ungated, while the apply below adds it only
-    // to a channel `marionetteRangedSlot` selects. That predates this subtask and moves numbers.
-    // PROVENANCE[marionette:strayedTransmute]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:11:e36dada50542233ab9fda915
-    statStep({ id: 'marionette:strayedTransmute', sourceId: 'marionetteStrayed',
-      sourceLabel: 'Marionette (strayed): Transmute Equipment', phase: 'b',
+    // The `isHero` term is the block's enclosing region, not a copy of any branch test: the
+    // augmentation sits between `UnitCalcPre.CAS!NOVAMPIRISM!+3 "IF ( ISHERO(U) = 0 ) THEN { GOTO"` and `UnitCalcPre.CAS!NOTHERO!`,
+    // so it reaches heroes alone. The other engine grant paths for the same flag are enumerated
+    // with their citations on `transmuteEquipment` in `stats_origins.js`, which is where that list
+    // lives; six of them are F256.3's and none has a control yet.
+    //
+    // **The `SRanged` half, settled by F256.2.** The script line is
+    // `SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2))` — the record's Ranged field, no strength and
+    // no type test — and until F256.2 the apply walked the channels itself and wrote only where
+    // `marionetteRangedSlot` was true, a flag carrying the *branch* terms. So the +2 vanished for
+    // exactly the heroes the new control creates. `addToSlot(…, 'rangedField', …)` is the named
+    // gate for "the record's `U.ranged` field itself, whatever type stands in it", and it is what
+    // `training:artificer` (`combat_abilities.js`) already models the identical
+    // `SETSTAT(U,SRanged,…)` line with. This was `marionetteRangedSlot`'s only reader, so the slot
+    // flag went with it; `marionetteOwnsThisRangedSlot`, the owned branch's, stays.
+    // PROVENANCE[transmuteEquipment:heroAugment]: VERIFIED versions=com2_warlord_1.5.12.9; sources=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS@span:11:e36dada50542233ab9fda915
+    statStep({ id: 'transmuteEquipment:heroAugment', sourceId: 'transmuteEquipment',
+      sourceLabel: 'Transmute Equipment: hero augmentation', phase: 'b',
       writes: ['atk', ...strengthFields, 'def', 'res'],
       when: u => !!isHero && !!u.transmuteEquipment,
-      apply: u => {
+      apply: (u, ctx) => {
         u.atk += 2;
-        for (const c of channels) {
-          if (c.marionetteRangedSlot) u[c.strengthField] += 2;
-        }
+        addToSlot(u, ctx, 'rangedField', 2);
         u.def += 2;
         u.res += 1;
       } }),

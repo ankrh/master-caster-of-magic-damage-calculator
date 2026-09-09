@@ -32,6 +32,51 @@ definePresets({
   },
 
   // --- Warlord Berserk: +15% To Hit, -1 armor, no atk doubling, no def-zero ---
+  // --- Transmute Equipment (Warlord) ---
+  // The cast is `spells.ini` [264], `EnchantmentID=69`, and its block is two arms: the permanent
+  // flag for every admitted target, then a non-hero re-equip. The flag is read back 298 lines
+  // into `UnitCalcPre.CAS` by the hero augmentation, so hero and non-hero take disjoint halves.
+  transmuteEquipmentHeroMeleeWarlord: {
+    desc: 'Transmute Equipment (Warlord): the hero augmentation block reads the permanent flag the cast wrote (UnitCalcPre.CAS!NOHEROAUGMENT!-12..-2 ": Hero augmentation effect of transmute equipment spell :" "SETSTAT(U,SResistBuff,0,(GetStat(U,SResistBuff,0)+1));"), so melee 1 + 2 = 3 at 100% hit → 3 dmg',
+    version: V_WARLORD,
+    a: { atk:1, hitChance:70, hp:10, unitType:'hero', abilities: { transmuteEquipment: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 3.000, sdDmgToB: 0.000 },
+  },
+  transmuteEquipmentHeroRangedWarlord: {
+    desc: 'Transmute Equipment (Warlord): the same block\'s `SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2))` carries no strength and no type test, so a hero missile 3 becomes 5 at 100% → 5 dmg. Until F256.2 that write was gated on a Marionette-branch slot flag, so it vanished for every hero the cast reached.',
+    version: V_WARLORD,
+    a: { atk:0, modernAttacks: { ranged: { strength:3, type:'missile' } }, hitRanged:70, hitThrown:70, hitBreath:70, hp:10, unitType:'hero', abilities: { transmuteEquipment: true } },
+    b: { hp:10 },
+    rangedCheck: true,
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 5.000, sdDmgToB: 0.000 },
+  },
+  transmuteEquipmentNonHeroAdamantiumWarlord: {
+    desc: 'Transmute Equipment (Warlord): the non-hero arm writes EncMagic, EncAdamant and EncOrihalcon, and adamantium overrides the other two in the quality ladder, so melee 1 + 2 = 3 at the base 30% plus the material 10% → 1.2 dmg. A hero takes the augmentation instead and no material at all.',
+    version: V_WARLORD,
+    a: { atk:1, hp:10, abilities: { transmuteEquipment: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.200, sdDmgToB: 0.849 },
+  },
+  transmuteEquipmentNonHeroOrihalconResWarlord: {
+    desc: 'Transmute Equipment (Warlord): the same arm\'s EncOrihalcon is the armour material, so a non-hero res 5 becomes 6 and a death gaze kills at 40% → 4 expected damage',
+    version: V_WARLORD,
+    a: { hp:10, abilities: { deathGaze: 0 } },
+    b: { res:5, hp:10, abilities: { transmuteEquipment: true } },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 4.000, sdDmgToB: 4.899 },
+  },
+  transmuteEquipmentFantasticRefusedWarlord: {
+    desc: 'Transmute Equipment (Warlord): `spells.ini` [264] carries `SpellTypeGroup=15`, the group whose arm of `@Spelltargeting@ValidUnitSpellTarget` refuses a permanently Fantastic target, so a fantastic creature keeps melee 1 → 1 dmg and reaches neither arm',
+    version: V_WARLORD,
+    a: { unitType:'fantastic_chaos', atk:1, hitChance:70, hp:10, abilities: { transmuteEquipment: true } },
+    b: { hp:10 },
+    expected: { dmgToA: 0, sdDmgToA: 0.000, dmgToB: 1.000, sdDmgToB: 0.000 },
+    vacuity: {
+      'a.ability.transmuteEquipment':
+        'Keep, and the absence is the rule under test: the claim is exactly that the cast does not land on a permanently Fantastic target, so the mark is expected to move nothing. The gate is the `!u.fantastic` term on `buffs:transmuteEquipment:cast` (stats_identity.js), read off the running record in the permanent-record phase, and a.unitType=fantastic_chaos is the live half - drop it and the same mark takes the hero augmentation or the material re-equip and the total goes from 1.000 to 3.000 (transmuteEquipmentHeroMeleeWarlord pins that value on the hero arm).',
+    },
+  },
+
   // --- Beat of Swiftness (Warlord) ---
   beatOfSwiftnessArmorPenaltyWarlord: {
     desc: 'Beat of Swiftness: def 10 loses round-to-even(10/10)=1, leaving 9. atk 10 @100% hit, 100% block → 10−9=1 dmg (without it: 10−10=0)',

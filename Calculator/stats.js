@@ -1606,8 +1606,6 @@ function deriveUnitStats(input) {
     const permanentRangedType = RANGED_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
     const permanentThrownType = THROWN_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
     const gazeType = GAZE_TYPES.includes(rtbTypeRaw) ? rtbTypeRaw : 'none';
-    const marionetteRangedSlot = (marionetteOwned || marionetteStrayed)
-      && (!channelKey || channelKey === 'ranged');
     const marionetteOwnsThisRangedSlot = marionetteOwned
       && (!channelKey || channelKey === 'ranged');
 
@@ -1758,7 +1756,7 @@ function deriveUnitStats(input) {
       baseSequenceRangedType, baseSequenceThrownType,
       permanentRangedType, permanentThrownType,
       calcBaseRtb, hasPermanentRangedStat, permanentMagicalRangedField, hasGazeAttack,
-      marionetteRangedSlot, marionetteOwnsThisRangedSlot,
+      marionetteOwnsThisRangedSlot,
       blackpowder, blackpowderPhysicalSource,
       blackpowderSelectedPhysicalRanged, blackpowderSelectedThrown,
       blackpowderSelectedFireBreath, blackpowderUpgradesToBoulder,

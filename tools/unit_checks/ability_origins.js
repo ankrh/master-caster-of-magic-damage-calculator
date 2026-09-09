@@ -503,10 +503,10 @@ const STRAYED_PACKAGE_VALUES = Object.freeze({
   transmuteEquipment: true, rebuild: true, sage: 2, mechanicalMaster: 2, ritualMaster: 2,
   charmed: true, arcaneWard: 2, spellLock: true,
 });
-// The five with no control in any version. `charmed` (all five), `rebuild` (Warlord) and
-// `spellLock` (CoM 1) are left out because each has a control whose mark reaches the record its
-// own way, which is what claims 4 and 6 are about.
-const STRAYED_UNCONTROLLED_KEYS = ['transmuteEquipment', 'sage', 'mechanicalMaster',
+// The four with no control in any version. `charmed` (all five), `rebuild` (Warlord),
+// `spellLock` (CoM 1) and, since F256.2, `transmuteEquipment` (Warlord) are left out because each
+// has a control whose mark reaches the record its own way, which is what claims 4 and 6 are about.
+const STRAYED_UNCONTROLLED_KEYS = ['sage', 'mechanicalMaster',
   'ritualMaster', 'arcaneWard'];
 
 function runStrayedMarionetteChecks(ctx, deps) {
@@ -555,7 +555,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   const order = strayed.statExecutionTrace.map(event => `${event.phase}:${event.id}`);
   const rank = key => order.indexOf(key);
   const ordered = ['b:marionette:strayedPackage', 'b:marionette:spellLock',
-    'b:marionette:strayedTransmute', 'b:rebuild'];
+    'b:transmuteEquipment:heroAugment', 'b:rebuild'];
   for (const key of ordered) assert(rank(key) >= 0, `${key} is executed for a strayed Wanderer`);
   for (let i = 1; i < ordered.length; i++) {
     assert(rank(ordered[i - 1]) < rank(ordered[i]),
@@ -576,7 +576,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   const lockedWanderer = wanderer({ spellLock: true });
   assertEqual(statusOf(lockedWanderer, 'marionette:strayedPackage'), 'skipped',
     'a card-stated Spell Lock refuses the strayed package at its own rank');
-  assertEqual(statusOf(lockedWanderer, 'marionette:strayedTransmute'), 'skipped',
+  assertEqual(statusOf(lockedWanderer, 'transmuteEquipment:heroAugment'), 'skipped',
     'so Transmute Equipment, which reads the flag the package would have written, is skipped');
   assertEqual(statusOf(lockedWanderer, 'rebuild'), 'skipped', 'and Rebuild with it');
   assertEqual(statusOf(lockedWanderer, 'marionette:spellLock'), 'applied',
@@ -598,12 +598,12 @@ function runStrayedMarionetteChecks(ctx, deps) {
   assertEqual(statusOf(strayed, 'marionette:spellLock'), 'applied',
     'and the Spell Lock write outside the skip is applied with it');
 
-  // 4. The two later blocks read the record. `b:marionette:strayedTransmute`'s gate is
+  // 4. The two later blocks read the record. `b:transmuteEquipment:heroAugment`'s gate is
   // `GetEnchantmentFlag(U,EncTransmuteEquipment,1)` and `b:rebuild`'s is `EncRebuild` — both the
   // permanent flag the package wrote — so an owned Marionette, which writes neither, is skipped
   // at both rather than gated out by a branch constant.
-  assertEqual(statusOf(owned, 'marionette:strayedTransmute'), 'skipped',
-    'b:marionette:strayedTransmute reads Transmute Equipment off the record, so it skips an '
+  assertEqual(statusOf(owned, 'transmuteEquipment:heroAugment'), 'skipped',
+    'b:transmuteEquipment:heroAugment reads Transmute Equipment off the record, so it skips an '
     + 'owned Marionette');
   assertEqual(statusOf(owned, 'rebuild'), 'skipped', 'and b:rebuild skips it the same way');
 
@@ -644,9 +644,9 @@ function runStrayedMarionetteChecks(ctx, deps) {
   // The augmentation reads the flag alone, inside the hook's hero-only region. An owned
   // Marionette carrying the flag would take it; the branch constant this gate used to be could
   // not express that, which is what makes the record read a real change rather than a rename.
-  const transmuteGate = predicateOf(ownedSteps, 'marionette:strayedTransmute', 'b');
+  const transmuteGate = predicateOf(ownedSteps, 'transmuteEquipment:heroAugment', 'b');
   assertEqual(!!transmuteGate({ transmuteEquipment: true }), true,
-    'b:marionette:strayedTransmute reads the flag off the record, not the strayed branch');
+    'b:transmuteEquipment:heroAugment reads the flag off the record, not the strayed branch');
   assertEqual(!!transmuteGate({}), false, 'and takes nothing without it');
 
   // The two hero-region terms, which no input can reach either. The Marionette region opens on
@@ -666,7 +666,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
     identity: { version: WARLORD, isHero: false, baseRace: '', baseFantastic: false },
     abilities: {} })));
   assertEqual(
-    !!predicateOf(nonHeroSteps, 'marionette:strayedTransmute', 'b')({ transmuteEquipment: true }),
+    !!predicateOf(nonHeroSteps, 'transmuteEquipment:heroAugment', 'b')({ transmuteEquipment: true }),
     false,
     'and the Transmute Equipment augmentation is refused outside the hero region, however the '
     + 'flag got onto the record');
@@ -681,7 +681,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   assertEqual(held.arcaneWard, 3, 'and so does the Arcane Ward skip, above the script\'s own 2');
   assertEqual(held.ritualMaster, 2, 'while a key the record does not carry takes the script value');
 
-  // 6. The five with no control anywhere are outputs, never inputs: a raw mark publishes nothing,
+  // 6. The four with no control anywhere are outputs, never inputs: a raw mark publishes nothing,
   // in every version. This is the half a derived assertion cannot reach.
   for (const version of versions) {
     for (const key of STRAYED_UNCONTROLLED_KEYS) {
