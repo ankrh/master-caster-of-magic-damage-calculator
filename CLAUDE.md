@@ -2,11 +2,18 @@
 
 # Project: Master/Caster of Magic tooling
 
+This is the shared project contract for Claude and Codex. Before working, read the shared global
+contract at `~/.claude/CLAUDE.md` if it is not already in context. `AGENTS.md` is the Codex entry
+point; it contains no duplicate project rules.
+
+Shared project memory, if present: `~/.claude/projects/c--CoM2-damage-calculator/memory/MEMORY.md`.
+Read that index and the entries relevant to the task; do not create separate Codex copies.
+
 ## Document tiers
 
 | Document | Tier | Write authority |
 |---|---|---|
-| `CLAUDE.md` | CONTRACT | Agents propose changes via `PROPOSALS.md`; they do not edit it. |
+| `CLAUDE.md`, `AGENTS.md`, `AGENT_WORKFLOW.md` | CONTRACT | Agents propose changes via `PROPOSALS.md`; they do not edit them. |
 | `TASKS.md` | TASKS | Items are added only on explicit approval in conversation. Deleted freely. |
 | `TESTS.md` | CONTRACT | The list of permanent suites. Agents propose changes via `PROPOSALS.md`; they do not add, delete or rename entries. The rules are in the global CLAUDE.md and are not restated here. |
 | `JOURNAL.md` | JOURNAL | Written and pruned freely. Never authoritative, and never cited as justification for a decision. |
@@ -45,30 +52,29 @@ constants, and Warlord scripts may add to or overwrite the result.
 
 Every `TASKS.md` item is executed under this protocol, including items that move no numbers.
 
-By default, task items should be executed in a collaboration between a Claude agent and a GPT agent. The preferred agents are Claude Opus 5 on High effort and GPT-6 Astra on medium reasoning.
+By default, task items should be executed in a collaboration between a Claude agent and a GPT agent. The preferred agents are Claude Fable 5.1 on medium effort and GPT-6 Astra on medium reasoning.
 
-A Claude agent launches a GPT reviewer or derivation agent through the global
-`~/.claude/tools/codex_agent.py`, never by typing `codex exec` directly:
-
-```
-python ~/.claude/tools/codex_agent.py --model gpt-6-astra --reasoning-effort medium --prompt <prompt file> --out .reviews/<PACKAGE>.review-of-Claude.md
-```
+Before launching another agent, read `AGENT_WORKFLOW.md` for the supported launch, output,
+resume and waiting procedures. The same procedures apply whichever model coordinates the task.
 
 By default, tasks should be executed according to method A. Tasks that involve source code reconstruction from the game binaries must be performed with method B. The methods run per subtask, not per item.
 
-The user may request one or more TASKS item to be performed. If multiple task items are requested, default to using sequential subagents, one for each subtask. Subtask agents run in the background, one at a time. Each keeps a status file in the
-scratchpad, `STATUS.<ID>.md`, with one timestamped line per stage: implementing, reviewer
-launched, review received, revising, verifying, done. The main agent watches that file with the
-Monitor tool while the subtask runs, and posts a line in the conversation when a subtask starts
-and when it finishes.
+The user may request one or more TASKS items. If multiple items are requested, default to
+sequential implementation subagents, one per subtask, running in the background one at a time.
+Each keeps `STATUS.<ID>.md` in a task scratch directory under `.reviews/`, with one timestamped
+line per stage: implementing, reviewer launched, review received, revising, verifying, done.
+The main agent checks progress through the active platform's agent/session tools, reads the
+status file when useful, and posts when each subtask starts and finishes. If the platform cannot
+launch implementation subagents, the main agent executes those subtasks sequentially itself;
+the required cross-model review still applies.
 
-Agents wait only with Monitor. No agent waits by launching a background sleep, timer or polling
-command. Anything that may run longer than a foreground shell call allows — the reviewer, the
-Playwright suite — runs in the background and is waited on with Monitor.
+Use the active platform's background execution and wait facilities for long-running agents and
+test commands, as described in `AGENT_WORKFLOW.md`. Do not launch sleep, timer or shell polling
+processes merely to wait.
 
-Each subtask agent writes its report to `REPORT.<ID>.md` in the scratchpad before returning it.
+Each subtask agent writes its report to `REPORT.<ID>.md` in that task scratch directory before returning it.
 
-After all requested subtasks have been executed, any code changes should be visualized in an artifact with graphical layout showing function calls and other explanatory text, with special emphasis for any features that are still scheduled for removal later in the TASKS pipeline.
+After all requested subtasks have been executed, any code changes should be visualized in an interactive diagram or standalone HTML/SVG artifact linked in the report, showing function calls and explanatory text, with special emphasis for any features that are still scheduled for removal later in the TASKS pipeline.
 
 A report that finishes a TASKS item ends with a block titled `To close <ID>`, and nothing
 follows it. The block lists every decision required from the user as a numbered yes/no
@@ -105,24 +111,41 @@ an equally valid response to a review finding.
 ### Method B:
 The current (main) agent prepares the reconstruction task and makes sure the number of instructions is no more than 1200. Otherwise, it splits the task into subunits and only proceeds with reconstructing the first subunit.
 
-Then the main agent will launch one Claude agent and one GPT agent to each perform an independent derivation of the source code, each with write access to its own derivation file; the GPT side goes through `~/.claude/tools/codex_agent.py --model gpt-6-astra --reasoning-effort medium --write`. The reciprocal-review round resumes the GPT session with `--resume <session-id>`; the tool prints the session id on success.
+The main agent prepares an address-backed evidence packet from the binary, recording version,
+binary path and hash, extraction commands, address range and instruction count. It includes the
+disassembly and relevant raw data, without an existing reconstruction of the target. Both agents
+receive the same packet and independently derive the source code. Additional evidence requests
+are fulfilled from the binary and supplied to both agents before completing the round.
 
-Once both subagents have returned, it tells each agent using resumed sessions (`codex exec resume <session-id>`) to review the other agent's work and write the review into a review file. When both agents have done so, the main agent tells the agents to revise their own work according to the other agent's review. Finally, the main agent will merge the two revised derivations into a final reconstruction.
+Launch one Claude agent and one GPT agent using the derivation procedure in `AGENT_WORKFLOW.md`.
+Each returns its complete derivation as its answer; the launcher saves it unchanged to that
+agent's designated artifact. Direct workspace write access is not required. The main agent does
+not rewrite either agent's derivation.
+
+Once both return, resume each derivation session through its wrapper to review the other agent's
+work and save a separate review. Then start a fresh derivation session for each revision with
+the permitted inputs specified below. Do not resume the
+reciprocal-review session for revision: it already contains the other derivation. Finally, the
+main agent merges the two revised derivations into the final reconstruction.
 
 The derivation agents are given some amount of autonomy. If they assess that other code blocks are relevant to answer the posed question, they are allowed to extend the reconstruction extent, as long as the total number of instructions remains under 1800 instructions.
 
 The revision round's inputs are the agent's own derivation, the other agent's review, and the binary. The other agent's *derivation* is not an input.
 
+The writer column identifies the content author; a launcher may persist its answer verbatim.
+
 | Artifact | Name | Writer |
 |---|---|---|
 | GPT derivation | `.derivations/<PACKAGE>.GPT.md` | GPT only |
 | Claude derivation | `.derivations/<PACKAGE>.Claude.md` | Claude only |
+| Revised GPT derivation | `.derivations/<PACKAGE>.GPT.revised.md` | GPT only |
+| Revised Claude derivation | `.derivations/<PACKAGE>.Claude.revised.md` | Claude only |
 | GPT review of Claude derivation | `.reviews/<PACKAGE>.review-of-Claude.md` | GPT only |
 | Claude review of GPT derivation | `.reviews/<PACKAGE>.review-of-GPT.md` | Claude only |
 | Merged evidence, WIZARDS.EXE | `Reference docs/DOS reconstructed/<PACKAGE>.evidence.md` | Main agent |
 | Merged evidence, CASTER.EXE | `Reference docs/Caster binary/<PACKAGE>.evidence.md` | Main agent |
 
-After the finished implementation, the reconstructed code should be visualized in an artifact with graphical layout showing function calls and other explanatory text.
+After the finished implementation, the reconstructed code should be visualized in an interactive diagram or standalone HTML/SVG artifact linked in the report, showing function calls and explanatory text.
 
 ### Which test suite a task runs
 
@@ -139,7 +162,7 @@ changes are large.
 
 ## Invariants
 
-<!-- Things that must hold, written so a test can cite one individually — this is what a `spec`-tagged suite anchors to. -->
+<!-- Things that must hold, written so a test can cite one individually. -->
 INV-1. **Valid PMF.** Every computed distribution has probabilities in [0,1] summing to 1 within 1e-9.
    A phase that cannot fire folds its mass in at damage 0 rather than dropping it.
 INV-2. **Version gating.** A control hidden for the active version cannot move a number.
@@ -233,7 +256,7 @@ Damage is also applied in phases, e.g., thrown, breath, gaze, first strike, coun
 ## Input/output contract
 
 <!-- What goes in, what comes out, and what callers may rely on. -->
-The user specifies the version, a roster unit or a custom unit both for the attacker and defender, and a set of enchantments and conditions for the attacker and defender.
+The user specifies the version, a roster unit or a custom unit both for the attacker and defender, and a set of enchantments and conditions for the attacker and defender. A condition includes what the side’s owning wizard supplies, such as retorts.
 
 The calculator will then show the probability mass functions for each of the damage and fear phases in the combat sequence (e.g., thrown, breath, gaze, melee, counterattack, wall of fire etc.).
 

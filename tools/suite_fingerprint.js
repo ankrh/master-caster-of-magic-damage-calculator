@@ -9,8 +9,8 @@
 //
 // What is excluded, and why each exclusion is safe:
 //
-//   tmp/            scratchpad. `tools/cas_citation_audit.js` OUT_OF_SCOPE.
-//   .reviews/       review artifacts. Same.
+//   tmp/            legacy task scratch and local probes. Citation audit OUT_OF_SCOPE.
+//   .reviews/       task scratch and review artifacts. Same.
 //   .derivations/   derivation artifacts. Same.
 //   TASKS.md        OUT_OF_SCOPE in the citation audit, and read by no script `npm test` runs.
 //   JOURNAL.md      the same.

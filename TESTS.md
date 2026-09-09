@@ -51,7 +51,7 @@ Any test file not named here is scaffolding and carries its own scheduled deleti
 | `preset_applier` | `presetToCardState` over the corpus, control-free |
 | `resolution_steps` | attack-specific sequences and the Weapon Immunity attack-to-weapon map |
 | `step_traces` | step construction and the modifier trace the UI reads back |
-| `version_gate_divergence` | `applyVersionGating` as the one implementation of the clearing |
+| `version_gating` | `abilityVersionGated` as the one gating test, and `applyVersionGating` as the one implementation of the clearing |
 | `version_scope` | the canonical engine-version scope table stays current |
 | `warlord_abilities` | script-granted packages and the building grants only 1.5.12.9 makes |
 | `damage_spell_f35_f37` | the Area iteration's HP cap; Magic Immunity before Black Sleep |

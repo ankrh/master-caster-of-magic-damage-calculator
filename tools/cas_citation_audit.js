@@ -51,20 +51,20 @@ const GRAMMAR_DOC = 'Reference docs/CAS citation grammar.md';
 
 // Which sources gate the exit. A citation in an in-scope source must resolve; a citation in an
 // out-of-scope source is counted and printed but moves nothing. Out-of-scope is history and
-// self-reference, not laxity: `.reviews/` and `.derivations/` are frozen transcripts of a past
-// round, `JOURNAL.md` is by contract never authoritative, and `TASKS.md` quotes stale citations
+// self-reference, not laxity: `.reviews/` holds task scratch and review records, `.derivations/`
+// holds derivation records, `JOURNAL.md` is never authoritative, and `TASKS.md` quotes stale citations
 // inside F227's own body as the evidence for the item. Rewriting any of those would falsify the
 // record. A citation-bearing file matching neither list is an error, so a new home for citations
 // has to be classified before it can hide one.
 const IN_SCOPE = ['Calculator/', 'Reference docs/', 'Unit rosters/', 'tests/', 'tools/',
-  'CLAUDE.md', 'TESTS.md', 'index.html'];
+  'CLAUDE.md', 'AGENTS.md', 'AGENT_WORKFLOW.md', 'TESTS.md', 'index.html'];
 const OUT_OF_SCOPE = new Map([
-  ['.reviews/', 'frozen review transcripts'],
+  ['.reviews/', 'task scratch and review records; not a home for authoritative citations'],
   ['.derivations/', 'frozen derivation transcripts'],
   ['JOURNAL.md', 'working notes; never authoritative'],
   ['TASKS.md', "the backlog quotes stale citations as F227's own evidence"],
   ['PROPOSALS.md', 'pending text the user owns'],
-  ['tmp/', 'untracked scratchpad: per-subtask status and report files, not a home for citations'],
+  ['tmp/', 'legacy task scratch and local probes; not a home for citations'],
 ]);
 // The scripts are the target of a citation, not a source of one.
 const NOT_SCANNED = ['Reference docs/Script source/'];
