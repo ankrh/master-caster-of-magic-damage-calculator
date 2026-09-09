@@ -8809,3 +8809,26 @@ substantive findings; three minor ones, all acted on — the two tooltip lines e
 guide's 75 characters and were wrapped, the gate comment said Spirit Link ranks after the step "in
 both modern manifests" when `buffs:spiritLink:fantastic` is `SCOPE_WARLORD`, and this entry was
 missing. The reviewer could not write its own file (read-only session); its text is the `.log`.
+
+## 2026-09-09 — withdrawn: the innate Undead/Teleporting declaration as a deviation
+
+F252.3's GPT review asked for the input rule — what ticking an innate `undead` or `teleporting`
+control means — to be filed against `CLAUDE.md`'s *Deliberate deviations* on the grounds that it
+cannot be re-derived from either binary. Proposed, and **withdrawn 2026-09-09 on the user's ruling**.
+
+Two errors in the proposal, both worth remembering because the shape recurs:
+
+- **It is not a deviation.** A deviation is the choice made *against* the binary-faithful option at a
+  fork. There is no fork: the engine keeps the flag on the unit record, and the calculator lets the
+  user assert the record has it. `CLAUDE.md`'s *Input/output contract* already states that every
+  control is specifiable on every unit whether or not it could have received the effect, so a
+  declaration is the input model rather than an exception to it.
+- **It is re-derivable.** A later agent reading the def lists sees the key has no template
+  derivation, and reading the contract rule sees what the control therefore means. Writing it into
+  the contract would turn an inference into an inherited premise.
+
+What *is* non-derivable is narrower and was smuggled in beside it: F252.2's shape-3 reading, that
+these two flags gate a normalisation and derive no ability field of their own, unlike the five
+dual-source booleans that set a bit on the template. That cost real binary reading, and its home is
+the comment above `INNATE_CONDITION_FLAG_KEYS` in `Calculator/ability_gating.js`, which now says so
+instead of pointing at an open proposal.

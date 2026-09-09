@@ -1,16 +1,6 @@
 <!-- Tier: channel. Agents append; only the user merges, edits or deletes. -->
 
 Document: CLAUDE.md
-Section: Deliberate deviations
-Change: addition
-Text:
-- **An innate Undead or Teleporting control declares the flag, it does not derive it.** Both are
-  condition flags that gate a normalisation and derive no ability field, so nothing in either engine
-  makes a unit's roster record evidence of the flag. Ticking the innate control declares that the
-  permanent record already carries `EncUndead` / the permanent Teleporting flag when combat
-  recalculation begins, whatever put it there.
-
-Document: CLAUDE.md
 Section: Architecture
 Change: addition
 Text:

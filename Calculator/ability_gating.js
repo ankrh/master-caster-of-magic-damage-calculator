@@ -210,9 +210,13 @@ const PROVIDED_RECEIVED_CALC_KEYS = Object.freeze(['holyBonus', 'resistanceToAll
 // subtask gives either key a record field owes it a `buffs:<key>:cast` step in the same change,
 // and `runMarkedBuffPhaseChecks` (`tools/unit_checks/ability_origins.js`) fails if it does not. It is stated here, beside
 // the ruling that produced it, so a later subtask giving either key a record field inherits the
-// meaning rather than re-deciding it. The input rule itself — what ticking the control means — is
-// an open `PROPOSALS.md` entry against CLAUDE.md's *Deliberate deviations*, because it cannot be
-// re-derived from either binary (F252.3 review, finding 2).
+// meaning rather than re-deciding it. What ticking the control means needs no entry of its own:
+// CLAUDE.md's *Input/output contract* already states that every control is specifiable on every
+// unit whether or not it could have received the effect, and a key with no template derivation is
+// a declaration by that rule. F252.3's review proposed it as a deviation; withdrawn 2026-09-09 on
+// the user's ruling, since declaring a state the engine keeps on the record is the input model
+// rather than a departure from it. What is not re-derivable is the shape-3 reading above — that
+// these two gate a normalisation and derive no ability field — and this comment is its home.
 const INNATE_CONDITION_FLAG_KEYS = Object.freeze(['undead', 'teleporting']);
 
 // The def each half of a calc key comes from. A key can have several defs on one side —
