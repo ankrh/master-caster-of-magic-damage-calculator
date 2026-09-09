@@ -3,7 +3,7 @@
 Unresolved or partially resolved evidence dossiers for calculator behavior that still rests on
 prose, inference, or an incomplete engine read. This file records the claim, the evidence already
 in hand, and the missing proof. It is not a backlog: priority, cost, status, blockers, and next
-actions live only in `Calculator/BACKLOG.md`.
+actions live only in `TASKS.md`.
 
 The IDs are stable historical identifiers. Sections A–C concern the DOS `WIZARDS.EXE` builds
 (MoM 1.31, MoM CP 1.60, and CoM 1); section D concerns the modern engine (CoM2 and Warlord).
@@ -175,3 +175,30 @@ extrapolating from two points.
 
 Note that the tier is a *display* classification and need not follow the transform sequence in
 `stats_sequence.js` — two effects writing the same stat at the same phase may still render differently.
+
+### D37. Does `ApplyHeroBonus` fold `HALucky` into `U.Lucky`?
+
+Filed 2026-09-09 out of F257.1. Warlord 1.5.12.9 (and, for the compiled half, CoM2).
+
+The Charismatic retort's arm of the Marionette ascension tail writes
+`SETHEAB(W,48,HALucky,1)` — a rank in `WizardT.Hero[herotype][HALucky]`, not a unit field. The
+block that spends Lucky is `if U.Lucky then` at `$0059DDC3..$0059DEC2`
+(`Caster binary/Units.RecalculateUnits.pas`), +10 common To Hit, +10 To Block and +1 Resistance,
+and its own comment records that Lucky is a direct unit boolean rather than an enchantment-array
+test at that point. Nothing in the tree establishes the bridge between the two.
+
+The candidate — the only one this reading found, not the only one that could exist — is
+`@Units@ApplyHeroBonus` at `$005992CC..$0059991F`, called at `$0059ACB7` from `RecalculateUnits`
+(`Caster binary/Units.RecalculateUnits.pas`), region `c` and therefore after the `UnitCalcPre` hook
+that makes the write. Its body is unreconstructed. Its extent appears in
+`Caster binary/D29.evidence.md`'s TD32 adjacency table, but that dossier locates and bounds
+`@Units@ApplyMagicWeapons`, and the two callers it enumerates are that routine's.
+
+Contrast `HACharmed`, which needs no fold: `$00595BC0` reads
+`Wizards[BaseUnits[u].owner].Hero[Units[u].herotype][HACharmed] > 0` directly
+(`Caster binary/Combat.ResolutionHelpers.R5.2e.evidence.md`).
+
+Missing proof: a Method B reconstruction of `ApplyHeroBonus`'s body, specifically which
+`heroabil.ini` entries it maps onto unit fields and whether the `Bonus=0 / Super=No` flag abilities
+(`Lucky` `[18]`, `Charmed` `[14]`) are among them. Until then any step positioning that write is a
+declared inference. Reading: `Caster binary/F257.1 Marionette retort tail.md`.

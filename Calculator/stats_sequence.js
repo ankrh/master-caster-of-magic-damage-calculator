@@ -871,7 +871,10 @@ function precalcScriptStatSteps(ctx) {
     // augmentation sits between `UnitCalcPre.CAS!NOVAMPIRISM!+3 "IF ( ISHERO(U) = 0 ) THEN { GOTO"` and `UnitCalcPre.CAS!NOTHERO!`,
     // so it reaches heroes alone. The other engine grant paths for the same flag are enumerated
     // with their citations on `transmuteEquipment` in `stats_origins.js`, which is where that list
-    // lives; six of them are F256.3's and none has a control yet.
+    // lives; six of them are the equip rule F256.3 ruled out of scope, and half that ruling is
+    // this step's `isHero` term — the flag's one combat reader is hero-gated, and the Armor Type
+    // control gives a hero no orihalcon to be gated on, so a step implementing the rule would move
+    // no number. The other half is that the materials themselves are already stated inputs.
     //
     // **The `SRanged` half, settled by F256.2.** The script line is
     // `SETSTAT(U,SRanged,0,(GetStat(U,SRanged,0)+2))` — the record's Ranged field, no strength and

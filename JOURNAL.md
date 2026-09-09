@@ -4,6 +4,148 @@
 
 # Journal
 
+## 2026-09-09 — F257.2: four new retort controls, because the fifth was already there
+
+The subtask was handed to me as "five Warlord-only booleans". It is four. The tail's fifth retort is
+Artificer, and `enchantments.js` has carried an `artificer` control since F142/F208, whose origin
+row reads `input:the owner holds the Artificer retort` in so many words. So the wizard fact the
+Marionette write is gated on is already an input; a second control saying the same thing would be a
+duplicate of exactly the kind `CLAUDE.md`'s *Single source of truth* names. F257.3 gates its
+`HAMechanicalMaster` step on `abilities.artificer`.
+
+The reason this is safe to reuse rather than a conflation: the existing consumer,
+`training:artificer`, gates on `retort && u.mechanical` at training time, and the Marionette write
+gates on `retort && marionetteOwned && ascension` in region `b`. Two readers, two gates, one input.
+The control never meant "the unit is Mechanical and the owner has Artificer" — the Mechanical half
+is the step's own test, read off the record at its rank.
+
+Two smaller things I did not expect:
+
+- **Retort controls are already a named category in the build.** `guardian` and `tactician` are
+  labelled "Guardian retort" and "Tactician retort" and have been for a long time, so the four new
+  labels are "<X> retort" rather than "Marionette: <X>". `channeler` and `marionetteConjurer` carry
+  the Marionette prefix because their *only* readers are the Marionette branch; a retort whose
+  effects reach elsewhere in the engine should not be filed under one hero.
+- **`match:` is for roster ability text and nothing else.** Only `parseAbilitiesFromUnit` reads it,
+  and only over `ABILITY_DEFS`; an `ENCHANTMENT_DEFS` `match` is dead weight. `channeler` and
+  `marionetteConjurer` have none and the new four have none. `artificer`'s is inert but I left it
+  alone — deleting it is not this subtask's business.
+
+Version gating, persistence, the share link and Reset all came free: `subgroup: 'Warlord only'` is
+read by `abilityVersionGated`, which is the single home for the rule since F261, and
+`collectFullState` enumerates `#calcMain input, #calcMain select` generically rather than from a
+key list. I checked both rather than assuming, since the subtask names them as obligations.
+
+The honest note F257.1 left standing still stands: these four controls move no number. They will
+move none after F257.3 either that a user could not already get by ticking Lucky, Charmed and Spell
+Lock. What F257 buys is the hover chain naming the retort. Nothing I found while implementing
+changes that assessment in either direction.
+
+**The review round moved the tooltips, not the design.** No P1. The reviewer confirmed the
+Artificer reuse independently, having read the training step, the origin row and the Warlord
+block, and it caught that my Sage and Astrologer lines — "an overland research bonus no combat
+calculation reads" — were the guide’s forbidden hedge wearing a mechanic’s clothes. They now state
+the rank grant and put the exclusion on the guide’s `Not modeled:` line. It also caught that the
+reused `artificer` tooltip goes stale the moment the input boundary exists, not when F257.3 lands,
+which is right: the control now stands for a retort with two modelled uses. Fixed here rather than
+deferred.
+
+**And the inherited inventory undercounted itself.** F257.1 said the card carries nine wizard-level
+inputs. It carries twelve, and five rather than two of them are retorts: its table listed the
+Marionette cluster and missed `guardian`, `tactician` and `artificer`, which have been retort
+controls all along. Corrected in the reference doc. The moral is the same one that produced the
+`artificer` reuse: the answer to "is a wizard retort an input here?" was already yes, in more
+places than the reading found.
+
+## 2026-09-09 — F257.1: the retort tail is six writes, and the calculator already takes wizard retorts as controls
+
+The reading and the ruling live in `Reference docs/Caster binary/F257.1 Marionette retort tail.md`.
+This entry records only what surprised me while getting there, and none of it is authoritative.
+
+**The item said five writes; the Charismatic block holds two.** `SETHEAB(W,48,HACharmed,1)` is
+followed by `SETHEAB(W,48,HALucky,1)` inside the same `IF`, and `lucky` is the one key in the whole
+tail with the largest combat consequence (+10 To Hit, +10 To Block, +1 Resistance). It is not that
+key's only owned-branch producer — `b:marionette:books:lucky` writes it from five Life books, which
+the review caught me claiming otherwise — but it is a second, independent route. Every prior pass over this tail — F244.3f, F244.3g, the retort-tail comment in
+`stats_sequence.js` — enumerated five, so the miscount is inherited rather than the item body’s.
+
+**The contract question answers itself against the build.** The item was filed on "a wizard retort
+is none of [the input kinds]", which is true of CLAUDE.md’s text and false of `enchantments.js`:
+`channeler` and `marionetteConjurer` are literally two retorts, and `outlanderWizard`, the five book
+counts and `marionetteBaseSkill` are seven more wizard facts — nine in all. So F257.2’s proposal
+regularises existing practice.
+
+**And the "stated value or control" question is a false alternative.** Both shapes are already in the
+build and the tail splits across them: four *more* retorts in the same tail (Warlord, Guardian, Cult
+Leader, Conjurer) write `HALeadership`, `HADivineBarrier`, `HAPrayermaster` and `HASoulLinker`, and
+all four already have `*Aura` numeric controls. `heroabil.ini` is the discriminator and I did not
+expect it to be that clean: `Levelscale=No, Bonus=0` for Charmed and Lucky (flags, so the cause is
+statable) against `Levelscale=Yes` for all four aura abilities (magnitude is f(level, super) over a
+stack maximum, so only the effect is statable). The retort-tail comment in `stats_sequence.js` lists
+three of those four as things the record "does not hold at all", which is wrong; F257.3 fixes it
+where it stands.
+
+**The uncomfortable finding, which argues against doing F257 at all.** `lucky`, `charmed` and
+`spellLock` are already card controls, so every number the six writes could move is reachable today
+by ticking three boxes; `sage`, `mechanicalMaster` and `ritualMaster` have zero readers in
+`combat_*.js` and `engine.js` (counted, not assumed). What F257 buys is provenance in the hover
+chain, not arithmetic. I put that in the report as a question rather than deciding it.
+
+**`HALucky` has no read behind it.** `HACharmed` is read straight off `Wizards[..].Hero[..]` at
+`$00595BC0`, but `U.Lucky` is a unit boolean and the candidate bridge is `ApplyHeroBonus`, whose body
+is unreconstructed. I first cited `D29.evidence.md` as its boundary proof; the review corrected that
+— D29 bounds `ApplyMagicWeapons` and only lists `ApplyHeroBonus` in its adjacency table. Filed as
+`D37`.
+
+While in `Engine verification evidence.md` I retargeted its one reference to `Calculator/BACKLOG.md`,
+a file that has not existed for some time, at `TASKS.md`.
+
+## 2026-09-09 — F256.3: the Adamant-plus-Orihalcon equip rule is out of scope, and why the ruling is not a shrug
+
+F256 closes here. Six of the eight sites that write `EncTransmuteEquipment` are one rule — the
+`: give transmutes equipment flag … :` idiom, gated on `EncAdamant %AND EncOrihalcon`, at the
+Caravanserai retrain, both Outlander re-equip paths, both spell-creation paths and Mystic Surge's
+tail. They are out of scope. The full statement with citations is the `transmuteEquipment` comment
+in `Calculator/stats_origins.js`; this entry records only how the call was reached.
+
+**The reason is not "overland, therefore out."** That framing was in the first draft and the review
+was right to kill it: the six are city training, two retrain/re-equip passes, two unit-creation
+blocks (one overland spell, one combat spell) and the tail of a random-grant loop belonging to a
+spell that is *combat only* (`spells.ini` `[94]` Mystic Surge, `CastingLocation=255`, which the
+file's own legend at the `; Casting Location determines where the spell may be cast.` line gives as
+combat only). Two grounds hold instead:
+
+- **What the six produce is already an input.** Which materials a unit carries into combat is
+  stated on the card by Weapon Type and Armor Type, written onto the record by
+  `training:weaponQuality` and `training:armorQuality`. The part the calculator declines to model
+  is the machinery each site uses to *decide* them: ore in range, the fortress, the Alchemist
+  Guild, the Sorcerer's Stone, the Lava Smelter and Strategic Logistics for five of them —
+  overland state, and overland play is out of scope — and for Mystic Surge a random draw over 46
+  outcomes, which is not a user input at all.
+- **The flag is the residue, and it cannot change a combat number.** Note the shape of that claim.
+  It is *not* "a step could not fire": a `training`-rank step keyed on the material pair would fire
+  on an ordinary non-hero carrying both, which is the shape F256.2's report proposed. It is that
+  firing could not move anything. `b:transmuteEquipment:heroAugment` is the field's one combat
+  reader, it is hero-gated, and no path gives a hero `armorMaterial === 'orihalcon'` — the Armor
+  Type control refuses it (`armorTrainingInputAt`'s `!isHero`, `stats.js`) and
+  `buffs:transmuteEquipment:materials` carries `!u.ishero`.
+
+**The honest limit.** That second inertness is the *calculator's*, not the script's. The Outlander
+re-equip pair excludes only base-Fantastic units, and Mystic Surge's `R=41`/`R=42` draws sit
+outside the `ISHERO(TU)=0` guard its other grants take — so in Warlord a hero really can acquire
+both materials and stand Body Augmented. The calculator cannot express that hero because of the
+armour control's hero exclusion, which `stats.js` already records as the control's choice rather
+than the engine's, on the ground that a hero's equipment is items. That is hero equipment, which
+`CLAUDE.md` defers until the rest works. Modelling the equip rule before hero equipment lands would
+add a step with a provenance citation and nothing downstream of it — coverage that reads as real
+and is not.
+
+The other four sites cannot reach a hero even in the engine: the Caravanserai retrain excludes one
+outright, `CreateUnit.CAS` is city training, and the two creation sites write a spell's `NEWU`
+(Air Support Doctrine's summon, per the review).
+
+Nothing moved. No fixture was added, because the ruling states no numeric claim.
+
 ## 2026-09-08 — F256.2: the Transmute Equipment cast becomes a control, and one step loses a name it never earned
 
 The cast is `spells.ini` `[264]`, Realm 1 (Nature), `EnchantmentID=69`, and its `OLSpell.CAS` block

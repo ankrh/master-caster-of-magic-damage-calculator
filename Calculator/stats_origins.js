@@ -204,6 +204,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
       producers: ['input:the owner holds the Artificer retort'] },
   ],
+  astrologer: [
+    { origin: 'nonRecord', versions: SCOPE_WARLORD,
+      producers: ['input:the owner holds the Astrologer retort'] },
+  ],
   badMoon: [
     { origin: 'nonRecord', versions: SCOPE_MODERN,
       producers: ['input:the Bad Moon world state'] },
@@ -324,6 +328,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   channeler: [
     { origin: 'nonRecord', versions: SCOPE_WARLORD,
       producers: ['input:the Wanderer has a Channeler owner'] },
+  ],
+  charismatic: [
+    { origin: 'nonRecord', versions: SCOPE_WARLORD,
+      producers: ['input:the owner holds the Charismatic retort'] },
   ],
   charmOfLife: [
     // A player/wizard global in both families: `unitcalc.c:1622` and `:1737`
@@ -458,6 +466,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
     { origin: 'training', versions: SCOPE_WARLORD,
       producers: ['step:training:lavaSmelter:elementalProtection'],
       admits: ['lavaSmelterElementalArmor', 'lavaSmelter'] },
+  ],
+  enchanter: [
+    { origin: 'nonRecord', versions: SCOPE_WARLORD,
+      producers: ['input:the owner holds the Enchanter retort'] },
   ],
   endurance: [
     { origin: 'buffs', versions: SCOPE_COM_PLUS,
@@ -1135,6 +1147,10 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
       // `channeler` only steers away from it (`deriveMarionettePackage`, `stats_identity.js`).
       admits: [] },
   ],
+  sageMaster: [
+    { origin: 'nonRecord', versions: SCOPE_WARLORD,
+      producers: ['input:the owner holds the Sage Master retort'] },
+  ],
   sailing: [
     { origin: 'template', versions: SCOPE_WARLORD,
       producers: ['control'] },
@@ -1263,7 +1279,8 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   // that step's only input. Seven further engine **grant** paths write the same permanent flag,
   // and each is Warlord's alone — the `CoM2 1.05.11 base` script set names `EncTransmuteEquipment`
   // nowhere and has no such spell. **The cast, site 1, is modelled since F256.2** and is the row's
-  // `buffs` origin below; the six sites of the equip rule are F256.3's and have no control.
+  // `buffs` origin below; the six sites of the equip rule have no control and, since F256.3, are
+  // ruled out of scope for the reason stated after the list.
   // This is the one home for that enumeration; the citations elsewhere point here rather than
   // restating it:
   //
@@ -1290,7 +1307,48 @@ const ABILITY_KEY_ORIGINS = Object.freeze({
   // 2–7 are one rule with six sites, not six rules: each carries the same
   // `: give transmutes equipment flag … :` idiom and the same `EncAdamant %AND EncOrihalcon`
   // gate, and sets the flag so the two material enchantments are not granted twice — a
-  // bookkeeping consequence of the materials rather than a cast. F256.3 rules on them.
+  // bookkeeping consequence of the materials rather than a cast.
+  //
+  // **F256.3 ruled the six out of scope**, on two grounds. They are *not* "these are overland
+  // writes": the six are city training, two retrain/re-equip passes, two unit-creation blocks —
+  // one under an overland spell and one under a combat spell — and the tail of a **combat-only**
+  // spell's random-grant loop (`spells.ini` `[94]` Mystic Surge, `CastingLocation=255`, which that
+  // file's own legend gives as combat only).
+  //
+  // **First: what the six produce is already an input.** Which materials a unit carries into
+  // combat is stated on the card by the Weapon Type and Armor Type controls, written onto the
+  // record by `training:weaponQuality` and `training:armorQuality`. What the calculator declines
+  // to model is the machinery each site uses to *decide* those materials — ore in range of the
+  // wizard's cities, the fortress, the Alchemist Guild, the Sorcerer's Stone, the Lava Smelter and
+  // Strategic Logistics for five of them, and for Mystic Surge a random draw over 46 outcomes.
+  // The first is overland state and *overland play is out of scope* (`CLAUDE.md`); the second is
+  // not a user input at all. Stating the outcome is how the calculator already answers both.
+  //
+  // **Second: the flag is the only residue, and it cannot change a combat number.** The claim is
+  // not that a step could not fire — a `training`-rank step keyed on
+  // `weaponMaterial === 'adamantium' && armorMaterial === 'orihalcon'` *would* fire on an ordinary
+  // non-hero carrying both, which is the shape F256.2's report proposed. It is that firing could
+  // not move anything: `b:transmuteEquipment:heroAugment` is the field's one combat reader, that
+  // step is hero-gated by its enclosing region, and no path gives a hero
+  // `armorMaterial === 'orihalcon'` — the Armor Type control refuses it (`armorTrainingInputAt`'s
+  // `!isHero`, `stats.js`) and `buffs:transmuteEquipment:materials` carries `!u.ishero`. So the
+  // predicate is unsatisfiable for a hero and unread for everyone else, and the step would be a
+  // cited write with no consumer.
+  //
+  // That second inertness is the calculator's, not the script's, and two of the six sites are
+  // where that shows. The Outlander re-equip pair skips base-Fantastic units only
+  // (`OverlandEndTurn.CAS!NOMAGITEKSCI!+2 "IF (BASEFANTASTIC(U)>0) THEN { GOTO"`), and Mystic
+  // Surge's loop can draw both materials for a hero
+  // (`SpellMysticSurge.CAS~"IF (R=41) THEN { SETENCHANTMENTFLAG(TU,EncAdamant,ABase,1); }"` and
+  // `SpellMysticSurge.CAS~"IF (R=42) THEN { SETENCHANTMENTFLAG(TU,EncOrihalcon,ABase,1); }"`,
+  // neither under the `ISHERO(TU)=0` guard the loop's other grants take), so a Warlord hero really
+  // can acquire both materials and stand Body Augmented. The other four cannot reach a hero at
+  // all: the Caravanserai retrain excludes one outright
+  // (`OverlandEndTurn.CAS!NOLOGISTIC!+17 "IF ISHERO(U) %OR BASEFANTASTIC(U) THEN { GOTO"`),
+  // `CreateUnit.CAS` is the city training path, and sites 4–5 write a spell's `NEWU`. The gap the
+  // ruling leaves open is therefore exactly one — a hero holding orihalcon — and that is hero
+  // equipment, which `CLAUDE.md` defers until the rest of the calculator works. Modelling the rule
+  // before that lands would add a step with a provenance citation and nothing downstream of it.
   //
   // One further site **clears** the permanent flag: Rust's cast, at
   // `COSpell.CAS!NOTRUST!-9 "SETENCHANTMENTFLAG(TU,EncTransmuteEquipment,1,0);"`, one of the nine

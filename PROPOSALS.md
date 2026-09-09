@@ -83,3 +83,13 @@ Spell targeting reads the record its own arm names, and the two are not the same
 reads the calculated one, from mirrored blocks that differ only in the array base
 (`Reference docs/Caster binary/F264.1.evidence.md`). A targeting gate is read, not assumed; where no
 reading exists yet, the gap is named rather than filled by a default.
+
+Document: CLAUDE.md
+Section: Input/output contract — after the first paragraph ("The user specifies the version, …")
+Change: addition
+Text:
+Some of what a side states is a property of its *owning wizard* rather than of the unit: a retort
+the wizard holds, its per-realm spell-book counts, its base casting skill, its research state. These
+are stated per side on the same enchantment-and-condition channel as everything else, are version
+gated the same way, and are gated internally the same way — a wizard-level mark on a unit the
+engine's own test refuses moves nothing.
