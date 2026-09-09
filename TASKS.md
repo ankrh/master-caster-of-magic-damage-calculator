@@ -103,6 +103,7 @@ subtask appears here before any subtask that depends on it.
 | 91 | **F272.7** | `rust` becomes a record field, and the melee −3's `hasAbil(abilities, 'rust')` gate stops holding that write on the merged map. Needs F272.1. |
 | 92 | **F275** | Immolation's cold immunity is modelled: a cast grants it in CoM2/Warlord, an innate one does not, and the DOS builds grant none. Needs F272.4. |
 | 93 | **F276** | Warlord Rust's targeting gate reads the calculated record, as `SpellTypeGroup=16` does. Numbers move in 2,117 measured Warlord cases. |
+| 94 | **F278** | The cost of having the matrix worker import all 24 core sources instead of nine is measured, and the subset either goes or is kept with the number stated. |
 **Provenance of the queue.** Items are named rather than numbered here, so a reorder does not rot this paragraph. **F260** and **F261** were filed 2026-09-05 out of the preset-suite cost measurement and moved above the backlog the same day so the rows below run against the cheaper suite; F261 was ordered after the refactor on the user’s ruling and executed 2026-09-07. **F267** was filed 2026-09-05 out of the identity-object read; its first subtask, F267.1, absorbed the CoM 1 template-phase follow-up the F262 close proposed and was executed 2026-09-07, and the item closed on 2026-09-08. **F264** and **F265** were filed 2026-09-05 out of the F244.3h and F246 close blocks; **F277** was filed 2026-09-09 from the F267.1 close discussion and absorbed **F274**, whose rank framing the `BU_Apply_Specials` two-caller reading superseded. **F264** closed 2026-09-08 on the user’s ruling, its question answered by the first Method B subunit (`Reference docs/Caster binary/F264.1.evidence.md`) with the two remaining subunits unfiled, and **F276** was filed from it. **F253** and **F259** were filed 2026-09-03 and 2026-09-04 out of the F244.3c close and the digest-blindness findings; **F259** closed 2026-09-08 (F259.1, F259.2), and `tools/derivation_equivalence.js` now prints and stores the input surface each run ranged over, halts on a boundary field it neither varies nor declares, and states the boundary's ability halves as well as the merged map. **F254**, **F255**, **F256** and **F257** were filed 2026-09-04 out of the F244.3f and F244.3g reviews. **F254** closed 2026-09-08 (F254.1, F254.2): the exclusion is a spell-targeting rule at `buffs:discipline:cast`, base CoM2 refuses a hero and both modern builds refuse a permanently Fantastic target, and 95 digest cases moved — 36 of them the solo CoM2 hero block F244.3d had measured, and every Warlord case Fantastic rather than hero. **F255** closed 2026-09-08 (F255.1, F255.2): `hasImplementationWrite` recognises `SETHEAB` and `SETOLENCHANTMENTFLAG` in both shipped call spellings, and the 17 citations that had been widened past the write they evidence were narrowed back to it, with the audit totals unchanged. **F256** closed 2026-09-09 (F256.1, F256.2, F256.3): the enumeration went from three writer sites to seven grants plus Rust’s clear, the cast became a Warlord control whose hero-augmentation step stopped calling itself a Marionette, and the six-site Adamant-plus-Orihalcon equip rule was ruled out of scope on two grounds — what the six produce is already the Weapon Type and Armor Type inputs, while the machinery deciding it is overland state for five and a random draw for Mystic Surge’s combat-only loop; and the flag is the only residue, whose one combat reader is hero-gated while no path gives a hero orihalcon armour, so a step keyed on the material pair would fire on a non-hero and still move nothing. The gap left open is a hero holding orihalcon, which is hero equipment. Rust’s strip, the figure split and **F249** were approved 2026-09-03 from the No Heal merge. **F250**, the evidence debt the F244.3b writes declared, was filed 2026-09-03 on the user’s approval. Then the Create Undead damage-bucket item and the composition normalisation decision F225.1 surfaced, and below those the standalone and structural backlog, F251 and the F224 race and realm findings among it. F239–F248 were approved 2026-09-02 from the F210/F204 close. Closed: F244 (F244.1, F244.2, F244.3a–F244.3i), F245, F246, F247, F248, F252 (F252.1–F252.6, executed 2026-09-07; the marked half is a positioned write for every `immunities`/`buffs`/`debuffs` key the record carries, and the keys it does not carry are left unfinished rather than exempt — the scope question is open in `tmp/REPORT.F252.5.md` and `tmp/REPORT.F252.6.md`), F258, F262, F263 (executed 2026-09-07; the Sapiens label is a record field with its own `buffs:spiritLink:sapiens` write and the `NOTSAPIENS` gate is two `ctx.base` reads), F260 (F260.1–F260.10, executed 2026-09-05/06; its tier promotions are an open `PROPOSALS.md` entry), F261 (executed 2026-09-07; one gating test, `abilityVersionGated`, and numbers moved in Warlord matrix runs), F268 (F268.1–F268.7, executed 2026-09-06/07 on the user’s ruling that Playwright is retired for non-UI testing; `npm test` is now the Node default and `npm run test:all` is what a page change runs, with three further `PROPOSALS.md` entries open), F267 (F267.1–F267.6, executed 2026-09-07/08; the identity object is gone and the five `UnitT` identity members — `race`, `fantastic`, `unittype`, `herotype`, `ishero` — are fields of the one sequence record, seeded at the input boundary and read at a position; the constructors survive as the input-shape declaration and `version` is no longer a member of one; nothing moved in any of the six).
 
 **F271**, **F272**, **F273**, **F274** and **F275** were filed 2026-09-07 as low priority from the rows 3–13 run (**F274** since absorbed by **F277**): F271 on the user’s ruling that compatibility-only code is not kept, and the other four out of the F252.2, F252.3/F252.4, F252.5/F252.6 and F267.1 close blocks.
@@ -833,6 +834,34 @@ that one.
 
 Shatter is **not** in scope: Warlord moves it to id 272 with `SpellTypeGroup = 13`. Base-CoM2 Shatter
 (id 88) is group 16, but base CoM2 has no Rust.
+
+### F278 — Measure what the matrix worker's nine-source subset buys
+
+*Category: other.* Approved 2026-09-09 as low priority, out of the F269.1 removal.
+
+`matrixWorkerSource()` (`Calculator/ui_matrix.js`) builds the worker blob from `index.html`'s
+`data-worker` script tags — **nine of the 24 `data-scope="core"` sources**. Nothing in a core source
+says whether the worker loads it, so moving a function between two core files leaves `npm test`
+green and the page working while the worker throws `ReferenceError` and the matrix renders nothing.
+F268.6 demonstrated it with `convolveDists`.
+
+F269.1 guarded that with a Node check; the check was **removed 2026-09-09 on the user's ruling** that
+`tests/matrix.spec.js` already fails the class and discovery at the next `test:all` is acceptable.
+Do not reintroduce it. The subset itself is untouched, and importing all 24 core sources would
+delete the failure class rather than detect it.
+
+What is unknown is the price. Measure, with numbers rather than estimates:
+
+- blob size and per-worker parse/startup time, nine sources against all 24;
+- how many workers a matrix run spawns, and whether the sources are parsed once per worker;
+- the wall-clock change for a representative matrix, against the ~7.6 ms/cell realm figure F260.9
+  measured.
+
+Then either widen the worker to all core sources and delete the `data-worker` attribute along with
+the distinction it encodes, or keep the subset and record the measured cost as the reason. One
+subtask; the close block puts the choice to the user with the numbers attached. Moves no number
+either way — the worker runs the same sources the page does, and F269.2 already gave the matrix the
+card's own input path.
 
 ### F271 — The merged-`abilities` compatibility arm is deleted
 
