@@ -83,3 +83,17 @@ the wizard holds, its per-realm spell-book counts, its base casting skill, its r
 are stated per side on the same enchantment-and-condition channel as everything else, are version
 gated the same way, and are gated internally the same way — a wizard-level mark on a unit the
 engine's own test refuses moves nothing.
+
+Document: CLAUDE.md
+Section: Architecture, appended to the paragraph introducing the phase table
+Change: addition
+Text:
+The two groups of phases are named for different reasons. `a` to `e` are bins of the binary's own
+code regions: which region a write sits in is evidence, but the boundaries between them are the
+engine's code layout rather than anything the game does, and a bin may be split where a reading
+shows one region is really two execution passes. **`immunities`, `buffs` and `debuffs` are one
+moment — cast time — divided into three bins by the calculator's ruling about the most likely order
+the casts happened in.** Their effect-kind names are that ruling: an immunity is assumed cast before
+a beneficial enchantment, which is assumed cast before a curse. That is why a marked write's bin is
+decided by what kind of effect it is, while a recalculation write's bin is decided by where the code
+is.

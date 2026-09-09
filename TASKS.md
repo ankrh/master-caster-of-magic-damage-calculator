@@ -91,19 +91,21 @@ subtask appears here before any subtask that depends on it.
 | 79 | **F270** | The tooltip system is overhauled. Low priority, deliberately late: nothing depends on it and the F268 pass left tooltip wording unasserted in the meantime. |
 | 80 | **F271** | `deriveUnitStats` takes the innate and marked halves alone; the merged-`abilities` arm and its ~300 callers go. |
 | 81 | **F273** | `lucky` and `magicImmunity` stop riding the `template` seed's transform arm; each pre-sequence grant takes a positioned `training` step. |
-| 82 | **F274** | CoM 1's two combat-summon conversions move to the boundary inside region `c` that the reviewed reconstruction puts them at, retiring the named deviation. |
-| 83 | **F272.1** | The 45 non-record marked keys are censused per shape and the record-field question is settled for each, with the deviation alternative costed. |
-| 84 | **F272.2** | The 36 same-named condition flags become record fields with positioned writes. Needs F272.1. |
-| 85 | **F272.3** | `elemArmor` becomes a value field. Needs F272.1 and F251.2. |
-| 86 | **F272.4** | Modern `fear` and `immolation` become shape-1 ability fields; DOS `fear` keeps its four separate contributions. Needs F272.1. |
-| 87 | **F272.5** | `teleporting` and `undead` become shape-3 condition fields. Needs F272.1. |
-| 88 | **F272.6** | `hierophany`, `mislead` and `soulFlay` become record fields. Needs F272.1. |
-| 89 | **F272.7** | `rust` becomes a record field, and the melee −3's `hasAbil(abilities, 'rust')` gate stops holding that write on the merged map. Needs F272.1. |
-| 90 | **F275** | Immolation's cold immunity is modelled: a cast grants it in CoM2/Warlord, an innate one does not, and the DOS builds grant none. Needs F272.4. |
-| 91 | **F276** | Warlord Rust's targeting gate reads the calculated record, as `SpellTypeGroup=16` does. Numbers move in 2,117 measured Warlord cases. |
-**Provenance of the queue.** Items are named rather than numbered here, so a reorder does not rot this paragraph. **F260** and **F261** were filed 2026-09-05 out of the preset-suite cost measurement and moved above the backlog the same day so the rows below run against the cheaper suite; F261 was ordered after the refactor on the user’s ruling and executed 2026-09-07. **F267** was filed 2026-09-05 out of the identity-object read; its first subtask, F267.1, absorbed the CoM 1 template-phase follow-up the F262 close proposed and was executed 2026-09-07, and the item closed on 2026-09-08. **F264** and **F265** were filed 2026-09-05 out of the F244.3h and F246 close blocks; **F264** closed 2026-09-08 on the user’s ruling, its question answered by the first Method B subunit (`Reference docs/Caster binary/F264.1.evidence.md`) with the two remaining subunits unfiled, and **F276** was filed from it. **F253** and **F259** were filed 2026-09-03 and 2026-09-04 out of the F244.3c close and the digest-blindness findings; **F259** closed 2026-09-08 (F259.1, F259.2), and `tools/derivation_equivalence.js` now prints and stores the input surface each run ranged over, halts on a boundary field it neither varies nor declares, and states the boundary's ability halves as well as the merged map. **F254**, **F255**, **F256** and **F257** were filed 2026-09-04 out of the F244.3f and F244.3g reviews. **F254** closed 2026-09-08 (F254.1, F254.2): the exclusion is a spell-targeting rule at `buffs:discipline:cast`, base CoM2 refuses a hero and both modern builds refuse a permanently Fantastic target, and 95 digest cases moved — 36 of them the solo CoM2 hero block F244.3d had measured, and every Warlord case Fantastic rather than hero. **F255** closed 2026-09-08 (F255.1, F255.2): `hasImplementationWrite` recognises `SETHEAB` and `SETOLENCHANTMENTFLAG` in both shipped call spellings, and the 17 citations that had been widened past the write they evidence were narrowed back to it, with the audit totals unchanged. **F256** closed 2026-09-09 (F256.1, F256.2, F256.3): the enumeration went from three writer sites to seven grants plus Rust’s clear, the cast became a Warlord control whose hero-augmentation step stopped calling itself a Marionette, and the six-site Adamant-plus-Orihalcon equip rule was ruled out of scope on two grounds — what the six produce is already the Weapon Type and Armor Type inputs, while the machinery deciding it is overland state for five and a random draw for Mystic Surge’s combat-only loop; and the flag is the only residue, whose one combat reader is hero-gated while no path gives a hero orihalcon armour, so a step keyed on the material pair would fire on a non-hero and still move nothing. The gap left open is a hero holding orihalcon, which is hero equipment. Rust’s strip, the figure split and **F249** were approved 2026-09-03 from the No Heal merge. **F250**, the evidence debt the F244.3b writes declared, was filed 2026-09-03 on the user’s approval. Then the Create Undead damage-bucket item and the composition normalisation decision F225.1 surfaced, and below those the standalone and structural backlog, F251 and the F224 race and realm findings among it. F239–F248 were approved 2026-09-02 from the F210/F204 close. Closed: F244 (F244.1, F244.2, F244.3a–F244.3i), F245, F246, F247, F248, F252 (F252.1–F252.6, executed 2026-09-07; the marked half is a positioned write for every `immunities`/`buffs`/`debuffs` key the record carries, and the keys it does not carry are left unfinished rather than exempt — the scope question is open in `tmp/REPORT.F252.5.md` and `tmp/REPORT.F252.6.md`), F258, F262, F263 (executed 2026-09-07; the Sapiens label is a record field with its own `buffs:spiritLink:sapiens` write and the `NOTSAPIENS` gate is two `ctx.base` reads), F260 (F260.1–F260.10, executed 2026-09-05/06; its tier promotions are an open `PROPOSALS.md` entry), F261 (executed 2026-09-07; one gating test, `abilityVersionGated`, and numbers moved in Warlord matrix runs), F268 (F268.1–F268.7, executed 2026-09-06/07 on the user’s ruling that Playwright is retired for non-UI testing; `npm test` is now the Node default and `npm run test:all` is what a page change runs, with three further `PROPOSALS.md` entries open), F267 (F267.1–F267.6, executed 2026-09-07/08; the identity object is gone and the five `UnitT` identity members — `race`, `fantastic`, `unittype`, `herotype`, `ishero` — are fields of the one sequence record, seeded at the input boundary and read at a position; the constructors survive as the input-shape declaration and `version` is no longer a member of one; nothing moved in any of the six).
+| 82 | **F277.1** | Each of CoM 1's 50 region-`c` steps is stated as running in the constructor's `BU_Apply_Specials` call, the recompute's, or both. |
+| 83 | **F277.2** | The chain gains a way to express a step the engine executes twice, or the double execution is restated as a named deviation. Needs F277.1. |
+| 84 | **F277.3** | CoM 1's two combat-summon conversions take their faithful position, retiring the head-of-`a` deviation. Absorbs F274. Needs F277.2. |
+| 85 | **F272.1** | The 45 non-record marked keys are censused per shape and the record-field question is settled for each, with the deviation alternative costed. |
+| 86 | **F272.2** | The 36 same-named condition flags become record fields with positioned writes. Needs F272.1. |
+| 87 | **F272.3** | `elemArmor` becomes a value field. Needs F272.1 and F251.2. |
+| 88 | **F272.4** | Modern `fear` and `immolation` become shape-1 ability fields; DOS `fear` keeps its four separate contributions. Needs F272.1. |
+| 89 | **F272.5** | `teleporting` and `undead` become shape-3 condition fields. Needs F272.1. |
+| 90 | **F272.6** | `hierophany`, `mislead` and `soulFlay` become record fields. Needs F272.1. |
+| 91 | **F272.7** | `rust` becomes a record field, and the melee −3's `hasAbil(abilities, 'rust')` gate stops holding that write on the merged map. Needs F272.1. |
+| 92 | **F275** | Immolation's cold immunity is modelled: a cast grants it in CoM2/Warlord, an innate one does not, and the DOS builds grant none. Needs F272.4. |
+| 93 | **F276** | Warlord Rust's targeting gate reads the calculated record, as `SpellTypeGroup=16` does. Numbers move in 2,117 measured Warlord cases. |
+**Provenance of the queue.** Items are named rather than numbered here, so a reorder does not rot this paragraph. **F260** and **F261** were filed 2026-09-05 out of the preset-suite cost measurement and moved above the backlog the same day so the rows below run against the cheaper suite; F261 was ordered after the refactor on the user’s ruling and executed 2026-09-07. **F267** was filed 2026-09-05 out of the identity-object read; its first subtask, F267.1, absorbed the CoM 1 template-phase follow-up the F262 close proposed and was executed 2026-09-07, and the item closed on 2026-09-08. **F264** and **F265** were filed 2026-09-05 out of the F244.3h and F246 close blocks; **F277** was filed 2026-09-09 from the F267.1 close discussion and absorbed **F274**, whose rank framing the `BU_Apply_Specials` two-caller reading superseded. **F264** closed 2026-09-08 on the user’s ruling, its question answered by the first Method B subunit (`Reference docs/Caster binary/F264.1.evidence.md`) with the two remaining subunits unfiled, and **F276** was filed from it. **F253** and **F259** were filed 2026-09-03 and 2026-09-04 out of the F244.3c close and the digest-blindness findings; **F259** closed 2026-09-08 (F259.1, F259.2), and `tools/derivation_equivalence.js` now prints and stores the input surface each run ranged over, halts on a boundary field it neither varies nor declares, and states the boundary's ability halves as well as the merged map. **F254**, **F255**, **F256** and **F257** were filed 2026-09-04 out of the F244.3f and F244.3g reviews. **F254** closed 2026-09-08 (F254.1, F254.2): the exclusion is a spell-targeting rule at `buffs:discipline:cast`, base CoM2 refuses a hero and both modern builds refuse a permanently Fantastic target, and 95 digest cases moved — 36 of them the solo CoM2 hero block F244.3d had measured, and every Warlord case Fantastic rather than hero. **F255** closed 2026-09-08 (F255.1, F255.2): `hasImplementationWrite` recognises `SETHEAB` and `SETOLENCHANTMENTFLAG` in both shipped call spellings, and the 17 citations that had been widened past the write they evidence were narrowed back to it, with the audit totals unchanged. **F256** closed 2026-09-09 (F256.1, F256.2, F256.3): the enumeration went from three writer sites to seven grants plus Rust’s clear, the cast became a Warlord control whose hero-augmentation step stopped calling itself a Marionette, and the six-site Adamant-plus-Orihalcon equip rule was ruled out of scope on two grounds — what the six produce is already the Weapon Type and Armor Type inputs, while the machinery deciding it is overland state for five and a random draw for Mystic Surge’s combat-only loop; and the flag is the only residue, whose one combat reader is hero-gated while no path gives a hero orihalcon armour, so a step keyed on the material pair would fire on a non-hero and still move nothing. The gap left open is a hero holding orihalcon, which is hero equipment. Rust’s strip, the figure split and **F249** were approved 2026-09-03 from the No Heal merge. **F250**, the evidence debt the F244.3b writes declared, was filed 2026-09-03 on the user’s approval. Then the Create Undead damage-bucket item and the composition normalisation decision F225.1 surfaced, and below those the standalone and structural backlog, F251 and the F224 race and realm findings among it. F239–F248 were approved 2026-09-02 from the F210/F204 close. Closed: F244 (F244.1, F244.2, F244.3a–F244.3i), F245, F246, F247, F248, F252 (F252.1–F252.6, executed 2026-09-07; the marked half is a positioned write for every `immunities`/`buffs`/`debuffs` key the record carries, and the keys it does not carry are left unfinished rather than exempt — the scope question is open in `tmp/REPORT.F252.5.md` and `tmp/REPORT.F252.6.md`), F258, F262, F263 (executed 2026-09-07; the Sapiens label is a record field with its own `buffs:spiritLink:sapiens` write and the `NOTSAPIENS` gate is two `ctx.base` reads), F260 (F260.1–F260.10, executed 2026-09-05/06; its tier promotions are an open `PROPOSALS.md` entry), F261 (executed 2026-09-07; one gating test, `abilityVersionGated`, and numbers moved in Warlord matrix runs), F268 (F268.1–F268.7, executed 2026-09-06/07 on the user’s ruling that Playwright is retired for non-UI testing; `npm test` is now the Node default and `npm run test:all` is what a page change runs, with three further `PROPOSALS.md` entries open), F267 (F267.1–F267.6, executed 2026-09-07/08; the identity object is gone and the five `UnitT` identity members — `race`, `fantastic`, `unittype`, `herotype`, `ishero` — are fields of the one sequence record, seeded at the input boundary and read at a position; the constructors survive as the input-shape declaration and `version` is no longer a member of one; nothing moved in any of the six).
 
-**F271**, **F272**, **F273**, **F274** and **F275** were filed 2026-09-07 as low priority from the rows 3–13 run: F271 on the user’s ruling that compatibility-only code is not kept, and the other four out of the F252.2, F252.3/F252.4, F252.5/F252.6 and F267.1 close blocks.
+**F271**, **F272**, **F273**, **F274** and **F275** were filed 2026-09-07 as low priority from the rows 3–13 run (**F274** since absorbed by **F277**): F271 on the user’s ruling that compatibility-only code is not kept, and the other four out of the F252.2, F252.3/F252.4, F252.5/F252.6 and F267.1 close blocks.
 
 F211–F216 were filed 2026-08-30 from the T2.11–T2.23 run, which found them while reading fixtures
 against the code. Each is verified against source and none makes a test red.
@@ -750,26 +752,49 @@ Each pre-sequence grant owes a positioned `training` step. Removing the carry wi
 the writers first would drop the grants and move numbers, so the two halves go together. One
 subtask, two keys, one repair.
 
-### F274 — CoM 1's summon conversions sit at the wrong rank inside region `c`
+### F277 — CoM 1 runs `BU_Apply_Specials` twice, and the chain models one pass
 
-*Category: faithfulness.* Approved 2026-09-07 as low priority, out of the F267.1 close block, where
-it was the GPT reviewer's P1.
+*Category: documentation* (F277.1), *decision* (F277.2), *faithfulness* (F277.3). Approved
+2026-09-09 out of the F267.1 close discussion. CoM 1, and CP 1.60 for the same routine.
+**Absorbs F274**, which framed this as a rank correction; the evidence says it is a double-execution
+problem, and a rank alone cannot express it.
 
-F267.1 established that `Load_Battle_Unit` runs the whole CoM 1 calculation before the summon path
-writes `bu->race` and `UA_FANTASTIC`, so those two are calculated-record writes rather than
-`template` ones. The reviewer reconstructed further: the stores sit **between the two stages region
-`c` draws from** — `Load_Battle_Unit` (com1:0x8F277, returns first) and
-`BU_Apply_Battlefield_Effects` (the second `BU_Apply_Specials` at com1:0x90743, taking
-`battleEnchantments & ~persistentEnchantments` with mutations zero), so Darkness, Supreme Light and
-node effects *do* see the conversion. The faithful rank is that boundary inside region `c`.
+`BU_Apply_Specials` has **two callers running the same routine body**: the constructor, inside
+`Load_Battle_Unit`, and the stat recompute, inside `BU_Apply_Battlefield_Effects`
+(`Reference docs/DOS reconstructed/R6.1a.evidence.md`, "CP 1.60 and CoM 1 moved Holy Weapon out of
+the constructor"). What differs is the argument: the recompute is passed
+`(unit_ench XOR bu_ench) AND bu_ench`, so an enchantment the unit record already carries is filtered
+out of the second call — **but an effect that does not read `ench` at all runs both times.** The Holy
+Arms grant and the to-hit normalisation are the two R6.1a names.
 
-F267.1 kept head-of-`a` so it stayed a reclassification moving no number, and named the difference
-as a deviation in code and in a `PROPOSALS.md` entry. This item takes the correction and retires
-that entry. Moving the rank may move numbers; enumerate what moves.
+The calculator's region `c` flattens both calls into one ordered list of 50 steps, so a step that the
+engine runs twice is modelled once, and the chain has no vocabulary for saying otherwise. R6.1a
+records that the second pass is idempotent — and therefore harmless — *except* for **a unit acquiring
+a `melee_tohit`-only bonus between the two calls**.
 
-`template:zombies:toBlock` (com1:0x8EE31 writes `bu->toblock`) is the same defect class for a stat
-rather than for identity, and was left out of F267.1's scope deliberately. Settle whether it joins
-this row while the region is open.
+**CoM 1's combat summon is exactly that exception.** `BU_UnitLoadToBattle` writes `bu->race` and
+`bu->Abilities |= UA_FANTASTIC` (com1:0x75D56/0x75D65/0x75D6C) after `Load_Battle_Unit` returns and
+before `BU_Apply_Battlefield_Effects` runs, so the unit acquires realm and Fantastic state between
+the two calls. F267.1 ranked those writes at the head of region `a` to keep its reclassification
+free of number movement, and named the rank as a deviation with an open `PROPOSALS.md` entry. Until
+this item lands, a CoM 1 combat summon's realm and Fantastic flag are visible to effects inside the
+first call that should not see them.
+
+- **F277.1** state, per step, which call executes each of CoM 1's 50 region-`c` steps: the
+  constructor's, the recompute's, or both. The discriminator is whether the step's effect reads
+  `ench`. The existing chain order already places `survivalInstinct` (com1:0x8F277, inside
+  `Load_Battle_Unit`) ahead of `nodeAura`, `darkness` and `supremeLight`, which the F267.1 review
+  found do see the conversion — treat that as a signal to verify per step, not as the answer. Do the
+  same for CP 1.60, which shares the two-caller shape. No number moves.
+- **F277.2** rule on how the chain expresses a step the engine executes twice, given F277.1's census.
+  Three shapes were costed in the filing discussion: a second bin for the recompute call, with an
+  `ench`-independent step appearing in both and therefore needing two distinct `phase:id` keys; a
+  marker on the step saying it runs twice, keeping one bin; or modelling one pass and restating the
+  deviation as double execution rather than as a rank. The first is a structural change to the rule
+  that one `phase:id` names one step. Needs F277.1.
+- **F277.3** the two combat-summon conversions take the position F277.2's shape allows, and the
+  head-of-`a` deviation and its `PROPOSALS.md` entry retire. **Numbers move in CoM 1 combat-summon
+  runs**; enumerate them rather than accepting whatever changes. Needs F277.2.
 
 ### F275 — Immolation's cold immunity is not modelled
 
