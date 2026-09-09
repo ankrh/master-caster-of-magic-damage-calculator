@@ -1,5 +1,41 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "tools/suite_gate.js",
+              "pre"
+            ],
+            "if": "Bash(npm *)",
+            "timeout": 30,
+            "statusMessage": "Checking whether this suite already passed..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "tools/suite_gate.js",
+              "post"
+            ],
+            "if": "Bash(npm *)",
+            "timeout": 30,
+            "async": true
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

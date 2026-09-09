@@ -28,3 +28,6 @@ Raw install files/
 # Item-scoped cross-agent derivation/review scratch; see CLAUDE.md, Method B
 .reviews/
 .derivations/
+
+# Suite-gate ledger: per-checkout state recording which suite last passed on which tree
+tmp/.last-green.json
