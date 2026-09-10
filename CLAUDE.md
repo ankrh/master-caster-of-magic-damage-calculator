@@ -155,8 +155,8 @@ After the finished implementation, the reconstructed code should be visualized i
 
 Work happens on `main`. There is no branching model.
 
-Commits are not per TASKS item: one commit bundles roughly 5–10 finished subtasks, fewer when the
-changes are large.
+Commit once per completed subtask, including its implementation, required validation, review
+revisions and task closure updates.
 
 ## Invariants
 
