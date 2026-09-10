@@ -4,6 +4,8 @@ Document: CLAUDE.md
 Section: Architecture
 Change: addition
 Text:
-CP 1.60 and CoM 1's two Specials calls use one shared routine with distinct invocation positions,
-arguments and execution/hover trace entries. The execution model must preserve changes between
-calls rather than treating the routine as one pass or blindly applying every effect twice.
+Represent repeated execution of a unit-stat routine by reusing its implementation, with a
+separate position, input arguments and execution/hover trace entry for each call. Each call
+uses the state present at that point, including changes made since the previous call.
+The call sequence and arguments follow each game version's own engine; sharing an
+implementation does not impose one version's sequence on another.
