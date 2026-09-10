@@ -4,6 +4,10 @@
 
 # Journal
 
+## 2026-09-10 — F250.1 spell qualification
+
+The [eleven-key metadata report](Reference%20docs/Caster%20binary/F250.1.spell-classification.evidence.md) records both modern INIs after independent GPT/Claude derivation, reciprocal review and fresh revisions. Shatter is C2 [88] group 16 versus W [272] group 13; Weakness changes group 13 to 14. The three Warp controls share [89], without an EnchantmentID. Nausea has no named record; base Rebuild is absent. All present scoped records omit NonMagic, but the documented default sits under damage-spell parameters and does not establish per-handler blocking or DOS behavior. Cast provenance remains UNVERIFIED with narrower gaps; no executable behavior changed.
+
 ## 2026-09-10 — Stat-derivation queue reorganized
 
 The user approved reorganizing the tasks around complete control coverage, after clarifying

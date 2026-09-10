@@ -1080,14 +1080,18 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
 // reconstructed — the Fandom page reports exactly that asymmetry from the player side, since the
 // game refuses a Sorcery target that is Illusion-Immune while silently wasting mana on a
 // Magic-Immune one. The PROVENANCE below is therefore the Magic Immunity mechanism only.
-// Membership follows the engines' own rule, stated by `spells.ini`'s legend (line 620):
-// "NonMagic - The spell is not blocked by Magic Immunity. (by default, spells are blocked by
-// Magic Immunity)". Every listed curse's record lacks `NonMagic`, so the default blocks it.
+// F250.1's versioned record census is in
+// `Reference docs/Caster binary/F250.1.spell-classification.evidence.md`.
+// Both modern INI legends document default Magic Immunity blocking, and all identified
+// records omit NonMagic. That paragraph is under damage-spell parameters: omission alone
+// does not establish each curse handler's admission, and modern metadata is not DOS evidence.
+// The three Warp controls share one candidate record without an EnchantmentID. Nausea has
+// no named record. Those runtime classification gaps remain with F250.2/F250.3/F250.4.
 // Hierophany carries the flag ([239]) and is excluded; its cast handler agrees — `COSpell.CAS`
 // lines 400-413 roll Resistance with no Magic Immunity test — as does the Warlord 1.5.12.7 manual
 // changelog, "Spell Hierophany now works properly against magic immunity".
-// `nausea` is the one member the flag cannot reach: it is a `UnitCalcPre.CAS` effect with no spell
-// record at all (0 occurrences in `spells.ini`), so its membership is inferred from the effect's
+// `nausea` has no named record or text reference in either modern `spells.ini`; this does not
+// identify a differently named backing spell. Its current membership is inferred from the effect's
 // shape rather than read.
 // Do **not** reach for `ACCurse`/`ACGlobalEffect` to decide this. That block is AI weighting for
 // strategic off-screen combat — "use these values to set the spells strength and type of effect"
@@ -1411,27 +1415,27 @@ function curseCastSteps(version, marked, eyeOfHeaven) {
     when: u => !!marked[key] && !curseRefusedByImmunity(u, key, version, eyeOfHeaven),
     apply: u => { u[key] = true; } });
   return [
-    // PROVENANCE[weakness:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    // PROVENANCE[weakness:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=cast backing store and per-handler admission remain unreconstructed here. F250.1 establishes the modern record and absent NonMagic only, not runtime blocking or DOS classification; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'weakness:cast', phase: 'debuffs', ...cast('weakness') }),
-    // PROVENANCE[blackSleep:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    // PROVENANCE[blackSleep:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=cast backing store and per-handler admission remain unreconstructed here. F250.1 establishes the modern record and absent NonMagic only, not runtime blocking or DOS classification; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'blackSleep:cast', phase: 'debuffs', ...cast('blackSleep') }),
-    // PROVENANCE[shatter:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    // PROVENANCE[shatter:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=cast backing store and per-handler admission remain unreconstructed here. F250.1 establishes the modern record and absent NonMagic only, not runtime blocking or DOS classification; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'shatter:cast', phase: 'debuffs', ...cast('shatter') }),
-    // PROVENANCE[vertigo:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    // PROVENANCE[vertigo:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=cast backing store and per-handler admission remain unreconstructed here. F250.1 establishes the modern record and absent NonMagic only, not runtime blocking or DOS classification; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'vertigo:cast', phase: 'debuffs', ...cast('vertigo') }),
-    // PROVENANCE[warpAttack:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    // PROVENANCE[warpAttack:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=cast backing store and per-handler admission remain unreconstructed here. F250.1 establishes the modern record and absent NonMagic only, not runtime blocking or DOS classification. The three Warp outcomes share the Warp Creature candidate and still need their individual flag mapping; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'warpAttack:cast', phase: 'debuffs', ...cast('warpAttack') }),
-    // PROVENANCE[warpDefense:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    // PROVENANCE[warpDefense:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=cast backing store and per-handler admission remain unreconstructed here. F250.1 establishes the modern record and absent NonMagic only, not runtime blocking or DOS classification. The three Warp outcomes share the Warp Creature candidate and still need their individual flag mapping; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'warpDefense:cast', phase: 'debuffs', ...cast('warpDefense') }),
-    // PROVENANCE[warpResist:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    // PROVENANCE[warpResist:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=cast backing store and per-handler admission remain unreconstructed here. F250.1 establishes the modern record and absent NonMagic only, not runtime blocking or DOS classification. The three Warp outcomes share the Warp Creature candidate and still need their individual flag mapping; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'warpResist:cast', phase: 'debuffs', ...cast('warpResist') }),
-    // PROVENANCE[mindStorm:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the cast's own permanent flag write is reconstructed in no supported source, and only the refusal that gates it is — PROVENANCE[curseImmunityRefusal] on curseRefusedByImmunity. The flag's membership of the blocked set is read off the spell record's missing NonMagic flag rather than from a reconstructed write; pointer=Reference docs/Script source/CoM2 1.05.11 base/spells.ini
+    // PROVENANCE[mindStorm:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=cast backing store and per-handler admission remain unreconstructed here. F250.1 establishes the modern record and absent NonMagic only, not runtime blocking or DOS classification; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'mindStorm:cast', phase: 'debuffs', ...cast('mindStorm') }),
-    // `nausea` is Warlord's alone — a `UnitCalcPre.CAS` effect with no spell record at all — so no
-    // other engine has the write, and its scope entry says the same thing. The Magic Immunity
+    // This `nausea` step is scoped to Warlord's `UnitCalcPre.CAS` effect. F250.1 found no
+    // Nausea-named spell record; F250.4 retains the script-source investigation. The Magic Immunity
     // refusal is inferred from the effect's shape rather than read off a `NonMagic` flag, which is
     // the second half of its declared gap below.
-    // PROVENANCE[nausea:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=neither the effect's own flag write nor its membership of the blocked set is reconstructed: nausea is a UnitCalcPre.CAS effect with no spells.ini record at all, so its refusal is inferred from the effect's shape. The refusal mechanism itself is PROVENANCE[curseImmunityRefusal]; pointer=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS
+    // PROVENANCE[nausea:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=neither the effect's own flag write nor its membership of the blocked set is reconstructed. F250.1 finds no Nausea-named record or text reference in either modern spells.ini, which supplies no NonMagic classification and does not exclude a differently named backing spell. Its refusal remains assumed. The refusal mechanism itself is PROVENANCE[curseImmunityRefusal]; pointer=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS
     ...(isWarlord ? [statStep({ id: 'nausea:cast', phase: 'debuffs', ...cast('nausea') })] : []),
   ];
 }
@@ -1527,7 +1531,7 @@ function permanentCastFlagSteps(version, marked) {
     apply: u => { u[key] = true; } });
   const disciplineValue = () => (cast.discipline === 'combat' ? 'combat' : 'overland');
   return [
-    // PROVENANCE[trueSight:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=the True Sight cast's own write of the permanent flag is reconstructed nowhere, so the pointer is the compiled read that proves the permanent record carries it; pointer=Reference docs/Caster binary/Units.RecalculateUnits.pas
+    // PROVENANCE[trueSight:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.1 establishes modern [131] as a unit buff with EnchantmentID 41 and absent NonMagic. It does not establish admission or the cast backing store, and supplies no DOS classification.; pointer=Reference docs/Caster binary/F250.1.spell-classification.evidence.md
     statStep({ id: 'trueSight:cast', phase: 'buffs', ...flag('trueSight', 'True Sight') }),
     // PROVENANCE[resistMagic:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=Warlord does reconstruct a Resist Magic cast writing the permanent flag, at `OLSpell.CAS!NOPERMENCHANT!-59 "SETENCHANTMENTFLAG(TU,EncResistMagic,1,1)"`, and `Reference docs/Caster binary/Units.RecalculateUnits.pas` reconstructs the modern aggregation the flag is then read through. Neither covers this step's claim. The script write stands behind the Tattoo Magic research gate at `OLSpell.CAS!NOPERMENCHANT!-74 "IF (SPELLSTATE(W,STattooMagic)<>2) THEN { GOTO"` while the step is unconditional, the four other engines have no reconstructed writer at all, and no source makes the card's mark evidence that the cast landed - which is the calculator's own assumption, stated in SPEC.md under Deliberate deviations; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
     statStep({ id: 'resistMagic:cast', phase: 'buffs', ...flag('resistMagic', 'Resist Magic') }),
@@ -1537,7 +1541,7 @@ function permanentCastFlagSteps(version, marked) {
       when: u => (cast.discipline === 'overland' || cast.discipline === 'combat')
         && disciplineCastTargetAdmitted(u, version),
       apply: u => { u.discipline = disciplineValue(); } })] : []),
-    // PROVENANCE[rebuild:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=this entry's old text said the write is reconstructed nowhere and that was wrong. `OLSpell.CAS!NOTMARKOFCONQUEROR!+5 "SETENCHANTMENTFLAG(TU,EncRebuild,1,1)"` is the Rebuild cast writing the permanent flag, unconditionally and in this step's one version, inside the block PROVENANCE[rebuildEffectDerivation] already cites for the package it confers. What is left unverified is only the calculator's own assumption that a marked flag means the cast landed, which is shared by every buffs cast step. This looks promotable to VERIFIED on that span and F250 owns the decision; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
+    // PROVENANCE[rebuild:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=F250.1 establishes Warlord [338] as an overland unit buff with EnchantmentID 70 and absent NonMagic, not its admission. Base CoM2 has no Rebuild record. The existing script writer lead remains for F250.4 to verify with its target context and backing store, and metadata alone cannot promote this cast step; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
     ...(isWarlord ? [statStep({ id: 'rebuild:cast', phase: 'buffs', ...flag('rebuild', 'Rebuild') })] : []),
     // Transmute Equipment joined them in F256.2. The block is two writes, not one, and they are
     // two steps for that reason: the permanent flag is written for every admitted target, and a
