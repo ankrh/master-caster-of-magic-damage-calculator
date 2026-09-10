@@ -1,5 +1,7 @@
 # Stat derivation control census
 
+CP160/CoM1 invocation and per-step coverage is now documented in the [F277.1 execution census](DOS%20reconstructed/F277.1.execution-census.md). References below assigning that local pass work to F277.1 resolve there; outer cast timing and other named gaps remain open.
+
 Reference inventory of the current calculator input surface, reconciled by F279.1f on 2026-09-10. All current-input/admission/writer/consumer columns are populated; unknown engine facts remain explicit below. This completes the census, not engine verification or F279's mechanism. No new disassembly is included.
 
 ## Keys and scope

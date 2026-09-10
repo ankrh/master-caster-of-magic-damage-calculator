@@ -5,9 +5,8 @@ counterpart to `Reference docs/Caster binary/`, and the conventions differ becau
 does: `Caster.exe` is Delphi, `WIZARDS.EXE` is Borland C++ 1991.
 
 Binary paths and md5s live in `Reference docs/MoM binary analysis.md`, *The binaries* — the single
-home; verify the hash before trusting any offset. Process (scoping, dual derivation, review,
-merge, the completion gate) lives in `DERIVATION-REVIEW-PROTOCOL.md`. Work state lives in
-`Calculator/BACKLOG.md`. None of that is restated here.
+home; verify the hash before trusting any offset. Execution rules live in the project's
+`CLAUDE.md` and `AGENT_WORKFLOW.md`; work state lives in `TASKS.md`.
 
 ## Language and layout
 
@@ -23,6 +22,7 @@ vocabulary matches.
 | `spelldat.c` | Source-shaped `SPELLDAT.LBX` records materialized by dedicated table-reconstruction items |
 | `<ID>.evidence.md` | One item's coverage ledgers, counts, findings and any `disputed` rows |
 | `R6.version-differences.md` | Merged three-build difference index and overlay-aware call closure |
+| `F277.1.execution-census.md` | CP 1.60 / CoM 1 calculator-step mapping to constructor, Specials invocations and battlefield effects |
 
 The `.c` files are shared across items and grow as items land. Reconstruction bodies go in the
 `.c`; ledgers and prose go in the evidence markdown.
