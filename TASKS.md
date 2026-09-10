@@ -1119,7 +1119,7 @@ failure.
 
 - **F250.2** the modern family's cast writes: whether `Caster.exe` writes each of the eleven flags
   onto the permanent record, starting from `Spells.InitializeCombatSpellcasting.pas` and the
-  neighbouring spell-application code. Uses the completed F250.1 qualification.
+  neighbouring spell-application code. Uses the completed F250.1 qualification. The [first combat subunit](Reference%20docs/Caster%20binary/F250.2.combat.evidence.md) is reconstructed: generic/Warp stores match the combat getter, not the base getter. F250.2 remains open for the bounded overland follow-up and declared remaining evidence; no permanent-record assumption is promoted.
 - **F250.3** the DOS family's equivalent, in `combat.c` and `unitcalc.c`, for the eight
   all-version curses and `trueSight`. Uses the completed F250.1 qualification.
 - **F250.4** the Illusion Immunity branch — currently assumed, with `A32_ai_shatter_candidate`

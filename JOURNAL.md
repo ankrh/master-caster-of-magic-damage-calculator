@@ -8884,3 +8884,7 @@ the blob and parse cost first.
 
 Three `PROPOSALS.md` blocks were withdrawn with the check. Note the deletion of "It evaluates no
 preset itself" went with them: that sentence is true again now.
+
+### F250.2 first combat subunit — 2026-09-10
+
+[Reviewed binary evidence](Reference%20docs/Caster%20binary/F250.2.combat.evidence.md) covers 968 executable instructions. Generic modern cast stores and Warp indices6/7/8 match CombatUnitEnchantment, not BaseUnitEnchantment. The common tail runs after nonpositive resistance returns as well as successful curse paths; early rejections skip it. Nine provenance gaps narrowed, none promoted; no executable calculator change. F250.2 remains open for overland and declared context gaps. Derivations, reciprocal reviews and fresh revisions retained under .derivations/.reviews; report .reviews/F250.2/REPORT.F250.2.md.

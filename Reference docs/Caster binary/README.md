@@ -190,3 +190,7 @@ review gates exist only in `Calculator/BACKLOG.md`.
 | R5.2m | [`Combat.AmplifiedDamage.pas`](./Combat.AmplifiedDamage.pas); [`Combat.AmplifiedDamage.R5.2m.evidence.md`](./Combat.AmplifiedDamage.R5.2m.evidence.md) | Combat-only, non-stacking opposing-owner Amplifier predicate |
 | R9-G1a-R2 | [`Spells.CombatSummonUnit.pas`](./Spells.CombatSummonUnit.pas); [`R9-G1a-R2.evidence.md`](./R9-G1a-R2.evidence.md) | Complete combat-summon creation, identity writes, Demon Lord/Lesser Demon gate and script handoff; merged 2026-08-09 from independent Claude/Codex derivations and reciprocal byte review with no surviving disagreement |
 | Q31 | [`Q31.evidence.md`](./Q31.evidence.md) | Complete `@Units@IsChaosUnit`, `@Units@IsDeathUnit` and `@Units@ChaosChannel` (`$00594FE4..$0059511F`): the realm-plus-recovery predicate, one-based flag indexing, calculated-record proof, full caller set, and `BUG-Q31`; merged 2026-08-31 from independent Claude/GPT derivations and reciprocal review, both revising from a defect reading to the recovery reading |
+
+## F250.2 combat cast backing stores (partial)
+
+[Evidence](F250.2.combat.evidence.md), [reconstruction](F250.2.combat.reconstruction.md), [raw packet](F250.2.combat.raw.md), [flow](F250.2.combat.flow.svg). Generic combat buffs/curses and Warp write the combat-getter region; no base/permanent-store claim follows. Only the first bounded subunit is complete; F250.2 remains open.

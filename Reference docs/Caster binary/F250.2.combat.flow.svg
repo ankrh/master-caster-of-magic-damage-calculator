@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="710" viewBox="0 0 1160 710" role="img" aria-labelledby="title desc">
+<title id="title">F250.2: compiled combat cast stores</title><desc id="desc">Early rejection skips the common tail. Buff stores use combat enchantments then leave the supplied extent. Curse positive continuation or group14 bypass stores combat enchantments; nonpositive resistance returns still reach script then recalculation. Base enchantments are a separate region. Overland and scripts remain open.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#8aa8c4"/></marker><style>text{font-family:Segoe UI,Arial,sans-serif;fill:#e6edf3;font-size:16px}.small{font-size:13px;fill:#adc1d4}.head{font-size:26px;font-weight:600}.box{fill:#152a3b;stroke:#426482;stroke-width:2}.open{fill:#352b19;stroke:#b9954d;stroke-width:2;stroke-dasharray:7 5}.flow{fill:none;stroke:#8aa8c4;stroke-width:2;marker-end:url(#arrow)}</style></defs>
+<rect width="1160" height="710" fill="#0b1722"/>
+<text x="34" y="44" class="head">Combat casts: the stored flag belongs to the combat region</text>
+<text x="34" y="73" class="small">F250.2 first subunit • 968 executable instructions • partial reconstruction, no calculator changes</text>
+<rect class="box" x="34" y="108" width="300" height="64" rx="10"/><text x="50" y="134">CombatSpellEffect prefix</text><text x="50" y="157" class="small">0x5C9AAC • guard and early checks</text>
+<path class="flow" d="M334 140H755"/><text x="440" y="128" class="small">guard / explicit rejection</text>
+<rect class="box" x="760" y="108" width="360" height="64" rx="10"/><text x="778" y="134">Cleanup 0x5CBC0E</text><text x="778" y="157" class="small">Common script/recalculation tail skipped</text>
+<path class="flow" d="M184 172V213"/>
+<rect class="box" x="34" y="220" width="300" height="88" rx="10"/><text x="50" y="246">Group 1 / 15 buff store</text><text x="50" y="270" class="small">0x5C9FD3 → combat region[index]</text><text x="50" y="292" class="small">True Sight: index 41, INI-conditioned</text>
+<path class="flow" d="M334 264H390"/>
+<rect class="open" x="399" y="220" width="315" height="88" rx="10"/><text x="416" y="246">Open continuation 0x5CA369</text><text x="416" y="270" class="small">After later dispatch; body not supplied</text><text x="416" y="292" class="small">No inferred shortcut to common tail</text>
+<path class="flow" d="M184 172V190H22V392H34"/>
+<rect class="box" x="34" y="348" width="300" height="105" rx="10"/><text x="50" y="375">Curse / Warp dispatch</text><text x="50" y="400" class="small">Group 14 bypasses resistance call</text><text x="50" y="424" class="small">Others: call 0x595CEC, test signed result</text>
+<path class="flow" d="M334 387H390"/><text x="348" y="375" class="small">+ / skip</text>
+<rect class="box" x="399" y="348" width="315" height="105" rx="10"/><text x="416" y="375">Combat region stores</text><text x="416" y="400" class="small">Generic: 0x5CA1F0</text><text x="416" y="424" class="small">Warp helper: indices 6 / 7 / 8, 0x5C8EEF</text>
+<path class="flow" d="M184 453V496H755"/><text x="350" y="484" class="small">nonpositive: no following curse store</text>
+<path class="flow" d="M714 401H742V480H755"/>
+<rect class="box" x="760" y="348" width="360" height="174" rx="10"/><text x="778" y="375">Common tail 0x5CBBCA</text><text x="778" y="402">CallCombatSpellEffectScript</text><text x="778" y="426" class="small">Runtime-selected script; body unknown</text><text x="778" y="456">then RecalculateUnits</text><text x="778" y="481" class="small">0x5CBBDC • body opaque in this packet</text><text x="778" y="507" class="small">Runs on nonpositive resistance return too</text>
+<rect class="box" x="34" y="563" width="530" height="105" rx="10"/><text x="50" y="591">CombatUnitEnchantment getter: same store address</text><text x="50" y="618" class="small">B + unit×0x784 + 0x1AC1D68 + enchantment</text><text x="50" y="645" class="small">BaseUnitEnchantment instead reads +0x1AC1CA0 (0xC8 earlier)</text>
+<rect class="open" x="590" y="563" width="530" height="105" rx="10"/><text x="608" y="591">Remaining evidence</text><text x="608" y="618" class="small">Overland True Sight / Rebuild; Nausea and Warlord scripts</text><text x="608" y="645" class="small">Loader, caller selection, later continuation, persistence</text>
+</svg>
