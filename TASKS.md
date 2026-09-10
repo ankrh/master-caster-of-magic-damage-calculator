@@ -18,9 +18,9 @@ Unrelated work keeps its relative order after this block.
 
 | # | Subtask | Next outcome |
 |---|---|---|
-| 1 | **F250.2** | The modern family's cast-flag writes are reconstructed or declared absent. Uses the completed F250.1 qualification. |
-| 2 | **F250.3** | The DOS family's cast-flag writes are reconstructed or declared absent. Uses the completed F250.1 qualification. |
-| 3 | **F250.4** | The Illusion Immunity branch and the four Warlord script-side writes get evidence or a declared gap. Uses the completed F250.1 qualification. |
+| 1 | **F250.2** | Reconcile modern cast-store claims with existing evidence; isolate any still-unreconstructed required extents. Uses the completed F250.1 qualification. |
+| 2 | **F250.3** | Reconcile DOS cast-store claims with existing reconstruction, starting with A32; isolate actual remaining gaps. Uses the completed F250.1 qualification. |
+| 3 | **F250.4** | Resolve Illusion-refusal evidence and the named Warlord script writes from existing sources; identify any missing compiled bridge. Uses the completed F250.1 qualification. |
 | 4 | **F236.1** | Distinguish Holy Weapon cast admission from Holy-Arms/Heavenly-Light grant eligibility. Uses the completed census. |
 | 5 | **F277.2** | Settle the repeated-execution representation for the shared design. Uses the completed [execution census](Reference%20docs/DOS%20reconstructed/F277.1.execution-census.md). |
 | 6 | **F279.2** | Design the outer cast sequence, record ownership, recalculation boundaries and traces. Needs F277.2, F250.2, F250.3, F250.4 and F236.1. |
@@ -61,7 +61,7 @@ Unrelated work keeps its relative order after this block.
 | 41 | **F249** | Position CoM 1 Raise Dead with the settled creation schedule. Needs F279.2. |
 | 42 | **F236.2** | Implement remaining global-grant eligibility, preserving the pilot cast distinction. Needs F279.3b and F279.4. |
 | 43 | **F232** | `UnitCalc.CAS:93-98`'s region-`d` Sanctify race re-write is read and either modelled or declared inapplicable. |
-| 44 | **F235** | Whether Warlord Vampirism and Revenant set `EncUndead` for the classifier and the Eternal Night / True Light arms is settled against the scripts. |
+| 44 | **F235** | Determine when the known Vampirism/Revenant `EncUndead` writes reach the classifier and Eternal Night / True Light readers. |
 | 45 | **F231** | Resolve the No Heal missing producer/healing reader. Needs F249. |
 | 46 | **F207** | Remove the obsolete Supreme Light published-value suppression. Needs F279.4. |
 | 47 | **F279.5** | Audit every live control/version and remove obsolete paths/docs; BLOCKED until all assigned migration/evidence work is resolved. See body for prerequisites. |
@@ -292,7 +292,10 @@ Open at filing: whether Heavenly Light's withheld To Hit thresholds are a second
 out of the same gate.
 
 Subtasks: **F236.1** distinguish the direct cast and each global grant, state their evidenced
-version scope and custom-unit discriminator (uses the completed census); **F236.2** implement the remaining
+version scope and custom-unit discriminator (uses the completed census). Reuse R6.1a's grant
+blocks and the F277.1 execution census; only an identified missing direct-cast fact can require
+new reconstruction. Enclosing pilot dispatch/timing gaps remain with P1/P2, not a repeat of the
+known grant blocks. **F236.2** implement the remaining
 grant behavior (needs F279.3b and F279.4).
 
 ### F226 — Create Undead is omitted, and it colours the damage it deals
@@ -394,7 +397,8 @@ Either give the field a producer at the Raise Dead write or delete it and route 
 
 ### F232 — `UnitCalc.CAS:93-98` re-writes race in region `d`, and nothing models it
 
-Category: **binary reconstruction** (script reading). Filed 2026-09-01 on the user's approval, out
+Categories: **decision and faithfulness** (existing script interpretation and implementation).
+Use Method A; the source write is already available. Filed 2026-09-01 on the user's approval, out
 of the F224.1 sweep.
 
 `UnitCalc.CAS:93-98` is a `SETSTAT(U,SRace,0,RCLife)` in region `d` — the late script hook. The
@@ -405,6 +409,8 @@ the calculator has no step for it.
 Read the block against its guards and either give it a step in the region-`d` chain or declare it
 unreachable for the states the calculator models. Note that Warlord scripts outrank the compiled
 behaviour they overwrite, so if it fires it wins.
+Any missing caller or API semantics must be named separately from this known script write;
+this task does not presume a new binary reconstruction is needed.
 
 
 ### F234 — The DOS Warp Reality exemption carries a Fantastic term its block does not test
@@ -426,22 +432,25 @@ Add a fixture per corrected build with its arithmetic in the `desc`.
 
 ### F235 — Warlord Vampirism and Revenant write `EncUndead`, and nothing decides whether it counts
 
-Category: **binary reconstruction** (script reading). Filed 2026-09-01 on the user's approval, out
+Categories: **decision and faithfulness** (existing script interpretation and implementation).
+Use Method A; the writes themselves are known. Filed 2026-09-01 on the user's approval, out
 of the F224.2a run.
 
 Warlord's Vampirism (`UnitCalc.CAS!NOVAMPIRISM!-7`) and Revenant (the `COSpell.CAS` Revenant arm)
-both write `EncUndead` at index 1. By this repo's reading that an index-1 write is already set at
-region `b`, both would be `EncUndead` for every later consumer — Eternal Night's Poor Vision, True
-Light, and the classifier arm F224.2a built.
+both write `EncUndead` at index 1. Determine which invocation makes each write and which later
+readers see it — Eternal Night's Poor Vision, True Light, and the classifier arm F224.2a built.
+A destination in permanent state does not place the write before region `b`; record destination
+and execution time must be established separately, including carry-forward between recalculations.
 
-`UnitCalcPre.CAS~"SPELLSTATE(W,SDeathMastery)=2"` argues the other way: it spells `EncUndead`,
-`EncRevenant` and `EncVampirism` as three separate disjuncts, so the script's own author does not
-treat either as implying the flag at the position that block reads.
+`UnitCalcPre.CAS~"SPELLSTATE(W,SDeathMastery)=2"` lists `EncUndead`,
+`EncRevenant` and `EncVampirism` as three separate disjuncts. Compare that earlier reader with
+the actual write sites and call order; the spelling alone does not settle their timing.
 
 F224.2a's review pressed for folding these into the membership reader's `EncUndead` term and the
-agent declined, on the grounds above; the question was documented in the reader's comment rather
-than decided. Settle it against the scripts. It moves existing Warlord fixtures for Eternal Night
-and True Light, so it needs its own evidence pass rather than a fold-in.
+agent declined; the question was documented in the reader's comment rather than decided.
+Resolve it from the existing scripts and reconstructed call schedule, then implement the supported
+result and report affected fixtures. Name any missing caller/reset evidence rather than
+reconstructing the already-known flag writes again.
 
 
 ### F180 — Four keys live in some versions and silent in others, with nothing saying why
@@ -1087,20 +1096,20 @@ becomes a field of the stat record, the two figure steps join the main chain at 
 positions, and the separate figure run is retired. Measure before and after with a probe that
 combines the two buildings with Endurance and Lionheart. One subtask.
 
-### F250 — The eleven declared cast writes have no evidence
+### F250 — Reconcile eleven cast-state claims with the engine evidence
 
 The completed [F250.1 qualification](Reference%20docs/Caster%20binary/F250.1.spell-classification.evidence.md) fixes the eleven-key input. Feed admission/effect-write results into F279.2 and the relevant
 migration owners. Additional evidence gaps outside these eleven keys are routed by F279; this
 item is not an assertion that all other casts are already sourced.
 
-*Category: binary reconstruction.* Approved 2026-09-03, out of the F244.3b review. Runs under
-Method B, not A: it is a reading of the scripts and the binaries, not a code change.
+*Categories: documentation and decision; binary reconstruction only for identified missing
+compiled extents.* Scope corrected on the user's approval, 2026-09-10. Existing-source reading,
+citation repair and interpretation use Method A; new binary reconstruction uses Method B.
 
-F244.3b turned each curse and each beneficial cast flag into its own positioned permanent-record
-write. Eleven of them carry `UNVERIFIED` provenance, because **no supported source in the tree
-reconstructs a cast putting its own flag on a unit's permanent record.**
-`Spells.InitializeCombatSpellcasting.pas` reconstructs exactly one such write, Raise Dead's
-`EncNoHeal`. The eleven are the nine `debuffs:<curse>:cast` steps (`weakness`, `blackSleep`,
+The calculator represents these casts as permanent-record writes. An `UNVERIFIED` entry does
+not establish that the source code is missing: the known engine write may use a different
+record, or only its citation, interpretation or implementation may be missing. The eleven
+claims are the nine `debuffs:<curse>:cast` steps (`weakness`, `blackSleep`,
 `shatter`, `vertigo`, `warpAttack`, `warpDefense`, `warpResist`, `mindStorm`, and Warlord's
 `nausea`) and the two `buffs:*:cast` steps (`trueSight`, `rebuild`), all in `stats_identity.js`.
 
@@ -1110,22 +1119,47 @@ Magic Immunity **refusal mechanism** — both engine families make the target's 
 unreachable for any spell carrying a realm, so the roll cannot fail. It says nothing about whether
 a given flag qualifies as a curse, nothing about that flag's magic/non-magic classification,
 nothing about the cast's own write, and nothing about the Illusion Immunity branch, which
-`stats_identity.js` states outright is assumed rather than cited. Those four gaps are this item.
+`stats_identity.js` states outright is assumed rather than cited. Assess those claims individually
+against the available source; they are not four presumed missing reconstructions.
 
-Each subtask ends by converting the writes it sourced from `UNVERIFIED` to `VERIFIED` with an
-anchor, or by narrowing the declared `gap=` to what is genuinely unreachable. A subtask that finds
-no source must say so and leave the entry `UNVERIFIED` with a sharper gap — that is a result, not a
-failure.
+For each remaining key/version claim, record its existing source locator and classify the
+remaining work: missing citation, unresolved interpretation, missing calculator implementation,
+or missing reconstructed code. State the actual destination and timing separately. Only the
+last class justifies a new binary packet: name the required unanswered fact, compare the proposed
+extent with existing coverage, and limit new derivation to the missing portion plus necessary
+context. A familiar routine name is not full coverage, and an unfamiliar citation is not absence.
 
-- **F250.2** the modern family's cast writes: whether `Caster.exe` writes each of the eleven flags
-  onto the permanent record, starting from `Spells.InitializeCombatSpellcasting.pas` and the
-  neighbouring spell-application code. Uses the completed F250.1 qualification. The [first combat subunit](Reference%20docs/Caster%20binary/F250.2.combat.evidence.md) is reconstructed: generic/Warp stores match the combat getter, not the base getter. F250.2 remains open for the bounded overland follow-up and declared remaining evidence; no permanent-record assumption is promoted.
-- **F250.3** the DOS family's equivalent, in `combat.c` and `unitcalc.c`, for the eight
-  all-version curses and `trueSight`. Uses the completed F250.1 qualification.
-- **F250.4** the Illusion Immunity branch — currently assumed, with `A32_ai_shatter_candidate`
-  named as the only curse-facing test anywhere and an AI heuristic at that — plus the four Warlord
-  script-side writes (`nausea` in `UnitCalcPre.CAS`, `rebuild` in `OLSpell.CAS`, and the Eye of
-  Heaven True Sight grant relevant to the current Illusion-refusal shortcut). Uses the completed F250.1 qualification.
+Promote provenance only when the evidence supports the exact calculator claim; a known battle
+write does not verify a permanent-write implementation. Otherwise narrow the gap and pass the
+implementation discrepancy to the existing migration owner. A searched-but-unlocated source
+is an explicit gap, not proof that no engine write exists. Do not enlarge this item into the
+full validator, recast/clear or timing work assigned to the census's P-family slices.
+
+- **F250.2** reconcile the modern claims using the completed F250.1 qualification and
+  [combat reconstruction](Reference%20docs/Caster%20binary/F250.2.combat.evidence.md): generic/Warp
+  stores match the combat getter, not the base getter. Reuse that result and existing cast/API
+  reconstructions. Audit remaining overland and post-store claims before using the preflight
+  continuation packet; its size alone does not establish a need to reconstruct it. Script
+  supplements stay with F250.4. This subtask remains open.
+- **F250.3** reconcile the eight DOS curses and `trueSight`, using F250.1 and the existing
+  `combat.c`/`unitcalc.c` bodies and coverage ledgers. Start with
+  [A32](Reference%20docs/DOS%20reconstructed/A32.evidence.md): dispatch `0x81F4C..0x81F6F`
+  and the class-13/16 prefix/store `0x82256..0x822E9` are already reconstructed in all three
+  builds, including the `BATTLE_UNIT.Combat_Effects` write. Reuse those facts. The unmerged
+  2026-09-10 packet extends the handler to `0x82451`; retain its work, but establish which
+  additional facts are needed before resuming it or launching Mind Storm/True Sight/Warp
+  packets. Any new reconstruction retained must finish its required review before merge.
+  This subtask remains open; no permanent-record store is presumed.
+- **F250.4** resolve the assumed Illusion-refusal branch against existing player-cast evidence;
+  distinguish AI selection from actual cast admission. An AI heuristic such as
+  `A32_ai_shatter_candidate` does not settle the player path. Separately read the existing
+  Warlord scripts for Conjuring Pact's nausea branch (`UnitCalcPre.CAS`, `EncConjuringPact`),
+  Rebuild's overland-clear/base-set writes (`OLSpell.CAS`, `EncRebuild`), and Eye of Heaven's
+  True Sight grant (`UnitCalcPre.CAS`, `CGEyeOfHeaven`). These writes have source; reconcile
+  their guards, destinations and execution positions with the calculator's claims. Do not
+  invent a separate Nausea spell or an early cast from a recalculation grant. Reuse the
+  documented hook/grant mappings; only a specifically missing compiled bridge needs Method B.
+  Uses the completed F250.1 qualification.
 
 Moves no number by itself. If a reading contradicts a modelled gate, that is a separate item.
 
@@ -1352,6 +1386,10 @@ not a citation swap.
 
 ### F41 — Engine-specific hero progression
 
+*Categories: faithfulness (F41.1–F41.3), decision (F41.4).* Start from existing source and
+implement its supported behavior using Method A. A new binary reconstruction is required only
+for a specific necessary fact absent from the existing coverage, using Method B for that extent.
+
 The DOS eight-threshold ladders and template-ability formulas (including CoM's Blademaster divisors,
 mana table and Lucky rewrite), plus the modern nine-step hero table. Decide how the current
 six-entry level control exposes them. Evidence: R6.1f hero ladders and abilities; CoM2 level-bonus
@@ -1359,8 +1397,13 @@ tables; `combat_abilities.js:43-78`.
 
 Hero *equipment* is deferred by SPEC until everything else works; this is progression, not equipment.
 
-Subtasks: **F41.1** DOS ladders; **F41.2** DOS template-ability formulas; **F41.3** the modern
-nine-step table; **F41.4** the level control.
+Subtasks: **F41.1** apply the DOS ladders from the existing `BU_Apply_Level_Bonus` reconstruction;
+**F41.2** apply DOS template-ability formulas from `BU_Apply_Hero_Abilities`. Both bodies and
+their three-build coverage are in `unitcalc.c` and
+[R6.1f](Reference%20docs/DOS%20reconstructed/R6.1f.evidence.md); do not rederive them wholesale.
+**F41.3** reconcile the modern nine-step table with existing level-bonus evidence before
+implementation, identifying any actual missing extent rather than assuming DOS coverage applies.
+**F41.4** decide how the level control exposes the evidenced progression.
 
 ### M3 — The older-engine Destruction path
 

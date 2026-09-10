@@ -4,6 +4,14 @@
 
 # Journal
 
+## 2026-09-10 — Evidence-task scopes corrected
+
+On the user's request, F250 now separates citation, interpretation, implementation and missing
+reconstruction work, reusing A32 and the completed modern combat packet. F232/F235 use existing
+script interpretation and implementation; F236.1 and F41 explicitly reuse their existing source.
+Queue order and dependencies are unchanged. Unmerged F250.3 work is retained, with further
+reconstruction subject to the corrected scope rather than an automatic packet continuation.
+
 ## 2026-09-10 — F250.1 spell qualification
 
 The [eleven-key metadata report](Reference%20docs/Caster%20binary/F250.1.spell-classification.evidence.md) records both modern INIs after independent GPT/Claude derivation, reciprocal review and fresh revisions. Shatter is C2 [88] group 16 versus W [272] group 13; Weakness changes group 13 to 14. The three Warp controls share [89], without an EnchantmentID. Nausea has no named record; base Rebuild is absent. All present scoped records omit NonMagic, but the documented default sits under damage-spell parameters and does not establish per-handler blocking or DOS behavior. Cast provenance remains UNVERIFIED with narrower gaps; no executable behavior changed.

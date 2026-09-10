@@ -1421,6 +1421,9 @@ No calculator code, source reconstruction, migration or provenance status change
 
 ## Final reconciliation (F279.1f)
 
+The current F250 scopes and work classification are in [TASKS.md](../TASKS.md). Use those
+corrected scopes when acting on the source gaps below; the old packet plans are preflight leads.
+
 The live `abilityUiDefs`/`abilityVersionGated` enumeration agrees with every definition's stable key, UI key, calc key, type, option list and offered versions. The input inventory yields 748 calculation key/version pairs. Exact set comparison, including keys rather than counts alone, finds the DOS admission and consumer sets both equal to the 355 offered DOS pairs (133 keys), and the modern sets both equal to the 393 offered modern pairs (252 keys: 147 C2 cells, 246 W). All applicable table cells have a current admission/carrier and writer location plus consumer/record/position, or an explicit current no-op. Engine evidence is independently sourced or gapped. No unread current-code cell is being excused as an engine gap.
 
 The 275-row total includes nine UI-only rows. It is not 275 independent engine flags: 15 calc-key alias groups, A/B mirrors, nine modern special mirrors and six DOS flag mirrors retain the relationships above. `collectCardState`, `collectGlobals`, `cardStateToDerivationInput`, the index.html input/select list, matrix candidates and the special-control builders were checked independently of origins. No new live control was found. Roster/custom selectors and version-specific options remain inputs even when roster selection locks their widgets.
