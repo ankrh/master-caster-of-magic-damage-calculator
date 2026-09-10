@@ -4,6 +4,14 @@
 
 # Journal
 
+## 2026-09-10 — F277.2 invocation decision complete
+
+The user selected [explicit invocations of one shared Specials routine](Reference%20docs/DOS%20reconstructed/F277.2.invocation-decision.md).
+Sol high review clarified the open MoM 1.31 schedule boundary, copied enchantment arguments versus
+mutable local state, and chain identity versus citation identity. F277.2 is complete; F279.2 owns
+the representation design. The approved decision is proposed for contract persistence in PROPOSALS.
+No calculator implementation changed.
+
 ## 2026-09-10 — F236.1 source distinction complete
 
 [Holy Weapon source handoff](Reference%20docs/DOS%20reconstructed/F236.1.holy-weapon-sources.md)
