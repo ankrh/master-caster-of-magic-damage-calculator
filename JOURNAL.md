@@ -4,6 +4,15 @@
 
 # Journal
 
+## 2026-09-10 — F250.4 script-source reconciliation
+
+[Script ledger](Reference%20docs/Caster%20binary/F250.4.script-reconciliation.md) resolves
+Conjuring Pact's synthetic nausea input, Rebuild and Eye of Heaven from existing scripts/API
+definitions/hooks. Conjuring Pact [343] is explicitly NonMagic; no Nausea-named record was needed.
+Player-cast Illusion refusal remains the sole F250.4 source question. Representation/timing
+discrepancies go to the existing migration owners. Sol high review revisions and citation checks
+completed; no numeric change or new reconstruction.
+
 ## 2026-09-10 — F250.2 record ownership reconciled
 
 The [modern cast evidence](Reference%20docs/Caster%20binary/F250.2.combat.evidence.md) now joins

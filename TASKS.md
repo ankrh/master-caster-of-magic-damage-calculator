@@ -20,7 +20,7 @@ Unrelated work keeps its relative order after this block.
 |---|---|---|
 | 1 | **F250.2** | Reconcile modern cast-store claims with existing evidence; isolate any still-unreconstructed required extents. Uses the completed F250.1 qualification. |
 | 2 | **F250.3** | Reconcile DOS cast-store claims with existing reconstruction, starting with A32; isolate actual remaining gaps. Uses the completed F250.1 qualification. |
-| 3 | **F250.4** | Resolve Illusion-refusal evidence and the named Warlord script writes from existing sources; identify any missing compiled bridge. Uses the completed F250.1 qualification. |
+| 3 | **F250.4** | Resolve the remaining player-cast Illusion-refusal predicate per version; the Warlord script sources are reconciled. |
 | 4 | **F236.1** | Distinguish Holy Weapon cast admission from Holy-Arms/Heavenly-Light grant eligibility. Uses the completed census. |
 | 5 | **F277.2** | Settle the repeated-execution representation for the shared design. Uses the completed [execution census](Reference%20docs/DOS%20reconstructed/F277.1.execution-census.md). |
 | 6 | **F279.2** | Design the outer cast sequence, record ownership, recalculation boundaries and traces. Needs F277.2, F250.2, F250.3, F250.4 and F236.1. |
@@ -1154,16 +1154,15 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
   The [existing-source reconciliation](Reference%20docs/DOS%20reconstructed/F250.3.reconciliation.md)
   maps all nine keys and separates named binding/direct-writer gaps from known consumers.
   This subtask remains open; no permanent-record store is presumed.
-- **F250.4** resolve the assumed Illusion-refusal branch against existing player-cast evidence;
-  distinguish AI selection from actual cast admission. An AI heuristic such as
-  `A32_ai_shatter_candidate` does not settle the player path. Separately read the existing
-  Warlord scripts for Conjuring Pact's nausea branch (`UnitCalcPre.CAS`, `EncConjuringPact`),
-  Rebuild's overland-clear/base-set writes (`OLSpell.CAS`, `EncRebuild`), and Eye of Heaven's
-  True Sight grant (`UnitCalcPre.CAS`, `CGEyeOfHeaven`). These writes have source; reconcile
-  their guards, destinations and execution positions with the calculator's claims. Do not
-  invent a separate Nausea spell or an early cast from a recalculation grant. Reuse the
-  documented hook/grant mappings; only a specifically missing compiled bridge needs Method B.
-  Uses the completed F250.1 qualification.
+- **F250.4** resolve the remaining player-cast Illusion-refusal predicate for Vertigo and
+  Mind Storm, including each version's path and record read. AI selection does not settle
+  player admission. The [script reconciliation](Reference%20docs/Caster%20binary/F250.4.script-reconciliation.md)
+  completes the source reading for Conjuring Pact, Rebuild and Eye of Heaven: their guards,
+  destinations, local order and configured hooks are known. Conjuring Pact is the identified
+  NonMagic backing spell for the calculator's synthetic nausea input. Remaining representation
+  and outer timing belong to F279.2/F279.4 and P4.1/P4.10/P4.11/P7M.16, not a repeat of these
+  scripts. For the open Illusion predicate, locate the named path and subtract existing
+  coverage before preparing any necessary Method B extent. Uses F250.1 and the reconciliation.
 
 Moves no number by itself. If a reading contradicts a modelled gate, that is a separate item.
 

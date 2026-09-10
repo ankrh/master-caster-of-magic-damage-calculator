@@ -1072,27 +1072,26 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
 // Magic Immunity's half is the cited mechanism: both engine families make the target's
 // resistance unreachable for any spell carrying a realm, so the roll cannot fail. Modern sets
 // Result := 100 against a `Random(10) + 1` roll; DOS adds 30 against a d10.
-// Illusion Immunity's half is assumed, not cited. Nothing in the reconstructed resolution path
-// tests it against a curse — `GetEffectiveResistance` reads `magicimmunity` alone, and the only
-// curse-facing Illusion Immunity test anywhere is `A32_ai_shatter_candidate` (`combat.c`, MoM
-// 1.31), an AI *targeting* heuristic that declines the target rather than rejecting a cast. We
-// assume the real gate lives in the UI's target validation and the AI code, neither of which is
-// reconstructed — the Fandom page reports exactly that asymmetry from the player side, since the
-// game refuses a Sorcery target that is Illusion-Immune while silently wasting mana on a
-// Magic-Immune one. The PROVENANCE below is therefore the Magic Immunity mechanism only.
+// Illusion Immunity's player-cast refusal remains unverified. The existing MoM 1.31 A32
+// Sorcery/Illusion test is AI selection, not player admission; CP/CoM use that island differently.
+// Modern Illusion metadata and partial targeting coverage do not settle this named predicate.
+// F250.4.script-reconciliation.md records the searched coverage and exact remaining question.
+// The PROVENANCE below remains the Magic Immunity resistance mechanism only.
 // F250.1's versioned record census is in
 // `Reference docs/Caster binary/F250.1.spell-classification.evidence.md`.
 // Both modern INI legends document default Magic Immunity blocking, and all identified
 // records omit NonMagic. That paragraph is under damage-spell parameters: omission alone
 // does not establish each curse handler's admission, and modern metadata is not DOS evidence.
 // The three Warp controls share one candidate record without an EnchantmentID. Nausea has
-// no named record. Those runtime classification gaps remain with F250.2/F250.3/F250.4.
+// no Nausea-named record; F250.4 identifies its Conjuring Pact backing spell below.
+// Remaining runtime binding belongs to F250.2/F250.3 and the census owners; F250.4 retains
+// the unresolved player Illusion-admission predicate.
 // Hierophany carries the flag ([239]) and is excluded; its cast handler agrees — `COSpell.CAS`
 // lines 400-413 roll Resistance with no Magic Immunity test — as does the Warlord 1.5.12.7 manual
 // changelog, "Spell Hierophany now works properly against magic immunity".
-// `nausea` has no named record or text reference in either modern `spells.ini`; this does not
-// identify a differently named backing spell. Its current membership is inferred from the effect's
-// shape rather than read.
+// F250.4 identifies nausea's backing spell as Warlord Conjuring Pact [343], EncConjuringPact=94,
+// NonMagic=True. UnitCalcPre reads its base combat flag and directly changes current stats on
+// nonfantastic units. This synthetic nausea input's Magic Immunity gate remains unsupported.
 // Do **not** reach for `ACCurse`/`ACGlobalEffect` to decide this. That block is AI weighting for
 // strategic off-screen combat — "use these values to set the spells strength and type of effect"
 // (`spells.ini` lines 244-256) — not a resolution mechanism, and it disagrees with the flag: Mind
@@ -1363,11 +1362,10 @@ function markedImmunitySteps(marked) {
 // `record` is the sequence record — `magicImmunity` and `illusionImmunity` are seeded by the
 // template phase and `trueSight` is written by `buffs:trueSight`, all of which rank ahead of every
 // `debuffs` step, so the answer is a positioned read rather than a projection of the finished set.
-// `eyeOfHeaven` stays a constant because the key is `nonRecord` (`stats_origins.js`): it is
-// Warlord's combat enchantment, granted by
-// `Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS!ENDOFCOMBAT!+2..+4 ": New combat enchantment" "SETENCHANTMENTFLAG(U,EncTrueSight,0,1);"` and named by
-// no other supported source, so outside Warlord it must not confer the Illusion Immunity that
-// refuses Mind Storm and Vertigo here.
+// `eyeOfHeaven` stays a captured nonRecord input in this implementation. Warlord UnitCalcPre
+// grants current True Sight at the early recalculation hook, under the owning wizard's combat
+// global test (F250.4.script-reconciliation.md). That grant does not establish this pre-cast
+// shortcut or the unresolved player-cast Illusion refusal; no other version receives it here.
 // STAT-FORMULA[curseImmunityRefusal]
 // PROVENANCE[curseImmunityRefusal]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
 function curseRefusedByImmunity(record, key, version, eyeOfHeaven) {
@@ -1431,11 +1429,8 @@ function curseCastSteps(version, marked, eyeOfHeaven) {
     statStep({ id: 'warpResist:cast', phase: 'debuffs', ...cast('warpResist') }),
     // PROVENANCE[mindStorm:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.2 establishes modern BaseUnits.CombatEnchantmentFlags stores and existing recalculation copies/aggregates that layer. Runtime binding, named admission and equivalence to this undifferentiated flag step remain open. DOS consumer reconstruction exists, but the direct named writer remains unlocated in reviewed canonical sources. See Reference docs/DOS reconstructed/F250.3.reconciliation.md.; pointer=Reference docs/Caster binary/F250.2.combat.evidence.md
     statStep({ id: 'mindStorm:cast', phase: 'debuffs', ...cast('mindStorm') }),
-    // This `nausea` step is scoped to Warlord's `UnitCalcPre.CAS` effect. F250.1 found no
-    // Nausea-named spell record; F250.4 retains the script-source investigation. The Magic Immunity
-    // refusal is inferred from the effect's shape rather than read off a `NonMagic` flag, which is
-    // the second half of its declared gap below.
-    // PROVENANCE[nausea:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=neither the effect's own flag write nor its membership of the blocked set is reconstructed. F250.1 finds no Nausea-named record or text reference in either modern spells.ini, which supplies no NonMagic classification and does not exclude a differently named backing spell. Its refusal remains assumed. The refusal mechanism itself is PROVENANCE[curseImmunityRefusal]; pointer=Reference docs/Script source/Warlord 1.5.12.9/UnitCalcPre.CAS
+    // The Warlord Conjuring Pact script writes current hit/block stats, not a nausea flag.
+    // PROVENANCE[nausea:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=F250.4 identifies Conjuring Pact [343], EncConjuringPact94 and NonMagic=True. UnitCalcPre reads its base combat flag, tests current Fantastic and writes current hit/block stats for nonfantastic units. This synthetic permanent nausea flag and its Magic Immunity refusal are not those source operations. Complete Conjuring Pact admission remains separate from the known script effect.; pointer=Reference docs/Caster binary/F250.4.script-reconciliation.md
     ...(isWarlord ? [statStep({ id: 'nausea:cast', phase: 'debuffs', ...cast('nausea') })] : []),
   ];
 }
@@ -1541,7 +1536,7 @@ function permanentCastFlagSteps(version, marked) {
       when: u => (cast.discipline === 'overland' || cast.discipline === 'combat')
         && disciplineCastTargetAdmitted(u, version),
       apply: u => { u.discipline = disciplineValue(); } })] : []),
-    // PROVENANCE[rebuild:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=F250.1 establishes Warlord [338] as an overland unit buff with EnchantmentID 70 and absent NonMagic, not its admission. Base CoM2 has no Rebuild record. The existing script writer lead remains for F250.4 to verify with its target context and backing store, and metadata alone cannot promote this cast step; pointer=Reference docs/Script source/Warlord 1.5.12.9/OLSpell.CAS
+    // PROVENANCE[rebuild:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=F250.4 confirms OLSpell clears target base overland EncRebuild then sets base generic EncRebuild for SRebuild before the nonhero package. The writer and selectors are source-present. This single flag step does not represent the overland clear or establish the enclosing target and cast/recalculation boundary.; pointer=Reference docs/Caster binary/F250.4.script-reconciliation.md
     ...(isWarlord ? [statStep({ id: 'rebuild:cast', phase: 'buffs', ...flag('rebuild', 'Rebuild') })] : []),
     // Transmute Equipment joined them in F256.2. The block is two writes, not one, and they are
     // two steps for that reason: the permanent flag is written for every admitted target, and a
