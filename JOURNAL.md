@@ -8938,3 +8938,7 @@ preset itself" went with them: that sentence is true again now.
 ### F250.2 first combat subunit — 2026-09-10
 
 [Reviewed binary evidence](Reference%20docs/Caster%20binary/F250.2.combat.evidence.md) covers 968 executable instructions. Generic modern cast stores and Warp indices6/7/8 match CombatUnitEnchantment, not BaseUnitEnchantment. The common tail runs after nonpositive resistance returns as well as successful curse paths; early rejections skip it. Nine provenance gaps narrowed, none promoted; no executable calculator change. F250.2 remains open for overland and declared context gaps. Derivations, reciprocal reviews and fresh revisions retained under .derivations/.reviews; report .reviews/F250.2/REPORT.F250.2.md.
+
+### F250.3 Mind Storm / True Sight combat subunit — 2026-09-10
+
+The [reviewed bounded reconstruction](Reference%20docs/DOS%20reconstructed/F250.3.mind-truesight.evidence.md) adds the missing class-14 and class-1/15 battle writers across three DOS builds (1,148 instructions). Existing dispatcher and consumer coverage is reused. Mind Storm's local Sorcery / battle Illusion Immunity refusal narrows F250.4; named runtime binding and enclosing admission remain conditional. Warp and overland True Sight are outside this fragment. Both independent derivations, reciprocal reviews and fresh revisions succeeded; bytes, hashes, links, rendered flow and citations passed. No numeric changes or provenance promotion. Report: `.reviews/F250.3-mind-truesight/REPORT.F250.3.md`.

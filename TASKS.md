@@ -1140,8 +1140,10 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
   and the class-13/16 prefix/store `0x82256..0x822E9` are already reconstructed in all three
   builds, including the `BATTLE_UNIT.Combat_Effects` write. Reuse those facts. The unmerged
   2026-09-10 packet extends the handler to `0x82451`; retain its work, but establish which
-  additional facts are needed before resuming it or launching Mind Storm/True Sight/Warp
-  packets. Any new reconstruction retained must finish its required review before merge.
+  additional facts are needed before resuming it. The reviewed
+  [Mind Storm / True Sight combat subunit](Reference%20docs/DOS%20reconstructed/F250.3.mind-truesight.evidence.md)
+  now supplies those battle writers and the local class-14 immunity guards. Warp writers,
+  overland True Sight and named runtime binding remain individually scoped gaps. Any new reconstruction retained must finish its required review before merge.
   The [existing-source reconciliation](Reference%20docs/DOS%20reconstructed/F250.3.reconciliation.md)
   maps all nine keys and separates named binding/direct-writer gaps from known consumers.
   This subtask remains open; no permanent-record store is presumed.
@@ -1152,7 +1154,10 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
   destinations, local order and configured hooks are known. Conjuring Pact is the identified
   NonMagic backing spell for the calculator's synthetic nausea input. Remaining representation
   and outer timing belong to F279.2/F279.4 and P4.1/P4.10/P4.11/P7M.16, not a repeat of these
-  scripts. For the open Illusion predicate, locate the named path and subtract existing
+  scripts. The F250.3 Mind Storm subunit establishes the DOS class-14 local Sorcery /
+  battle Illusion Immunity refusal in all three builds, conditional on the named runtime
+  binding. Vertigo and modern refusal remain open; do not rederive that class-14 guard.
+  For the remaining Illusion predicate, locate the named path and subtract existing
   coverage before preparing any necessary Method B extent. Uses F250.1 and the reconciliation.
 
 Moves no number by itself. If a reading contradicts a modelled gate, that is a separate item.

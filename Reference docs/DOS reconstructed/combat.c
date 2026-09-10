@@ -5368,3 +5368,346 @@ void com1_raise_dead_dispatch_fragment(int16_t spell_idx, int16_t player_idx,
     }                                            /* caller cleanup 131:—  160:—  com1:0x82EE7 */
 }
 #endif
+
+/* =====================================================================================
+ * F250.3 Mind Storm / True Sight combat writer fragments.
+ * Source-shaped C instruction notation, not a recovered callable signature or emulator.
+ * F250.3.mind-truesight.evidence.md owns scope, machine notation and semantic field mapping.
+ * Initial/review/revision artifacts remain immutable. Calls are opaque whole-state transitions.
+ * Register names denote live machine values; L/LB denote current SS:BP memory, not C locals.
+ * W/B denote current segmented memory with 16-bit offset wrap. push16/pop16 use actual stack.
+ * BADDR/SADDR/BARG/CALL6 below are notation expansions, not invented game callees.
+ * BUILD and TAIL select a source fragment at presentation time, never game runtime tests.
+ * Every unqualified address below is shared by 131/160/com1 except explicitly versioned arms
+ * and the tails, which are 131/160 only. The evidence ledger fixes per-build coverage.
+ * ===================================================================================== */
+
+#define F250_MT_BATTLE_STRIDE               0x006E
+#define F250_MT_SPELL_STRIDE                0x0024
+#define F250_MT_BATTLE_POINTER_DS           0x922A
+#define F250_MT_BATTLE_SEGMENT_DS           0x922C
+#define F250_MT_SPELL_POINTER_DS            0x912C
+#define F250_MT_BU_ATTRIBS1                 0x18
+#define F250_MT_BU_COMBAT_EFFECTS           0x22
+#define F250_MT_BU_ENCHANTMENTS_LO          0x3A
+#define F250_MT_BU_ENCHANTMENTS_HI          0x3C
+#define F250_MT_BU_UNKNOWN_07               0x07
+#define F250_MT_BU_UNKNOWN_33               0x33
+#define F250_MT_BU_UNKNOWN_54               0x54
+#define F250_MT_SPELL_REALM                 0x17
+#define F250_MT_REALM_SORCERY               1
+#define F250_MT_REALM_CHAOS                 2
+#define F250_MT_REALM_DEATH                 4
+#define F250_MT_SPELL_EFFECT_WORD           0x20
+#define F250_MT_SPELL_EFFECT_HI             0x22
+#define F250_MT_FRAME_AGGREGATE_UNKNOWN_BIT 0x4000
+#define F250_MT_SPECIAL_INDEX_5             0x0005
+#define F250_MT_SPECIAL_INDEX_131_160       0x0046
+#define F250_MT_SPECIAL_INDEX_COM1          0x004D
+#define F250_MT_NEARCALL_INDEX_COM1         0x005E
+#define F250_MT_COMBAT_EFFECT_UNKNOWN_0800  0x0800
+#define F250_MT_UNKNOWN_33_VALUE            0x0C
+#define F250_MT_UNKNOWN_54_VALUE            0x0004
+
+/* The following four macros define instruction notation only. Their registers, segmented
+ * memory lvalues and push/pop/call primitives are abstract machine aliases, not library/game
+ * functions. FLAGS effects are implicit. Macro invocations carry the relevant site annotations.
+ */
+/* BADDR(): actual MOV / MOV / IMUL / LES / ADD sequence */
+#define BADDR() do { \
+    AX = SI; \
+    DX = F250_MT_BATTLE_STRIDE; \
+    DX_AX = s16(AX) * s16(DX); \
+    ES_BX = far_pointer_at_current_DS(F250_MT_BATTLE_POINTER_DS); \
+    BX = u16(BX + AX); \
+} while (0)
+
+/* SADDR(): actual MOV / MOV / IMUL / LES / ADD sequence */
+#define SADDR() do { \
+    AX = DI; \
+    DX = F250_MT_SPELL_STRIDE; \
+    DX_AX = s16(AX) * s16(DX); \
+    ES_BX = far_pointer_at_current_DS(F250_MT_SPELL_POINTER_DS); \
+    BX = u16(BX + AX); \
+} while (0)
+
+/* BARG(): separate offset and segment reads, not LES */
+#define BARG() do { \
+    AX = SI; \
+    DX = F250_MT_BATTLE_STRIDE; \
+    DX_AX = s16(AX) * s16(DX); \
+    DX = DS_word(F250_MT_BATTLE_POINTER_DS); \
+    DX = u16(DX + AX); \
+    push16(DS_word(F250_MT_BATTLE_SEGMENT_DS)); \
+    push16(DX); \
+} while (0)
+
+/* CALL6(): pushes occur in this chronological order */
+#define CALL6() do { \
+    push16(L(+0x0A)); \
+    push16(L(+0x12)); \
+    push16(L(-0x06)); \
+    push16(DI); \
+    push16(L(+0x0E)); \
+    push16(L(+0x0C)); \
+    opaque_far_call(0x0418, 0x0043); \
+    SP = u16(SP + 0x000C); \
+} while (0)
+
+/* Analysis wrapper around the two alternative entries, NOT a recovered game function/ABI.
+ * Select class14_82451 or class1_15_8262D as the entry; TAIL selects the corresponding old-build
+ * expansion. The wrapper return marks only the boundary at 0x82F61, whose body is outside scope.
+ * This C-shaped notation is not a standalone compilable translation: machine aliases are explicit
+ * unresolved notation rather than fabricated C ABI contracts for the opaque game calls.
+ */
+static void F250_MT_fragment_notation(void)
+{
+class14_82451:
+    BADDR();                                  /* 131:0x82451,0x8245C 160:= com1:=; 0x82451–0x8245C */
+    if ((W(ES_BX, F250_MT_BU_ATTRIBS1) & USA_IMMUNITY_MAGIC) == 0)       /* 131:0x8245E,0x82464 160:= com1:=; 0x8245E, 0x82464 */
+        goto guard_8246E;
+    if (DI == F250_MT_SPECIAL_INDEX_5)                         /* 131:0x82466,0x82469 160:= com1:=; 0x82466, 0x82469 */
+        goto guard_8246E;
+    goto rejected_8261B;                      /* 131:0x8246B 160:= com1:=; 0x8246B */
+
+guard_8246E:
+    SADDR();                                  /* 131:0x8246E,0x82479 160:= com1:=; 0x8246E–0x82479 */
+    if (B(ES_BX, F250_MT_SPELL_REALM) == F250_MT_REALM_CHAOS)                  /* 131:0x8247B,0x82480 160:= com1:=; 0x8247B, 0x82480 */
+        goto aggregate_82496;
+
+    SADDR();                                  /* 131:0x82482,0x8248D 160:= com1:=; 0x82482–0x8248D: reload */
+    if (B(ES_BX, F250_MT_SPELL_REALM) != F250_MT_REALM_DEATH)                  /* 131:0x8248F,0x82494 160:= com1:=; 0x8248F, 0x82494 */
+        goto guard_824A9;
+
+aggregate_82496:
+    AX = L(-0x0C);                           /* 131:0x82496 160:= com1:=; 0x82496 */
+    DX = L(-0x0E);                           /* 131:0x82499 160:= com1:=; 0x82499 */
+    DX &= 0;                                  /* 131:0x8249C 160:= com1:=; 0x8249C */
+    AX &= F250_MT_FRAME_AGGREGATE_UNKNOWN_BIT;                             /* 131:0x8249F 160:= com1:=; 0x8249F */
+    DX |= AX;                                 /* 131:0x824A2 160:= com1:=; 0x824A2 */
+    if (DX == 0)                             /* 131:0x824A4 160:= com1:=; 0x824A4 */
+        goto guard_824A9;
+    goto rejected_8261B;                      /* 131:0x824A6 160:= com1:=; 0x824A6 */
+
+guard_824A9:
+    SADDR();                                  /* 131:0x824A9,0x824B4 160:= com1:=; 0x824A9–0x824B4: reload */
+    if (B(ES_BX, F250_MT_SPELL_REALM) != F250_MT_REALM_SORCERY)                  /* 131:0x824B6,0x824BB 160:= com1:=; 0x824B6, 0x824BB */
+        goto accepted_824D5;
+
+    BADDR();                                  /* 131:0x824BD,0x824C8 160:= com1:=; 0x824BD–0x824C8 */
+    if ((W(ES_BX, F250_MT_BU_ATTRIBS1) & USA_IMMUNITY_ILLUSION) == 0)       /* 131:0x824CA,0x824D0 160:= com1:=; 0x824CA, 0x824D0 */
+        goto accepted_824D5;
+    goto rejected_8261B;                      /* 131:0x824D2 160:= com1:=; 0x824D2 */
+
+accepted_824D5:
+    CALL6();                                  /* 131:0x824D5..0x824EA 160:= com1:=; pushes 0x824D5–0x824E2;
+                                                 call 0x824E5;
+                                                 cleanup 0x824EA */
+
+    /* All subsequent state is the opaque call's returned state. */
+    BADDR();                                  /* 131:0x824ED,0x824F8 160:= com1:=; 0x824ED–0x824F8 */
+    AX = W(ES_BX, F250_MT_BU_COMBAT_EFFECTS);                       /* 131:0x824FA 160:= com1:=; 0x824FA */
+    push16(AX);                               /* 131:0x824FE 160:= com1:=; 0x824FE */
+
+    SADDR();                                  /* 131:0x824FF,0x8250A 160:= com1:=; 0x824FF–0x8250A */
+    AX = pop16();                             /* 131:0x8250C 160:= com1:=; 0x8250C */
+    AX |= W(ES_BX, F250_MT_SPELL_EFFECT_WORD);                      /* 131:0x8250D 160:= com1:=; 0x8250D */
+    push16(AX);                               /* 131:0x82511 160:= com1:=; 0x82511 */
+
+    BADDR();                                  /* 131:0x82512,0x8251D 160:= com1:=; 0x82512–0x8251D: reload */
+    AX = pop16();                             /* 131:0x8251F 160:= com1:=; 0x8251F */
+    W(ES_BX, F250_MT_BU_COMBAT_EFFECTS) = AX;                       /* 131:0x82520 160:= com1:=; 0x82520 */
+
+    if (DI != F250_MT_SPECIAL_INDEX_5)                         /* 131:0x82524,0x82527 160:= com1:=; 0x82524, 0x82527 */
+        goto accepted_calls_82560;
+
+    BADDR();                                  /* 131:0x82529,0x82534 160:= com1:=; 0x82529–0x82534 */
+    B(ES_BX, F250_MT_BU_UNKNOWN_33) = F250_MT_UNKNOWN_33_VALUE;                    /* 131:0x82536 160:= com1:=; 0x82536 */
+
+    BADDR();                                  /* 131:0x8253B,0x82546 160:= com1:=; 0x8253B–0x82546: reload */
+    W(ES_BX, F250_MT_BU_UNKNOWN_54) = F250_MT_UNKNOWN_54_VALUE;                  /* 131:0x82548 160:= com1:=; 0x82548 */
+
+    BADDR();                                  /* 131:0x8254E,0x82559 160:= com1:=; 0x8254E–0x82559: reload */
+    B(ES_BX, F250_MT_BU_UNKNOWN_07) = 0;                       /* 131:0x8255B 160:= com1:=; 0x8255B */
+
+accepted_calls_82560:
+    opaque_far_call(0x00E0, 0x001A);           /* 131:0x82560 160:= com1:=; 0x82560 */
+    opaque_far_call(0x0318, 0x0020);           /* 131:0x82565 160:= com1:=; 0x82565 */
+    opaque_far_call(0x0008, 0x0503);           /* 131:0x8256A 160:= com1:=; 0x8256A */
+
+    if (BUILD == COM1)
+        goto exit_8262A;                      /* 131:— 160:— com1:0x8256F; 0x8256F: E9 B8 00 */
+
+    goto tail14_8256F;                        /* 131/160 fall-through */
+
+rejected_8261B:
+    opaque_far_call(0x00E0, 0x001A);           /* 131:0x8261B 160:= com1:=; 0x8261B */
+    opaque_far_call(0x0318, 0x0020);           /* 131:0x82620 160:= com1:=; 0x82620 */
+    opaque_far_call(0x0008, 0x0503);           /* 131:0x82625 160:= com1:=; 0x82625 */
+
+exit_8262A:
+    goto external_82F61;                      /* 131:0x8262A 160:= com1:=; 0x8262A */
+
+class1_15_8262D:
+    CALL6();                                  /* 131:0x8262D..0x82642 160:= com1:=; pushes 0x8262D–0x8263A;
+                                                 call 0x8263D;
+                                                 cleanup 0x82642 */
+
+    /* DI and all addressing state below are post-call values. */
+    if (BUILD == COM1) {
+        if (DI != F250_MT_SPECIAL_INDEX_COM1)                     /* 131:— 160:— com1:0x82645,0x82648; 0x82645, 0x82648 */
+            goto ordinary_com1_8266B;
+
+        BADDR();                              /* 131:— 160:— com1:0x8264A,0x82655; 0x8264A–0x82655 */
+        W(ES_BX, F250_MT_BU_COMBAT_EFFECTS) |= F250_MT_COMBAT_EFFECT_UNKNOWN_0800;             /* 131:— 160:— com1:0x82657; 0x82657 */
+        /* 131:— 160:— com1:0x8265D,0x82669; Twelve NOPs: [0x8265D,0x82669). */
+        goto calls_826BA;                     /* 131:— 160:— com1:0x82669; 0x82669 */
+
+ordinary_com1_8266B:
+        BADDR();                              /* 131:— 160:— com1:0x8266B,0x82676; 0x8266B–0x82676 */
+        if (DI != F250_MT_NEARCALL_INDEX_COM1)                     /* 131:— 160:— com1:0x82678,0x8267B; 0x82678, 0x8267B */
+            goto ordinary_read_82680;
+
+        opaque_near_call(0x80DEF);            /* 131:— 160:— com1:0x8267D; 0x8267D: E8 6F E7 */
+
+        /* No source-pointer reload follows this call.
+           ES:BX, DI, SI, DS, SS, BP, SP, and memory below
+           are the returned state, with no preservation assumed. */
+        goto ordinary_read_82680;            /* fall-through */
+    }
+
+    /* 131 and 160 */
+    if (DI != F250_MT_SPECIAL_INDEX_131_160)                         /* 131:0x82645,0x82648 160:= com1:—; 0x82645, 0x82648 */
+        goto ordinary_old_82673;
+
+    BADDR();                                  /* 131:0x8264A,0x82655 160:= com1:—; 0x8264A–0x82655 */
+
+    if (BUILD == V131) {
+        AX = W(ES_BX, F250_MT_BU_COMBAT_EFFECTS);                  /* 131:0x82657 160:— com1:—; 0x82657 */
+        AX |= F250_MT_COMBAT_EFFECT_UNKNOWN_0800;                        /* 131:0x8265B 160:— com1:—; 0x8265B */
+        push16(AX);                          /* 131:0x8265E 160:— com1:—; 0x8265E */
+
+        BADDR();                              /* 131:0x8265F,0x8266A 160:— com1:—; 0x8265F–0x8266A: reload */
+        AX = pop16();                        /* 131:0x8266C 160:— com1:—; 0x8266C */
+        W(ES_BX, F250_MT_BU_COMBAT_EFFECTS) = AX;                  /* 131:0x8266D 160:— com1:—; 0x8266D */
+    } else { /* V160 */
+        W(ES_BX, F250_MT_BU_COMBAT_EFFECTS) |= F250_MT_COMBAT_EFFECT_UNKNOWN_0800;             /* 131:— 160:0x82657 com1:—; 0x82657 */
+        B(ES_BX, F250_MT_BU_UNKNOWN_07) =
+            u8(B(ES_BX, F250_MT_BU_UNKNOWN_07) << 1);          /* 131:— 160:0x8265D com1:—; 0x8265D */
+        /* Same ES:BX for OR and SHL; no intervening reload.
+           Sixteen NOPs: [0x82661,0x82671). */
+    }
+    goto calls_826BA;                         /* 131:0x82671 160:= com1:—; 0x82671 */
+
+ordinary_old_82673:
+    BADDR();                                  /* 131:0x82673,0x8267E 160:= com1:—; 0x82673–0x8267E */
+
+ordinary_read_82680:
+    AX = W(ES_BX, F250_MT_BU_ENCHANTMENTS_HI);                       /* 131:0x82680 160:= com1:=; 0x82680 */
+    DX = W(ES_BX, F250_MT_BU_ENCHANTMENTS_LO);                       /* 131:0x82684 160:= com1:=; 0x82684 */
+    push16(AX);                               /* 131:0x82688 160:= com1:=; 0x82688: source +3C */
+
+    AX = DI;                                  /* 131:0x82689 160:= com1:=; 0x82689 */
+    BX = F250_MT_SPELL_STRIDE;                              /* 131:0x8268B 160:= com1:=; 0x8268B */
+    push16(DX);                               /* 131:0x8268E 160:= com1:=; 0x8268E: source +3A */
+    DX_AX = s16(AX) * s16(BX);                /* 131:0x8268F 160:= com1:=; 0x8268F */
+    ES_BX = far_pointer_at_current_DS(F250_MT_SPELL_POINTER_DS); /* 131:0x82691 160:= com1:=; 0x82691 */
+    BX = u16(BX + AX);                        /* 131:0x82695 160:= com1:=; 0x82695 */
+
+    AX = pop16();                             /* 131:0x82697 160:= com1:=; 0x82697: source +3A */
+    AX |= W(ES_BX, F250_MT_SPELL_EFFECT_WORD);                      /* 131:0x82698 160:= com1:=; 0x82698 */
+    DX = pop16();                             /* 131:0x8269C 160:= com1:=; 0x8269C: source +3C */
+    DX |= W(ES_BX, F250_MT_SPELL_EFFECT_HI);                      /* 131:0x8269D 160:= com1:=; 0x8269D */
+
+    push16(AX);                               /* 131:0x826A1 160:= com1:=; 0x826A1: result for +3A */
+    AX = SI;                                  /* 131:0x826A2 160:= com1:=; 0x826A2 */
+    BX = F250_MT_BATTLE_STRIDE;                              /* 131:0x826A4 160:= com1:=; 0x826A4 */
+    push16(DX);                               /* 131:0x826A7 160:= com1:=; 0x826A7: result for +3C */
+    DX_AX = s16(AX) * s16(BX);                /* 131:0x826A8 160:= com1:=; 0x826A8 */
+    ES_BX = far_pointer_at_current_DS(F250_MT_BATTLE_POINTER_DS); /* 131:0x826AA 160:= com1:=; 0x826AA */
+    BX = u16(BX + AX);                        /* 131:0x826AE 160:= com1:=; 0x826AE */
+
+    AX = pop16();                             /* 131:0x826B0 160:= com1:=; 0x826B0: result for +3C */
+    W(ES_BX, F250_MT_BU_ENCHANTMENTS_HI) = AX;                       /* 131:0x826B1 160:= com1:=; 0x826B1: FIRST store */
+    AX = pop16();                             /* 131:0x826B5 160:= com1:=; 0x826B5: result for +3A */
+    W(ES_BX, F250_MT_BU_ENCHANTMENTS_LO) = AX;                       /* 131:0x826B6 160:= com1:=; 0x826B6: SECOND store */
+
+calls_826BA:
+    opaque_far_call(0x00E0, 0x001A);           /* 131:0x826BA 160:= com1:=; 0x826BA */
+    opaque_far_call(0x0318, 0x0020);           /* 131:0x826BF 160:= com1:=; 0x826BF */
+    opaque_far_call(0x0008, 0x0503);           /* 131:0x826C4 160:= com1:=; 0x826C4 */
+
+    if (BUILD == COM1)
+        goto external_82F61;                 /* 131:— 160:— com1:0x826C9; 0x826C9: E9 95 08 */
+
+    goto tail1_15_826C9;                      /* 131/160 fall-through */
+
+tail14_8256F:
+tail1_15_826C9:
+    push16(SI);                               /* 131:0x8256F,0x826C9 160:= com1:—; 0x8256F / 0x826C9 */
+    opaque_far_call(0x03E0, 0x003E);           /* 131:0x82570,0x826CA 160:= com1:—; 0x82570 / 0x826CA */
+    CX = pop16();                             /* 131:0x82575,0x826CF 160:= com1:—; 0x82575 / 0x826CF */
+    L(-0x16) = AX;                            /* 131:0x82576,0x826D0 160:= com1:—; 0x82576 / 0x826D0 */
+    L(-0x18) = 0;                             /* 131:0x82579,0x826D3 160:= com1:—; 0x82579 / 0x826D3 */
+
+    BADDR();                                  /* 131:0x8257E,0x82589,0x826D8,0x826E3 160:= com1:—; 0x8257E–0x82589 / 0x826D8–0x826E3 */
+    AL = B(ES_BX, F250_MT_BU_UNKNOWN_07);                      /* 131:0x8258B,0x826E5 160:= com1:—; 0x8258B / 0x826E5 */
+    AX = sx8(AL);                             /* 131:0x8258F,0x826E9 160:= com1:—; 0x8258F / 0x826E9 */
+    if (AX != L(-0x16))                       /* 131:0x82590,0x82593,0x826EA,0x826ED 160:= com1:—; 0x82590,0x82593 / 0x826EA,0x826ED */
+        goto unequal;
+
+    L(-0x18) = 1;                             /* 131:0x82595,0x826EF 160:= com1:—; 0x82595 / 0x826EF */
+    goto pointer_calls;                       /* 131:0x8259A,0x826F4 160:= com1:—; 0x8259A / 0x826F4 */
+
+unequal:
+    BADDR();                                  /* 131:0x8259C,0x825A7,0x826F6,0x82701 160:= com1:—; 0x8259C–0x825A7 / 0x826F6–0x82701 */
+    AL = B(ES_BX, F250_MT_BU_UNKNOWN_07);                      /* 131:0x825A9,0x82703 160:= com1:—; 0x825A9 / 0x82703: fresh read */
+    AX = sx8(AL);                             /* 131:0x825AD,0x82707 160:= com1:—; 0x825AD / 0x82707 */
+    L(-0x16) = AX;                            /* 131:0x825AE,0x82708 160:= com1:—; 0x825AE / 0x82708 */
+
+pointer_calls:
+    BARG();                                   /* 131:0x825B1,0x825C2,0x8270B,0x8271C 160:= com1:—; 0x825B1–0x825C2 / 0x8270B–0x8271C */
+    opaque_far_call(0x03A0, 0x003E);           /* 131:0x825C3,0x8271D 160:= com1:—; 0x825C3 / 0x8271D */
+    CX = pop16();                             /* 131:0x825C8,0x82722 160:= com1:—; 0x825C8 / 0x82722 */
+    CX = pop16();                             /* 131:0x825C9,0x82723 160:= com1:—; 0x825C9 / 0x82723 */
+
+    BARG();                                   /* 131:0x825CA..0x825DB,0x82724..0x82735 160:= com1:—;
+                                                 fresh post-call addressing */
+    opaque_far_call(0x03A0, 0x0052);           /* 131:0x825DC,0x82736 160:= com1:—; 0x825DC / 0x82736 */
+    CX = pop16();                             /* 131:0x825E1,0x8273B 160:= com1:—; 0x825E1 / 0x8273B */
+    CX = pop16();                             /* 131:0x825E2,0x8273C 160:= com1:—; 0x825E2 / 0x8273C */
+
+    if (TAIL == CLASS1_15)
+        L(-0x18) = 0;                         /* 131:0x8273D 160:= com1:—; 0x8273D only */
+
+    if (L(-0x18) != 1)                        /* 131:0x825E3,0x825E7,0x82742,0x82746 160:= com1:—; 0x825E3,0x825E7 / 0x82742,0x82746 */
+        goto frame_byte;
+
+    push16(SI);                               /* 131:0x825E9,0x82748 160:= com1:—; 0x825E9 / 0x82748 */
+    opaque_far_call(0x03E0, 0x003E);           /* 131:0x825EA,0x82749 160:= com1:—; 0x825EA / 0x82749 */
+    CX = pop16();                             /* 131:0x825EF,0x8274E 160:= com1:—; 0x825EF / 0x8274E */
+    push16(AX);                               /* 131:0x825F0,0x8274F 160:= com1:—; 0x825F0 / 0x8274F */
+
+    BADDR();                                  /* 131:0x825F1,0x825FC,0x82750,0x8275B 160:= com1:—; 0x825F1–0x825FC / 0x82750–0x8275B */
+    AX = pop16();                             /* 131:0x825FE,0x8275D 160:= com1:—; 0x825FE / 0x8275D */
+    B(ES_BX, F250_MT_BU_UNKNOWN_07) = u8(AX);                  /* 131:0x825FF,0x8275E 160:= com1:—; 0x825FF / 0x8275E */
+    goto tail_done;                           /* 131:0x82603,0x82762 160:= com1:—; 0x82603 / 0x82762 */
+
+frame_byte:
+    BADDR();                                  /* 131:0x82605,0x82610,0x82764,0x8276F 160:= com1:—; 0x82605–0x82610 / 0x82764–0x8276F */
+    AL = LB(-0x16);                           /* 131:0x82612,0x82771 160:= com1:—; 0x82612 / 0x82771 */
+    B(ES_BX, F250_MT_BU_UNKNOWN_07) = AL;                      /* 131:0x82615,0x82774 160:= com1:—; 0x82615 / 0x82774 */
+
+tail_done:
+    if (TAIL == CLASS14)
+        goto exit_8262A;                      /* 131:0x82619,0x8262A 160:= com1:—; 0x82619, then 0x8262A */
+    goto external_82F61;                      /* 131:0x82778 160:= com1:—; class1/15: 0x82778 */
+
+external_82F61:
+    /* 131:0x82F61 160:= com1:=; boundary only, no return instruction reconstructed here. */
+    return;
+}
+#undef BADDR
+#undef SADDR
+#undef BARG
+#undef CALL6
