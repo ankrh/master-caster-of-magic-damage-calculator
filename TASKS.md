@@ -1131,9 +1131,11 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
   stores match `BaseUnits.CombatEnchantmentFlags`, not that object's base enchantment layer.
   Existing accessor and recalculation evidence establishes the object ownership and aggregation;
   reuse those results and existing cast/API
-  reconstructions. Audit remaining overland and post-store claims before using the preflight
-  continuation packet; its size alone does not establish a need to reconstruct it. Script
-  supplements stay with F250.4. This subtask remains open.
+  reconstructions. The [37-instruction overland store](Reference%20docs/Caster%20binary/F250.2.overland-store.evidence.md)
+  is also reconstructed; do not rederive either writer or launch the old broader preflight by
+  default. Remaining runtime field binding, full named admission and necessary continuation
+  facts require individual scope decisions. Script sources are reconciled in F250.4. This
+  subtask remains open.
 - **F250.3** reconcile the eight DOS curses and `trueSight`, using F250.1 and the existing
   `combat.c`/`unitcalc.c` bodies and coverage ledgers. Start with
   [A32](Reference%20docs/DOS%20reconstructed/A32.evidence.md): dispatch `0x81F4C..0x81F6F`
