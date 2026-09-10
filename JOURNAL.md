@@ -4,6 +4,14 @@
 
 # Journal
 
+## 2026-09-10 — F250.3 existing-source reconciliation
+
+[DOS coverage ledger](Reference%20docs/DOS%20reconstructed/F250.3.reconciliation.md) reuses A32's
+battle writer and the nine existing consumers. The remaining named-writer/binding gaps are explicit;
+F250.3 stays open. The unmerged handler extension is retained, not automatically resumed.
+GPT-5.6 Sol high reviewed this Method A pass at the user's request and found no defects.
+Citation/provenance checks pass; only documentation and comments changed.
+
 ## 2026-09-10 — Evidence-task scopes corrected
 
 On the user's request, F250 now separates citation, interpretation, implementation and missing
