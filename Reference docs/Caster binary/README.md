@@ -193,4 +193,4 @@ review gates exist only in `Calculator/BACKLOG.md`.
 
 ## F250.2 combat cast backing stores (partial)
 
-[Evidence](F250.2.combat.evidence.md), [reconstruction](F250.2.combat.reconstruction.md), [raw packet](F250.2.combat.raw.md), [flow](F250.2.combat.flow.svg). Generic combat buffs/curses and Warp write the combat-getter region; no base/permanent-store claim follows. Only the first bounded subunit is complete; F250.2 remains open.
+[Evidence](F250.2.combat.evidence.md), [reconstruction](F250.2.combat.reconstruction.md), [raw packet](F250.2.combat.raw.md), [flow](F250.2.combat.flow.svg). Generic combat buffs/curses and Warp write `BaseUnits.CombatEnchantmentFlags`; existing accessor and recalculation evidence distinguishes that persistent object's combat layer from its base enchantment layer. Only the first bounded reconstruction subunit and existing-source reconciliation are complete; F250.2 remains open.

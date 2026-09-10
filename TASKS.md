@@ -1137,7 +1137,9 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
 
 - **F250.2** reconcile the modern claims using the completed F250.1 qualification and
   [combat reconstruction](Reference%20docs/Caster%20binary/F250.2.combat.evidence.md): generic/Warp
-  stores match the combat getter, not the base getter. Reuse that result and existing cast/API
+  stores match `BaseUnits.CombatEnchantmentFlags`, not that object's base enchantment layer.
+  Existing accessor and recalculation evidence establishes the object ownership and aggregation;
+  reuse those results and existing cast/API
   reconstructions. Audit remaining overland and post-store claims before using the preflight
   continuation packet; its size alone does not establish a need to reconstruct it. Script
   supplements stay with F250.4. This subtask remains open.
@@ -1149,6 +1151,8 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
   2026-09-10 packet extends the handler to `0x82451`; retain its work, but establish which
   additional facts are needed before resuming it or launching Mind Storm/True Sight/Warp
   packets. Any new reconstruction retained must finish its required review before merge.
+  The [existing-source reconciliation](Reference%20docs/DOS%20reconstructed/F250.3.reconciliation.md)
+  maps all nine keys and separates named binding/direct-writer gaps from known consumers.
   This subtask remains open; no permanent-record store is presumed.
 - **F250.4** resolve the assumed Illusion-refusal branch against existing player-cast evidence;
   distinguish AI selection from actual cast admission. An AI heuristic such as

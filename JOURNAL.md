@@ -4,6 +4,15 @@
 
 # Journal
 
+## 2026-09-10 — F250.2 record ownership reconciled
+
+The [modern cast evidence](Reference%20docs/Caster%20binary/F250.2.combat.evidence.md) now joins
+its stores to the existing F264.1 accessor mapping and RecalculateUnits copy/merges:
+combat flags belong to BaseUnits, in a different layer from base enchantment flags.
+GPT-5.6 Sol high confirmed that correction and identified Rebuild's scripted writer as already
+available; its scope was narrowed accordingly. F250.2 stays open for explicit remaining gaps.
+No new binary derivation or calculator behavior change.
+
 ## 2026-09-10 — F250.3 existing-source reconciliation
 
 [DOS coverage ledger](Reference%20docs/DOS%20reconstructed/F250.3.reconciliation.md) reuses A32's
