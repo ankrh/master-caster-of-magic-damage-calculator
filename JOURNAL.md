@@ -4,6 +4,14 @@
 
 # Journal
 
+## 2026-09-10 — F236.1 source distinction complete
+
+[Holy Weapon source handoff](Reference%20docs/DOS%20reconstructed/F236.1.holy-weapon-sources.md)
+separates direct casts, Holy Arms and Heavenly Light using existing reconstructions. Sol high
+review corrected an overbroad handoff claim: grant predicates/destinations are established,
+while P1/P2 still supply complete direct-cast admission, backing stores and timing. F236.1 is
+complete; F236.2 remains for implementation. Links and task dependencies checked; no code changes.
+
 ## 2026-09-10 — F250.4 script-source reconciliation
 
 [Script ledger](Reference%20docs/Caster%20binary/F250.4.script-reconciliation.md) resolves
