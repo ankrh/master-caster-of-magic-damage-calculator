@@ -70,8 +70,10 @@ have completed successfully. Preserve their provenance and name unresolved disag
 - In Codex, use the shell tool's returned session handle and its follow-up output tool. Use the
   agent wait/message tools for native implementation subagents. If a tool call itself yields a
   running cell, wait on that cell with its matching tool.
-- Use bounded waits that leave room for progress updates. Do not spawn sleep or shell polling
-  processes, relaunch a slow job, or treat a running job as a failed one.
+- In Codex, follow the shared global contract's "Codex: waiting for agents and reviews" rule
+  for wait cadence and user updates.
+- Do not spawn sleep or shell polling processes, relaunch a slow job, or treat a running job
+  as a failed one.
 
 A run counts as completed only when its wrapper exits successfully and its new, nonempty answer
 has been read and checked against the task. Save the printed session ID and log paths in the

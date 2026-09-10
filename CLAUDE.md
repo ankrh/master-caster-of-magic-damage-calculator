@@ -149,9 +149,7 @@ After the finished implementation, the reconstructed code should be visualized i
 
 ### Which test suite a task runs
 
-Playwright is retired for non-UI testing. A task that changes page code runs `npm run test:all`;
-every other task runs the Node default, `npm test`, and nothing else. `TESTS.md` is the single home
-for where that boundary falls and for what the Node default cannot see.
+`TESTS.md` owns test selection and the limits of each suite. Follow its change-based validation rule.
 
 ## Version control
 

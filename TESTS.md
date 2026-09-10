@@ -4,8 +4,18 @@
 # Test list — Master/Caster of Magic damage calculator
 
 `npm test` is the Node default and runs entries 1-3. `npm run test:ui` runs entries 4-11 through
-Playwright against the no-cache dev server; `npm run test:all` runs both. A task that changes page
-code runs `test:all`; every other task runs `npm test`.
+Playwright against the no-cache dev server; `npm run test:all` runs both. Playwright is used only
+for page behavior.
+
+Select validation from what changed:
+
+- Page code changes run `npm run test:all`.
+- Other executable code, calculation data, or test changes run `npm test`.
+- Documentation-only changes do not automatically run either suite. Check the affected text,
+  links, references and task dependencies. If the edit changes an input interpreted by a checker,
+  run that checker; run a broader suite only when the change can affect what it verifies.
+- Read-only discussion or review does not require a suite run. Run a check when it is needed to
+  investigate or substantiate a finding.
 
 Any test file not named here is scaffolding and carries its own scheduled deletion.
 `node tools/test_list_audit.js` checks that in both directions.

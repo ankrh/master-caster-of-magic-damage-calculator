@@ -12,8 +12,10 @@ CoM1 or MoM material/Master of Magic Official Release/
 # Playwright MCP logs
 .playwright-mcp/
 
-# Playwright UI tests
+# Installed dependencies
 node_modules/
+
+# Playwright UI tests
 test-results/
 playwright-report/
 
@@ -29,5 +31,5 @@ Raw install files/
 .reviews/
 .derivations/
 
-# Suite-gate ledger: per-checkout state recording which suite last passed on which tree
-tmp/.last-green.json
+# Temporary working files (including the per-checkout suite-gate ledger)
+tmp/
