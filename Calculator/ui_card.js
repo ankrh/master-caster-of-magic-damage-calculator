@@ -562,7 +562,22 @@ function formatTraceSource(entry) {
 
 function formatTraceTooltip(trace) {
   const lines = ['Editable base: ' + formatTraceValue(trace.base, trace)];
+  const callsByRoutine = new Map();
   for (const entry of trace.entries) {
+    if (!entry.invocation) continue;
+    const { routine, id } = entry.invocation;
+    if (!callsByRoutine.has(routine)) callsByRoutine.set(routine, []);
+    const calls = callsByRoutine.get(routine);
+    if (!calls.includes(id)) calls.push(id);
+  }
+  let previousCall = null;
+  for (const entry of trace.entries) {
+    const calls = entry.invocation && callsByRoutine.get(entry.invocation.routine);
+    if (calls && calls.length > 1 && entry.invocation.id !== previousCall) {
+      lines.push('— ' + entry.invocation.label + ' (call '
+        + (calls.indexOf(entry.invocation.id) + 1) + ') —');
+    }
+    previousCall = entry.invocation ? entry.invocation.id : null;
     // A boundary entry marks a position the engine crosses rather than a write, so it is
     // rendered without values: printing `5 → 5` would read as a transform that did nothing.
     if (entry.boundary) {

@@ -693,8 +693,8 @@ function stepHasId(step) {
 }
 
 function assertStatStepOrder(steps) {
-  let rank = -1;
-  let previous = null;
+  const previousByOrigin = new Map();
+  let projectedExecutionIndex = -1;
   const seen = new Set();
   for (const step of steps) {
     if (!stepHasId(step)) {
@@ -704,14 +704,23 @@ function assertStatStepOrder(steps) {
       throw new Error(`step ${step.id} has unknown phase ${step.phase}`);
     }
     const stepRank = STEP_PHASE_RANK[step.phase];
-    if (stepRank < rank) {
+    const origin = step.projectedOccurrence ? step.projectedOccurrence.invocationId : null;
+    const previous = previousByOrigin.get(origin);
+    if (previous && stepRank < STEP_PHASE_RANK[previous.phase]) {
       throw new Error(`step ${step.id} (phase ${step.phase}) is declared after ${previous.id} (phase ${previous.phase})`);
     }
-    const key = stepVersionScopeKey(step);
+    if (step.projectedOccurrence) {
+      if (step.projectedOccurrence.executionIndex < projectedExecutionIndex) {
+        throw new Error(`projected step ${step.id} is out of execution order`);
+      }
+      projectedExecutionIndex = step.projectedOccurrence.executionIndex;
+    }
+    const key = step.projectedOccurrence
+      ? JSON.stringify([stepVersionScopeKey(step), step.id, step.projectedOccurrence.id])
+      : stepVersionScopeKey(step);
     if (seen.has(key)) throw new Error(`step ${key} is declared twice in one sequence`);
     seen.add(key);
-    rank = stepRank;
-    previous = step;
+    previousByOrigin.set(origin, step);
   }
   return steps;
 }
@@ -809,31 +818,122 @@ function orderStatStepsBySource(steps, chain) {
 //   ctx.trace             an array; each step that changes a declared field appends an entry
 //   ctx.executionTrace    an array; every visited step appends an applied/skipped entry
 //   ctx.validateWrites    throw if a step writes a field it did not declare
+// An invocation is a calculator call descriptor, not an assertion about a binary routine.
+// Arguments and declared entry reads are copied now; record bindings remain live for the call.
+function createStatExecutionRun() {
+  return { invocations: [], nextExecutionIndex: 0 };
+}
+
+function copyStatInvocationValue(value) {
+  if (value === null || ['string', 'number', 'boolean', 'undefined'].includes(typeof value)) return value;
+  if (Array.isArray(value)) return Object.freeze(value.map(copyStatInvocationValue));
+  if (typeof value !== 'object') throw new Error('invocation arguments must be data');
+  return Object.freeze(Object.fromEntries(Object.entries(value)
+    .map(([key, item]) => [key, copyStatInvocationValue(item)])));
+}
+
+function createStatInvocation(run, specification) {
+  const { id, routine, parentId = null, requestId = null, label = routine } = specification;
+  if (!id || !routine || run.invocations.some(invocation => invocation.id === id)) {
+    throw new Error(`stat invocation has missing or repeated identity: ${id}`);
+  }
+  if (parentId !== null && !run.invocations.some(invocation => invocation.id === parentId)) {
+    throw new Error(`stat invocation ${id} has unknown parent ${parentId}`);
+  }
+  const records = specification.records || {};
+  const reads = {};
+  for (const [record, fields] of Object.entries(specification.recordReads || {})) {
+    if (!records[record] || !Array.isArray(fields)) throw new Error(`invocation ${id} has no record ${record}`);
+    reads[record] = {};
+    for (const field of fields) {
+      if (!(field in records[record])) throw new Error(`invocation ${id} cannot read ${record}.${field}`);
+      reads[record][field] = records[record][field];
+    }
+  }
+  const descriptor = Object.freeze({ id, routine, label, parentId, requestId,
+    position: run.invocations.length,
+    arguments: copyStatInvocationValue(specification.arguments || {}),
+    recordReads: copyStatInvocationValue(reads), recordBindings: Object.freeze(Object.keys(records)) });
+  run.invocations.push(descriptor);
+  return { run, descriptor, records, nextOrdinal: 0 };
+}
+
+function invocationTraceFields(invocation, step, ordinal, executionIndex) {
+  if (step.projectedOccurrence) {
+    return { occurrence: step.projectedOccurrence, invocation: step.projectedInvocation };
+  }
+  if (!invocation) return {};
+  const sourceKey = `${step.phase}:${step.id}`;
+  return { invocation: invocation.descriptor,
+    occurrence: Object.freeze({ id: JSON.stringify([invocation.descriptor.id, sourceKey, ordinal]),
+      invocationId: invocation.descriptor.id, sourceKey, ordinal, executionIndex }) };
+}
+
+function executingInvocationFields(invocation, executionIndex) {
+  return invocation ? { executionInvocation: invocation.descriptor, executionIndex } : {};
+}
+
+function projectedInvocationFields(event) {
+  return event.occurrence ? { occurrence: event.occurrence, invocation: event.invocation } : {};
+}
+
+function runStatInvocation(run, specification, steps, unit, context = {}) {
+  if (run.activeInvocation) throw new Error('stat invocations must run between atomic source-write steps');
+  const invocation = createStatInvocation(run, specification);
+  const fields = ['invocation', 'callArguments', 'callRecords'];
+  const saved = fields.map(key => [key, Object.prototype.hasOwnProperty.call(context, key), context[key]]);
+  try {
+    context.invocation = invocation;
+    return runStatSteps(steps, unit, context);
+  } finally {
+    for (const [key, present, value] of saved) {
+      if (present) context[key] = value;
+      else delete context[key];
+    }
+  }
+}
+
 function runStatSteps(steps, unit, ctx) {
   const context = ctx || {};
   const trace = context.trace;
   const executionTrace = context.executionTrace;
   const validate = context.validateWrites || statStepDebug;
   if (validate) assertStatStepOrder(steps);
-  for (let order = 0; order < steps.length; order++) {
-    const step = steps[order];
-    if (step.when && !step.when(unit, context)) {
-      if (executionTrace) recordStepExecution(executionTrace, step, order, 'skipped');
-      continue;
+  const activeRun = context.invocation && context.invocation.run;
+  if (activeRun && activeRun.activeInvocation) {
+    throw new Error('stat invocations must run between atomic source-write steps');
+  }
+  if (activeRun) activeRun.activeInvocation = context.invocation;
+  try {
+    for (let order = 0; order < steps.length; order++) {
+      const step = steps[order];
+      const invocation = context.invocation;
+      const ordinal = invocation ? invocation.nextOrdinal++ : null;
+      const executionIndex = invocation ? invocation.run.nextExecutionIndex++ : null;
+      if (invocation) {
+        context.callArguments = invocation.descriptor.arguments;
+        context.callRecords = invocation.records;
+      }
+      if (step.when && !step.when(unit, context)) {
+        if (executionTrace) recordStepExecution(executionTrace, step, order, 'skipped', invocation, ordinal, executionIndex);
+        continue;
+      }
+      const before = (trace || validate) ? { ...unit } : null;
+      const result = step.apply(unit, context);
+      if (validate) assertStepWrites(step, before, unit);
+      if (trace) recordStepTrace(trace, step, before, unit, order, invocation, ordinal, executionIndex);
+      if (executionTrace) recordStepExecution(executionTrace, step, order, 'applied', invocation, ordinal, executionIndex);
+      if (result === HALT) break;
     }
-    const before = (trace || validate) ? { ...unit } : null;
-    const result = step.apply(unit, context);
-    if (validate) assertStepWrites(step, before, unit);
-    if (trace) recordStepTrace(trace, step, before, unit, order);
-    if (executionTrace) recordStepExecution(executionTrace, step, order, 'applied');
-    if (result === HALT) break;
+    if (trace && context.assertTraceOrder) assertStatTraceOrder(trace);
+    if (executionTrace && (context.assertTraceOrder || context.assertExecutionTraceOrder)) {
+      if (typeof executionTrace.assert === 'function') executionTrace.assert(steps, context.invocation);
+      else assertStatTraceOrder(executionTrace, { steps, invocation: context.invocation });
+    }
+    return unit;
+  } finally {
+    if (activeRun) delete activeRun.activeInvocation;
   }
-  if (trace && context.assertTraceOrder) assertStatTraceOrder(trace);
-  if (executionTrace && (context.assertTraceOrder || context.assertExecutionTraceOrder)) {
-    if (typeof executionTrace.assert === 'function') executionTrace.assert(steps);
-    else assertStatTraceOrder(executionTrace, { steps });
-  }
-  return unit;
 }
 
 // A step that writes a field it did not declare is a migration bug: the trace under-reports,
@@ -1069,7 +1169,7 @@ function collectStepChanges(step, before, unit) {
   return changes;
 }
 
-function recordStepTrace(trace, step, before, unit, order) {
+function recordStepTrace(trace, step, before, unit, order, invocation, ordinal, executionIndex) {
   const changes = collectStepChanges(step, before, unit);
   if (isBoundaryStep(step) || Object.keys(changes).length > 0) {
     const event = {
@@ -1079,6 +1179,7 @@ function recordStepTrace(trace, step, before, unit, order) {
       order,
       traceOrder: trace.length,
       changes,
+      ...invocationTraceFields(invocation, step, ordinal, executionIndex),
     };
     if (isBoundaryStep(step)) event.boundary = true;
     if (Number.isInteger(step.sourceOrder)) event.sourceOrder = step.sourceOrder;
@@ -1099,9 +1200,9 @@ function recordStepTrace(trace, step, before, unit, order) {
 // Complete execution ledger used by F20. It intentionally records no-op and predicate-skipped
 // steps as well as writes, so a trace cannot appear complete merely because changed events were
 // sorted or because an omitted step happened to be a no-op. The public `trace` remains sparse.
-function recordStepExecution(trace, step, order, status) {
+function recordStepExecution(trace, step, order, status, invocation, ordinal, executionIndex) {
   if (typeof trace.record === 'function') {
-    trace.record(step, order, status);
+    trace.record(step, order, status, invocation, ordinal, executionIndex);
     return;
   }
   const event = {
@@ -1111,6 +1212,8 @@ function recordStepExecution(trace, step, order, status) {
     traceOrder: trace.length,
     executionOrder: trace.length,
     status,
+    ...invocationTraceFields(invocation, step, ordinal, executionIndex),
+    ...executingInvocationFields(invocation, executionIndex),
   };
   if (Number.isInteger(step.sourceOrder)) event.sourceOrder = step.sourceOrder;
   if (typeof step.projectionOf === 'string') event.projectionOf = step.projectionOf;
@@ -1125,19 +1228,21 @@ function recordStepExecution(trace, step, order, status) {
 function createStatExecutionTraceLedger() {
   const records = [];
   return {
-    record(step, order, status) {
-      records.push([step, order, status]);
+    record(step, order, status, invocation, ordinal, executionIndex) {
+      records.push([step, order, status, invocation, ordinal, executionIndex]);
     },
-    assert(steps) {
+    assert(steps, invocation) {
+      const callRecords = invocation ? records.filter(record => record[3] === invocation) : records;
       if (!Array.isArray(steps)) {
         throw new Error('complete stat trace expected steps is not an array');
       }
-      if (records.length !== steps.length) {
-        throw new Error(`complete stat trace has ${records.length} events, expected ${steps.length}`);
+      assertStatStepOrder(steps);
+      if (callRecords.length !== steps.length) {
+        throw new Error(`complete stat trace has ${callRecords.length} events, expected ${steps.length}`);
       }
       let previousSource = null;
-      for (let index = 0; index < records.length; index++) {
-        const [step, order, status] = records[index];
+      for (let index = 0; index < callRecords.length; index++) {
+        const [step, order, status] = callRecords[index];
         if (step !== steps[index] || order !== index) {
           throw new Error(`complete trace event ${step && step.id} does not match step ${steps[index] && steps[index].id}`);
         }
@@ -1145,6 +1250,7 @@ function createStatExecutionTraceLedger() {
           throw new Error(`complete trace event ${step.id} has no execution status`);
         }
         const sourceOrder = Number.isInteger(step.sourceOrder) ? step.sourceOrder : null;
+        if (step.projectedOccurrence) continue;
         if (['b', 'c', 'd'].includes(step.phase) && sourceOrder === null) {
           throw new Error(`complete trace event ${step.id} has no source order`);
         }
@@ -1160,7 +1266,7 @@ function createStatExecutionTraceLedger() {
       }
     },
     materialize() {
-      return records.map(([step, order, status], traceOrder) => {
+      return records.map(([step, order, status, invocation, ordinal, executionIndex], traceOrder) => {
         const channels = stepChannelTargets(step);
         return {
           id: step.id,
@@ -1169,6 +1275,9 @@ function createStatExecutionTraceLedger() {
           traceOrder,
           executionOrder: traceOrder,
           status,
+          ...invocationTraceFields(invocation, step, ordinal, executionIndex),
+          ...executingInvocationFields(invocation, executionIndex),
+          ...(typeof step.projectionOf === 'string' ? { projectionOf: step.projectionOf } : {}),
           ...(Number.isInteger(step.sourceOrder) ? { sourceOrder: step.sourceOrder } : {}),
           ...(channels ? { channels } : {}),
         };
@@ -1183,12 +1292,20 @@ function createStatExecutionTraceLedger() {
 // therefore the one total order exposed to projections and to the F20 regression.
 function assertStatTraceOrder(trace, options = {}) {
   if (!Array.isArray(trace)) throw new Error('stat trace is not an array');
+  // A runner validates its own call; the shared ledger retains the global positions.
+  if (options.invocation) {
+    trace = trace.filter(event => event.executionInvocation === options.invocation.descriptor)
+      .map((event, index) => ({ ...event, traceOrder: index, executionOrder: index }));
+  }
   const seen = new Set();
   let previousSource = null;
+  let previousInvocation = null;
   const expectedSteps = options.steps || null;
   if (expectedSteps && !Array.isArray(expectedSteps)) {
     throw new Error('complete stat trace expected steps is not an array');
   }
+  if (expectedSteps) assertStatStepOrder(expectedSteps);
+  const sourcePositions = new Set();
   if (expectedSteps && !options.allowPrefix && trace.length !== expectedSteps.length) {
     throw new Error(`complete stat trace has ${trace.length} events, expected ${expectedSteps.length}`);
   }
@@ -1200,13 +1317,24 @@ function assertStatTraceOrder(trace, options = {}) {
     if (!event || typeof event.id !== 'string' || !event.id) {
       throw new Error(`trace event ${index} has no id`);
     }
-    // Keyed `phase:id`, the key the chain and the scope table use: one effect may make two
-    // separately cited writes in two regions of one engine and both may fire in one pass —
-    // `c:trueSight` sets Illusion Immunity and `d:trueSight` adds ranged To Hit (`SPEC.md`,
-    // *The step model*). A repeated `phase:id` is still a bug, because that is one position.
-    const eventKey = `${event.phase}:${event.id}`;
+    // Source identity belongs to the evidence; occurrence identity belongs to this execution.
+    const eventKey = event.executionInvocation
+      ? JSON.stringify([event.executionInvocation.id, event.order])
+      : event.occurrence ? event.occurrence.id : `${event.phase}:${event.id}`;
     if (seen.has(eventKey)) throw new Error(`trace event id ${eventKey} is repeated`);
     seen.add(eventKey);
+    const projected = event.executionInvocation && event.occurrence
+      && event.executionInvocation.id !== event.occurrence.invocationId;
+    if (!projected) {
+      const sourcePosition = JSON.stringify([event.invocation ? event.invocation.id : null,
+        `${event.phase}:${event.id}`]);
+      if (sourcePositions.has(sourcePosition)) throw new Error(`trace source ${sourcePosition} is repeated`);
+      sourcePositions.add(sourcePosition);
+    }
+    const invocationId = event.executionInvocation ? event.executionInvocation.id
+      : event.occurrence ? event.occurrence.invocationId : null;
+    if (invocationId !== previousInvocation) previousSource = null;
+    previousInvocation = invocationId;
     if (event.traceOrder !== index) {
       throw new Error(`trace event ${event.id} has trace order ${event.traceOrder}, expected ${index}`);
     }
@@ -1233,7 +1361,8 @@ function assertStatTraceOrder(trace, options = {}) {
       const expectedSourceOrder = Number.isInteger(expected.sourceOrder)
         ? expected.sourceOrder : null;
       const actualSourceOrder = Number.isInteger(event.sourceOrder) ? event.sourceOrder : null;
-      if (['b', 'c', 'd'].includes(expected.phase) && expectedSourceOrder === null) {
+      if (['b', 'c', 'd'].includes(expected.phase) && expectedSourceOrder === null
+          && !expected.projectedOccurrence) {
         throw new Error(`complete trace event ${event.id} has no source order`);
       }
       if (expectedSourceOrder !== actualSourceOrder) {
@@ -1245,7 +1374,7 @@ function assertStatTraceOrder(trace, options = {}) {
       assertEventChannelAttribution(event, stepChannelTargets(expected));
     }
     const phaseRank = STEP_PHASE_RANK[event.phase];
-    if (Number.isInteger(event.sourceOrder)) {
+    if (Number.isInteger(event.sourceOrder) && !projected) {
       if (previousSource && (phaseRank < previousSource.phaseRank
           || (phaseRank === previousSource.phaseRank
             && event.sourceOrder <= previousSource.sourceOrder))) {
@@ -1296,6 +1425,7 @@ function projectStatTrace(trace, field, base, result, options = {}) {
         order: event.order,
         ...(Number.isInteger(event.traceOrder) ? { traceOrder: event.traceOrder } : {}),
         ...(typeof event.projectionOf === 'string' ? { projectionOf: event.projectionOf } : {}),
+        ...projectedInvocationFields(event),
         boundary: true,
         from: running,
         to: running,
@@ -1315,6 +1445,7 @@ function projectStatTrace(trace, field, base, result, options = {}) {
       order: event.order,
       ...(Number.isInteger(event.traceOrder) ? { traceOrder: event.traceOrder } : {}),
       ...(typeof event.projectionOf === 'string' ? { projectionOf: event.projectionOf } : {}),
+      ...projectedInvocationFields(event),
       from,
       to,
     });
@@ -1348,6 +1479,7 @@ function appendProjectedTraceEntry(projected, step, from, to) {
     source: traceSourceForStep(step),
     phase: step.phase,
     order: step.order,
+    ...projectedInvocationFields(step),
     from,
     to,
   });

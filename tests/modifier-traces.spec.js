@@ -7,6 +7,40 @@ const { expectNoConsoleErrors, openCalculator, setValue, warmDefaultStateCache }
 const BASE_COPY_LINE = '— Calculated record seeded from the permanent record (phase a) —';
 const writes = trace => trace.entries.filter(entry => !entry.boundary);
 
+test('Repeated source writes retain call labels and boundary positions in hovers', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const result = await page.evaluate(() => {
+    const run = createStatExecutionRun();
+    const record = { res: 0 };
+    const trace = [];
+    const routine = [
+      statStep({ id: 'boundary', sourceLabel: 'Entry boundary', phase: 'a', writes: [],
+        boundary: true, apply: () => {} }),
+      statStep({ id: 'shared', sourceLabel: 'Shared source', phase: 'a', writes: ['res'],
+        apply: (u, c) => { u.res += c.callArguments.amount; } }),
+    ];
+    for (const id of ['first', 'second']) {
+      runStatInvocation(run, { id, routine: 'shared', label: 'Shared routine',
+        arguments: { amount: 1 } }, routine, record, { trace });
+    }
+    const projection = projectStatTrace(trace, 'res', 0, record.res);
+    return {
+      tooltip: formatTraceTooltip(projection),
+      single: formatTraceTooltip({ ...projection, entries: projection.entries.slice(0, 2) }),
+      projection: formatTraceTooltip({ ...projection, entries: projection.entries.map((entry, index) => ({
+        ...entry, invocation: { ...entry.invocation, routine: index < 2 ? 'flat' : 'projection' },
+      })) }),
+    };
+  });
+  expect(result.tooltip).toContain('Shared routine (call 1)');
+  expect(result.tooltip).toContain('Shared routine (call 2)');
+  expect(result.tooltip.match(/Entry boundary/g)).toHaveLength(2);
+  expect(result.tooltip.match(/Shared source/g)).toHaveLength(2);
+  expect(result.single).not.toContain('(call ');
+  expect(result.projection).not.toContain('(call ');
+  expectNoConsoleErrors(errors);
+});
+
 test('R7.3 projects source-ordered running chains for chance, identity, and modern channels', async ({ page }) => {
   const errors = await openCalculator(page);
   const report = await page.evaluate(() => deriveUnitStats({

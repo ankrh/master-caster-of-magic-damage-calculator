@@ -4,6 +4,16 @@
 
 # Journal
 
+## 2026-09-11 — F279.3a invocation and trace representation complete
+
+Existing calculation calls now carry separate invocation and source-occurrence identities,
+copied arguments and live record bindings. Repeated calls retain their trace order; hovers
+show call labels only when a routine repeats. Numerical schedules remain unchanged.
+[Execution diagram](Reference%20docs/F279.3a.execution-representation.svg) marks the remaining
+outer-executor and Holy Weapon work. Claude review findings are resolved. Validation passed:
+81 browser tests, then final assertion corrections passed 34,211 Node assertions, all presets
+and citations, plus 13 affected hover tests. The 64,456-case comparison found no numeric changes.
+
 ## 2026-09-11 — F271 source-input migration complete
 
 The merged-input API, reverse splitter and unused DOM adapters are removed. Inputs retain

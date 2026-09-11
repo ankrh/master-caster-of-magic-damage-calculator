@@ -700,6 +700,11 @@ function deriveUnitStats(input) {
   // Some permanent/base-record writes execute before the main scratch-record sequence. Keep
   // them as individual trace events at those execution sites: `stat:base` then becomes only a
   // seed of the prepared record, never a catch-all attribution for the sources which prepared it.
+  const statExecutionRun = createStatExecutionRun();
+  const flatInvocation = createStatInvocation(statExecutionRun, {
+    id: 'calculator:flat', routine: 'calculator.flat', label: 'Current flat calculation',
+    arguments: { version, prefix }, records: { working: statRecord },
+  });
   const basePreparationTrace = [];
   let basePreparationOrder = 0;
   const traceBasePreparation = (id, sourceLabel, before, after) => {
@@ -719,6 +724,8 @@ function deriveUnitStats(input) {
       phase: 'template',
       order: basePreparationOrder++,
       changes,
+      ...invocationTraceFields(flatInvocation, { id, phase: 'template' },
+        flatInvocation.nextOrdinal++, statExecutionRun.nextExecutionIndex++),
     });
   };
 
@@ -2729,7 +2736,7 @@ function deriveUnitStats(input) {
   // Two record shapes: the modern engines separate Ranged, Thrown and Breath modifiers,
   // the DOS engines keep one shared secondary slot. See `secondaryHitTargets` above.
   for (const field of secondaryHitFields) statRecord[field] = 0;
-  const statRunContext = { version,
+  const statRunContext = { version, invocation: flatInvocation,
     trace: statTrace,
     executionTrace: statExecutionLedger,
     assertExecutionTraceOrder: true,
@@ -3052,10 +3059,11 @@ function deriveUnitStats(input) {
     const chanceTrace = [];
     const chanceContributions = [];
     let chanceSerial = 0;
-    function addChanceContribution(id, source, phase, order, deltas, projectionOf) {
+    function addChanceContribution(id, source, phase, order, deltas, projectionOf, event) {
       if (!Object.values(deltas).some(value => value !== 0)) return;
       chanceContributions.push({
         id, source, phase, order, deltas, projectionOf, serial: chanceSerial++,
+        ...(event ? projectedInvocationFields(event) : {}),
       });
     }
     function addChanceDelta(id, source, phase, order, fields, value) {
@@ -3074,6 +3082,7 @@ function deriveUnitStats(input) {
           id: `chance:${event.id}`, source: event.source, phase: event.phase, order: event.order,
           deltas: {}, projectionOf: `${event.phase}:${event.id}`, boundary: true,
           serial: chanceSerial++,
+          ...projectedInvocationFields(event),
         });
         continue;
       }
@@ -3096,7 +3105,7 @@ function deriveUnitStats(input) {
       const projectedId = event.id === 'trueLight' ? 'chance:trueLightIllusion'
         : `chance:${event.id}`;
       addChanceContribution(projectedId,
-        event.source, event.phase, event.order, deltas, `${event.phase}:${event.id}`);
+        event.source, event.phase, event.order, deltas, `${event.phase}:${event.id}`, event);
     }
     // PROVENANCE[chance:distancePenalty]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/DOS reconstructed/combat.c@span:28:4d6d2024c9551eae456f2bbf | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:21:b13db6265b2feaabf81fb261 | TABLE=Reference docs/Script source/CoM2 1.05.11 base/MODDING.INI@span:6:791acb631b8f903c2812da35 | TABLE=Reference docs/Script source/Warlord 1.5.12.9/MODDING.INI@span:6:791acb631b8f903c2812da35
     addChanceDelta('chance:distancePenalty', { id: 'distancePenalty', label: 'Range distance' },
@@ -3110,6 +3119,9 @@ function deriveUnitStats(input) {
       id: item.id, sourceId: item.source.id, sourceLabel: item.source.label,
       phase: item.phase, writes: Object.keys(item.deltas),
       ...(item.projectionOf ? { projectionOf: item.projectionOf } : {}),
+      ...(item.occurrence ? {
+        projectedOccurrence: item.occurrence, projectedInvocation: item.invocation,
+      } : {}),
       ...(item.boundary ? { boundary: true } : {}),
       apply: u => {
         for (const [field, value] of Object.entries(item.deltas)) u[field] += value;
@@ -3137,9 +3149,19 @@ function deriveUnitStats(input) {
     );
     // Most of this sequence is projected from the stat ledger, so its entries inherit their
     // canonical scope from the step they project (steps.js, resolveStepVersionScope).
-    const chanceUnit = runStatSteps(filterStepsToVersionScope(chanceSteps, version), {
+    const chanceRecord = {
       toHitCommon: 30, toHitMelee: 30, toHitRtb: 30, toBlock: 30,
-    }, { version, trace: chanceTrace });
+    };
+    const chanceUnit = runStatInvocation(statExecutionRun, {
+      id: `calculator:chance:${statExecutionRun.invocations.length}`,
+      routine: 'calculator.chance-projection', label: 'Attack chance projection',
+      parentId: flatInvocation.descriptor.id,
+      arguments: { version, secondaryHitField: context.secondaryHitField,
+        rangedTypeField: context.rangedTypeField },
+      records: { thresholds: chanceRecord },
+      recordReads: { thresholds: Object.keys(chanceRecord) },
+    }, filterStepsToVersionScope(chanceSteps, version), chanceRecord,
+    { version, trace: chanceTrace });
     return { chanceTrace, chanceUnit };
   }
 
@@ -3188,9 +3210,14 @@ function deriveUnitStats(input) {
       sourceLabel: 'Academy', phase: 'training', writes: ['figs'],
       when: () => alumniOfAcademy, apply: u => { u.figs += 2; } }),
   ];
-  const figureUnit = runStatSteps(
+  const figureRecord = { figs: baseFigs };
+  const figureUnit = runStatInvocation(statExecutionRun, {
+    id: 'calculator:figures', routine: 'calculator.figures', label: 'Figure calculation',
+    parentId: flatInvocation.descriptor.id, arguments: { version },
+    records: { figures: figureRecord }, recordReads: { figures: ['figs'] },
+  },
     orderStatStepsBySource(filterStepsToVersionScope(figureSteps, version), statChain(version)),
-    { figs: baseFigs }, { version, trace: figureTrace });
+    figureRecord, { version, trace: figureTrace });
 
   const modifierTraces = {
     figures: projectStatTrace(figureTrace, 'figs', baseFigs, figureUnit.figs),
@@ -3328,6 +3355,10 @@ function deriveUnitStats(input) {
   Object.defineProperty(result, 'statExecutionTrace', {
     enumerable: false,
     get: () => statExecutionLedger.materialize(),
+  });
+  Object.defineProperty(result, 'statInvocations', {
+    enumerable: false,
+    get: () => Object.freeze(statExecutionRun.invocations.slice()),
   });
 
   // Modern units have four independent attack fields, all derived by the one walk above. The

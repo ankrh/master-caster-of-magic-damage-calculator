@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="570" viewBox="0 0 1120 570">
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6" fill="#49728e"/></marker></defs>
+<rect width="1120" height="570" fill="#f3f6fa"/>
+<g font-family="Segoe UI, sans-serif" fill="#17334a">
+<text x="35" y="44" font-size="25" font-weight="600">Execution identity without changing the calculation</text>
+<text x="35" y="73" font-size="16">Source citations name writes. Invocation and occurrence metadata name their execution.</text>
+<g fill="#fff" stroke="#8aa6bb" stroke-width="2">
+<rect x="35" y="111" width="310" height="128" rx="12"/>
+<rect x="405" y="111" width="310" height="128" rx="12"/>
+<rect x="775" y="111" width="310" height="128" rx="12"/>
+<rect x="35" y="305" width="310" height="119" rx="12"/>
+<rect x="405" y="305" width="310" height="119" rx="12"/>
+<rect x="775" y="305" width="310" height="119" rx="12"/>
+</g>
+<g font-size="17">
+<text x="55" y="143" font-weight="600">Existing flat calculation</text>
+<text x="55" y="174">Preparation observations</text><text x="55" y="201">One existing main step walk</text>
+<text x="425" y="143" font-weight="600">Invocation descriptor</text>
+<text x="425" y="174">Routine, position, copied arguments</text><text x="425" y="201">Named records and entry reads</text>
+<text x="795" y="143" font-weight="600">Occurrence identity</text>
+<text x="795" y="174">Invocation + source + ordinal</text><text x="795" y="201">Execution index across the run</text>
+<text x="55" y="337" font-weight="600">Existing projection calls</text>
+<text x="55" y="368">Chance and figure calculations</text><text x="55" y="395">No added engine calls</text>
+<text x="425" y="337" font-weight="600">Trace storage</text>
+<text x="425" y="368">Sparse writes and boundaries</text><text x="425" y="395">Lazy complete main-pass ledger</text>
+<text x="795" y="337" font-weight="600">Projected hover chains</text>
+<text x="795" y="368">Keep source and occurrence</text><text x="795" y="395">Distinguish repeated calls</text>
+</g>
+<g stroke="#49728e" stroke-width="2" fill="none" marker-end="url(#arrow)">
+<path d="M345 174 H400"/><path d="M715 174 H770"/><path d="M930 239 V274 H560 V300"/>
+<path d="M190 239 V300"/><path d="M345 366 H400"/><path d="M715 366 H770"/>
+</g>
+<rect x="35" y="464" width="1050" height="72" rx="10" fill="#fff0cf" stroke="#b7851e"/>
+<text x="55" y="493" font-size="18" font-weight="600" fill="#765008">Current flat execution remains — this is calculator metadata, not binary schedule evidence.</text>
+<text x="55" y="519" font-size="16" fill="#765008">F279.3c: outer cast execution. F279.3b: Holy Weapon migration. No numerical changes in F279.3a.</text>
+</g></svg>

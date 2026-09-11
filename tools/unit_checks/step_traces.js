@@ -12,6 +12,123 @@ function runStatStepChecks(ctx) {
   const step = (id, phase, writes, apply, extra) =>
     ctx.statStep({ id, phase, writes, apply, ...(extra || {}) });
 
+  // Reusing one routine does not reuse its execution identity or its entry state.
+  const exerciseCalls = compact => {
+    const run = ctx.createStatExecutionRun();
+    const record = { res: 2 };
+    const trace = [];
+    const ledger = compact ? ctx.createStatExecutionTraceLedger() : [];
+    const context = { trace, executionTrace: ledger, assertExecutionTraceOrder: true };
+    const routine = [
+      step('entry', 'a', [], () => {}, { boundary: true, projectionOf: 'a:baseCopy' }),
+      step('sharedWrite', 'a', ['res'], (u, c) => {
+        assert(c.callRecords.working === u, 'Invocation binds the live record');
+        u.res += c.callArguments.amount;
+      }),
+      step('noOp', 'a', ['res'], () => {}),
+      step('refused', 'a', ['res'], () => { throw new Error('skipped'); }, { when: () => false }),
+    ];
+    const args = { amount: 2 };
+    const first = ctx.createStatInvocation(run, { id: 'first', routine: 'shared',
+      arguments: args, records: { working: record }, recordReads: { working: ['res'] } });
+    args.amount = 99;
+    ctx.runStatSteps(routine, record, { ...context, invocation: first });
+    ctx.runStatInvocation(run, { id: 'second', routine: 'shared', arguments: { amount: 3 },
+      records: { working: record }, recordReads: { working: ['res'] } }, routine, record, context);
+    assertEqual(record.res, 7, 'Repeated routine uses copied arguments and preceding state');
+    assertEqual(run.invocations[0].recordReads.working.res, 2, 'First entry read is retained');
+    assertEqual(run.invocations[1].recordReads.working.res, 4, 'Second entry read sees first write');
+    assert(!('invocation' in context) && !('callArguments' in context), 'Call bindings are restored');
+    ctx.assertStatTraceOrder(trace);
+    const projected = ctx.projectStatTrace(trace, 'res', 2, 7);
+    assertEqual(projected.entries.length, 4, 'Both boundaries and writes survive projection');
+    assert(projected.entries[1].occurrence.id !== projected.entries[3].occurrence.id,
+      'Repeated source writes have distinct occurrence IDs');
+    assertEqual(projected.entries[1].occurrence.sourceKey, projected.entries[3].occurrence.sourceKey,
+      'Repeated calls preserve one source identity');
+    const projectionStep = step('projected', 'a', ['res'], u => { u.res += 1; }, {
+      projectionOf: 'a:sharedWrite', projectedOccurrence: trace[1].occurrence,
+      projectedInvocation: trace[1].invocation,
+    });
+    for (const id of ['projectionOne', 'projectionTwo']) {
+      ctx.runStatInvocation(run, { id, routine: 'projection' }, [projectionStep], { res: 0 },
+        { executionTrace: ledger, assertExecutionTraceOrder: true });
+    }
+    const events = compact ? ledger.materialize() : ledger;
+    assertEqual(events.length, 10, 'Complete ledger keeps no-op, skipped and projection visits');
+    events.forEach((event, index) => assertEqual(event.executionIndex, index,
+      'Execution index increases across calls'));
+    assertEqual(events[8].occurrence.id, events[1].occurrence.id,
+      'Projection retains the original source occurrence');
+    assertEqual(events[8].executionInvocation.id, 'projectionOne',
+      'Complete projection ledger names the executing call separately');
+    assertEqual(events[0].projectionOf, 'a:baseCopy', 'Complete ledger retains projection provenance');
+    return events;
+  };
+  assertEqual(JSON.stringify(exerciseCalls(true)), JSON.stringify(exerciseCalls(false)),
+    'Compact and plain invocation ledgers have identical provenance');
+
+  const projectionAcrossCalls = compact => {
+    const run = ctx.createStatExecutionRun();
+    const sourceTrace = [];
+    const record = { res: 0 };
+    const routine = [step('early', 'a', ['res'], u => { u.res += 1; }),
+      step('late', 'c', ['res'], u => { u.res += 1; }, { sourceOrder: 1 })];
+    for (const id of ['sourceOne', 'sourceTwo']) {
+      ctx.runStatInvocation(run, { id, routine: 'source' }, routine, record, { trace: sourceTrace });
+    }
+    const projections = sourceTrace.map(event => step('project:' + event.id, event.phase, ['res'],
+      u => { u.res += 1; }, { projectionOf: event.phase + ':' + event.id,
+        projectedOccurrence: event.occurrence, projectedInvocation: event.invocation }));
+    const ledger = compact ? ctx.createStatExecutionTraceLedger() : [];
+    ctx.runStatInvocation(run, { id: 'projection', routine: 'projection' }, projections, { res: 0 },
+      { executionTrace: ledger, assertExecutionTraceOrder: true });
+    let reordered;
+    try { ctx.assertStatStepOrder([projections[0], projections[2], projections[1], projections[3]]); }
+    catch (error) { reordered = error.message; }
+    assert(reordered && reordered.includes('out of execution order'),
+      'A phase-sorted projection cannot reorder its original execution occurrences');
+    const first = sourceTrace[0];
+    let duplicated;
+    try {
+      ctx.assertStatTraceOrder([first, { ...first, traceOrder: 1,
+        occurrence: { ...first.occurrence, id: 'different-occurrence', ordinal: 99 } }]);
+    } catch (error) { duplicated = error.message; }
+    assert(duplicated && duplicated.includes('is repeated'),
+      'Different occurrence IDs cannot disguise duplicate source writes inside one call');
+    return compact ? ledger.materialize() : ledger;
+  };
+  assertEqual(JSON.stringify(projectionAcrossCalls(true)), JSON.stringify(projectionAcrossCalls(false)),
+    'Projected a/c/a/c occurrence order works with both complete ledger stores');
+
+  // An orchestration call belongs between atomic writes, never inside their before/after span.
+  for (const stage of ['when', 'apply']) {
+    const guardedRun = ctx.createStatExecutionRun();
+    const previousArgs = { previous: true };
+    const context = { callArguments: previousArgs };
+    const record = { res: 0 };
+    const reenter = () => ctx.runStatInvocation(guardedRun,
+      { id: 'inner', routine: 'inner', parentId: 'outer' }, [], record, {});
+    let failure;
+    try {
+      ctx.runStatInvocation(guardedRun, { id: 'outer', routine: 'outer' }, [
+        step('atomic', 'a', ['res'], stage === 'apply' ? reenter : () => {},
+          stage === 'when' ? { when: reenter } : {}),
+      ], record, context);
+    } catch (error) { failure = error.message; }
+    assert(failure && failure.includes('between atomic source-write steps'),
+      'Fresh context cannot bypass the active run guard from ' + stage);
+    assert(context.callArguments === previousArgs && !('invocation' in context),
+      'Thrown call restores prior context bindings');
+    ctx.runStatInvocation(guardedRun, { id: 'later', routine: 'later', parentId: 'outer',
+      arguments: { amount: 3 } }, [step('write', 'a', ['res'], (u, c) => {
+      c.base = { published: true };
+      u.res += c.callArguments.amount;
+    })], record, context);
+    assertEqual(record.res, 3, 'Guard clears for a separately orchestrated parent-linked call');
+    assert(context.base.published, 'Published context state survives invocation cleanup');
+  }
+
   // A step reads the field's current value at its own position, so a later halving sees
   // everything the earlier additions wrote — the property the bucket model cannot express.
   const unit = { res: 2 };
@@ -125,6 +242,20 @@ function runModifierTraceChecks(ctx) {
       lightningBreath: { strength: 1, type: 'lightning' },
     },
   }));
+
+  const invocationSnapshot = traced.statInvocations;
+  assert(Object.isFrozen(invocationSnapshot), 'Published invocation list is an immutable snapshot');
+  assert(invocationSnapshot !== traced.statInvocations, 'Reading descriptors does not expose the run array');
+  assertEqual(invocationSnapshot[invocationSnapshot.length - 1].routine, 'calculator.chance-projection',
+    'Invocation list includes the late per-slot chance projections');
+  assert(!Object.keys(traced).includes('statInvocations') && !Object.keys(traced).includes('statExecutionTrace'),
+    'Diagnostic invocation and complete trace metadata stay outside enumerable combat payload');
+  assertEqual(Object.keys(invocationSnapshot[0].recordReads).length, 0,
+    'Flat descriptor does not pretend placeholder numeric slots are reads');
+  const sourceBoundary = traced.statTrace.find(event => event.id === 'baseCopy');
+  const chanceBoundary = traced.modifierTraces.toHitMelee.entries.find(event => event.boundary);
+  assert(sourceBoundary && chanceBoundary && sourceBoundary.occurrence.id === chanceBoundary.occurrence.id,
+    'Chance projection preserves the original base-copy occurrence');
 
   for (const [name, trace] of Object.entries(traced.modifierTraces)) {
     if (name === 'modernAttacks') continue;
