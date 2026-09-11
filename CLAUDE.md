@@ -204,6 +204,13 @@ At a fork between a binary-faithful implementation and one that is not, the fait
 ## Architecture
 
 <!-- The shape of the code and why it has that shape. Structure, not a tour of the modules. -->
+For each effect or spell application, establish the applicable version's engine recalculation
+calls and their order, reusing existing reconstruction first. Assess whether replacing that
+sequence with a full calculator recalculation pass preserves calculated results, persistent
+state changes and subsequent effect eligibility. Prefer the shared full pass where equivalence
+is established; otherwise preserve the required sequence and record the specific difference
+or unresolved evidence that prevents simplification.
+
 Fail-loud on out-of-range values. Halt with an error naming the offending value, the record or file it came from, and the set that was expected.
 
 Fail-loud is a code-design principle, verified by inspection. Individual halt sites are not each a
