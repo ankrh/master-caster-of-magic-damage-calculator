@@ -12,10 +12,10 @@
  * Conventions (C vocabulary, fixed 131/160/com1 address order, symbolic constants and
  * per-build ledgers) are in README.md. Coverage, branch/call inventories and findings live in
  * R6.2a.evidence.md through R6.2f.evidence.md, R6.5a/b/d.evidence.md, and
- * A32.evidence.md, D28.evidence.md, D35.evidence.md, D37.evidence.md, and D39.evidence.md. The overlay-entry names
- * below are ReMoM
- * attributions: the VROOMM
- * targets cannot be mapped back to file offsets from the executable images.
+ * A32.evidence.md, D28.evidence.md, D35.evidence.md, D37.evidence.md, and D39.evidence.md. Overlay operands can be mapped to file offsets using
+ * byte-backed VROOMM metadata (tools/resolve_dos_overlays.py). Each evidence unit records
+ * the targets it verifies; a resolved address alone does not establish the callee's behavior.
+ * Older semantic overlay-entry names remain ReMoM attributions unless separately verified.
  */
 
 #include "MOM_DAT.h"
@@ -5711,3 +5711,246 @@ external_82F61:
 #undef SADDR
 #undef BARG
 #undef CALL6
+
+/* =====================================================================================
+ * F250.3 Warp Creature: class-5 route, id89 caller and resolved overlay-133 writer.
+ * F250.3.warp.evidence.md owns scope, raw-byte provenance and existing-callee joins.
+ * C-shaped machine notation, not a callable ABI or standalone compilable implementation.
+ * AX/AL, SI, DI, ES:BX and L/DS memory are live after every opaque call; PUSH/POP and
+ * far/near calls have machine stack effects. Address offsets wrap to 16 bits without
+ * carrying into segment words. BUILD selects a transcription, not a runtime engine test.
+ * Existing F250_MT layout constants are shared below; no second record-layout definition.
+ * BUE names match unitcalc.c; local definitions retain raw masks for this source artifact.
+ * ===================================================================================== */
+#define BUE_WARPED_ATTACK   0x0080
+#define BUE_WARPED_DEFENSE  0x0100
+#define BUE_WARPED_RESIST   0x0200
+#define F250_W_SPELL_INDEX  0x0059
+#define F250_W_SKIP_131     0x0003
+#define F250_W_SKIP_COM1    0x0044
+#define F250_W_SKIP_137     0x0089
+#define F250_W_SKIP_195     0x00C3
+#define F250_W_SIBLING_204  0x00CC
+#define F250_W_SIBLING_148  0x0094
+#define F250_W_SIBLING_81   0x0051
+#define F250_W_SIBLING_125  0x007D
+#define F250_W_SIBLING_73   0x0049
+#define F250_W_RETRY_ATTACK 0xFFFF
+#define F250_W_RETRY_DEFENSE 0xFFFE
+#define F250_W_RETRY_RESIST 0xFFFD
+#define F250_W_DRAW_FIRST   1
+#define F250_W_DRAW_SECOND  2
+#define F250_W_DRAW_THIRD   3
+/* Encoded call operands, resolved independently in the raw packet. */
+#define F250_W_CALL_COMMON      0x0418, 0x0043
+#define F250_W_CALL_COPY_SETUP  0x0000, 0x0787
+#define F250_W_CALL_RESISTANCE  0x03D0, 0x002A
+#define F250_W_CALL_WRITER      0x0428, 0x002A
+#define F250_W_CALL_DRAW        0x00B0, 0x00D8
+#define F250_W_CALL_BYTE07      0x03E0, 0x003E
+#define F250_W_CALL_CONSTRUCT   0x03A0, 0x003E
+#define F250_W_CALL_BATTLEFIELD 0x03A0, 0x0052
+/* Inline instruction expansions: not additional game calls. IMUL writes DX:AX. */
+#define WARP_MUL(index, stride) do { AX=(index); DX=(stride); DX_AX=s16(AX)*s16(DX); } while (0)
+#define WARP_ADDR() do { WARP_MUL(SI,F250_MT_BATTLE_STRIDE); \
+    ES_BX=far_pointer_at_current_DS(F250_MT_BATTLE_POINTER_DS); BX=u16(BX+AX); } while (0)
+#define WARP_ARG() do { WARP_MUL(SI,F250_MT_BATTLE_STRIDE); \
+    DX=DS_word(F250_MT_BATTLE_POINTER_DS); DX=u16(DX+AX); \
+    push16(DS_word(F250_MT_BATTLE_SEGMENT_DS)); push16(DX); } while (0)
+
+static void F250_W_class5_fragment_notation(void)
+{
+    if (DI != (BUILD == COM1 ? F250_W_SKIP_COM1 : F250_W_SKIP_131) &&
+        DI != F250_W_SKIP_137 && DI != F250_W_SKIP_195) { /* 131:0x82B84,0x82B89,0x82B8F 160:= com1:= */
+        push16(L(+0x0A));                      /* 131:0x82B95 160:= com1:= */
+        push16(L(+0x12));                      /* 131:0x82B98 160:= com1:= */
+        push16(L(-0x06));                      /* 131:0x82B9B 160:= com1:= */
+        push16(DI);                            /* 131:0x82B9E 160:= com1:= */
+        push16(L(+0x0E));                      /* 131:0x82B9F 160:= com1:= */
+        push16(L(+0x0C));                      /* 131:0x82BA2 160:= com1:= */
+        opaque_far_call(F250_W_CALL_COMMON);   /* 131:0x82BA5 160:= com1:= */
+        SP=u16(SP+12);                         /* 131:0x82BAA 160:= com1:= */
+    }
+    if (DI == (BUILD == COM1 ? F250_W_SKIP_COM1 : F250_W_SKIP_131))
+        goto external_82BB2;                  /* 131:0x82BAD 160:= com1:= */
+#if BUILD == COM1
+    if (DI == F250_W_SIBLING_204) goto external_82BBB; /* 131:— 160:— com1:0x82BB5 */
+    if (DI == F250_W_SIBLING_148) goto external_82BC6; /* 131:— 160:— com1:0x82BC0 */
+    if (DI == F250_W_SIBLING_81) goto external_82BD5;  /* 131:— 160:— com1:0x82BCD */
+#else
+    if (DI == F250_W_SIBLING_81) goto external_82BC8;  /* 131:0x82BC0 160:= com1:— */
+#endif
+    if (DI == F250_W_SIBLING_125) goto external_82C9B; /* 131:0x82C96 160:= com1:= */
+    if (DI == F250_W_SIBLING_73) goto external_82CB3;  /* 131:0x82CAB 160:= com1:= */
+    /* The supplied false edges reach the local id89 head. Excluded sibling labels
+     * terminate this fragment, not the game function; they are not reconstructed no-ops. */
+    if (DI != F250_W_SPELL_INDEX) goto external_82E53; /* 131:0x82D59,0x82D5E 160:= com1:= */
+    WARP_MUL(DI,F250_MT_SPELL_STRIDE);          /* 131:0x82D61 160:= com1:= */
+    ES_BX=far_pointer_at_current_DS(F250_MT_SPELL_POINTER_DS); /* 131:0x82D68 160:= com1:= */
+    BX=u16(BX+AX);                             /* 131:0x82D6C 160:= com1:= */
+    AL=B(ES_BX,F250_MT_SPELL_REALM);           /* 131:0x82D6E 160:= com1:= */
+    AX=s16(s8(AL));                            /* 131:0x82D72 160:= com1:= */
+    push16(AX);                               /* 131:0x82D73 160:= com1:= */
+    push16(L(-0x0A));                         /* 131:0x82D74 160:= com1:= */
+    WARP_MUL(SI,F250_MT_BATTLE_STRIDE);         /* 131:0x82D77 160:= com1:= */
+    DX=DS_word(F250_MT_BATTLE_SEGMENT_DS);      /* 131:0x82D7E 160:= com1:= */
+    push16(AX);                               /* 131:0x82D82 160:= com1:= */
+    AX=DS_word(F250_MT_BATTLE_POINTER_DS);      /* 131:0x82D83 160:= com1:= */
+    BX=pop16();                               /* 131:0x82D86 160:= com1:= */
+    AX=u16(AX+BX);                            /* 131:0x82D87 160:= com1:= */
+    CX=F250_MT_BATTLE_STRIDE;                  /* 131:0x82D89 160:= com1:= */
+    opaque_far_call(F250_W_CALL_COPY_SETUP);   /* 131:0x82D8C 160:= com1:= */
+    opaque_far_call(F250_W_CALL_RESISTANCE);   /* 131:0x82D91 160:= com1:= */
+    SP=u16(SP+F250_MT_BATTLE_STRIDE+4);         /* 131:0x82D96 160:= com1:=; raw cleanup0x72 */
+    L(-2)=AX;                                 /* 131:0x82D99 160:= com1:= */
+    if (s16(L(-2)) > 0) {                     /* 131:0x82D9C,0x82DA0 160:= com1:= */
+        push16(SI);                           /* 131:0x82DA2 160:= com1:= */
+        far_call(F250_W_CALL_WRITER);          /* 131:0x82DA3 160:= com1:=; body below, resolved0xAE020 */
+        CX=pop16();                           /* 131:0x82DA8 160:= com1:= */
+    }
+#if BUILD == COM1
+    goto external_82E53;                      /* 131:— 160:— com1:0x82DA9 */
+#else
+    push16(SI);                               /* 131:0x82DA9 160:= com1:— */
+    opaque_far_call(F250_W_CALL_BYTE07);       /* 131:0x82DAA 160:= com1:— */
+    CX=pop16();                               /* 131:0x82DAF 160:= com1:— */
+    L(-0x16)=AX;                              /* 131:0x82DB0 160:= com1:— */
+    L(-0x18)=0;                               /* 131:0x82DB3 160:= com1:— */
+    WARP_ADDR();                              /* 131:0x82DB8 160:= com1:— */
+    AL=B(ES_BX,F250_MT_BU_UNKNOWN_07);         /* 131:0x82DC5 160:= com1:— */
+    AX=s16(s8(AL));                            /* 131:0x82DC9 160:= com1:— */
+    if (AX == L(-0x16)) {                     /* 131:0x82DCA,0x82DCD 160:= com1:— */
+        L(-0x18)=1;                           /* 131:0x82DCF 160:= com1:— */
+    } else {
+        WARP_ADDR();                          /* 131:0x82DD6 160:= com1:— */
+        AL=B(ES_BX,F250_MT_BU_UNKNOWN_07);     /* 131:0x82DE3 160:= com1:— */
+        AX=s16(s8(AL));                        /* 131:0x82DE7 160:= com1:— */
+        L(-0x16)=AX;                          /* 131:0x82DE8 160:= com1:— */
+    }
+    WARP_ARG();                               /* 131:0x82DEB 160:= com1:— */
+    opaque_far_call(F250_W_CALL_CONSTRUCT);    /* 131:0x82DFD 160:= com1:—; existing BU_Construct0x8EDFD */
+    CX=pop16(); CX=pop16();                    /* 131:0x82E02,0x82E03 160:= com1:— */
+    WARP_ARG();                               /* 131:0x82E04 160:= com1:—; recompute after call */
+    opaque_far_call(F250_W_CALL_BATTLEFIELD);  /* 131:0x82E16 160:= com1:—; existing battlefield0x8FF09 */
+    CX=pop16(); CX=pop16();                    /* 131:0x82E1B,0x82E1C 160:= com1:— */
+    if (L(-0x18) == 1) {                      /* 131:0x82E1D,0x82E21 160:= com1:— */
+        push16(SI);                           /* 131:0x82E23 160:= com1:— */
+        opaque_far_call(F250_W_CALL_BYTE07);   /* 131:0x82E24 160:= com1:— */
+        CX=pop16();                           /* 131:0x82E29 160:= com1:— */
+        push16(AX);                           /* 131:0x82E2A 160:= com1:— */
+        WARP_ADDR();                          /* 131:0x82E2B 160:= com1:— */
+        AX=pop16();                           /* 131:0x82E38 160:= com1:— */
+        B(ES_BX,F250_MT_BU_UNKNOWN_07)=AL;     /* 131:0x82E39 160:= com1:— */
+    } else {
+        WARP_ADDR();                          /* 131:0x82E3F 160:= com1:— */
+        AL=LB(-0x16);                        /* 131:0x82E4C 160:= com1:— */
+        B(ES_BX,F250_MT_BU_UNKNOWN_07)=AL;     /* 131:0x82E4F 160:= com1:— */
+    }
+    goto external_82E53;                      /* 131:0x82E3D / fall-through0x82E53 160:= com1:— */
+#endif
+    /* External labels above name fragment boundaries, not local return instructions. */
+}
+
+/* Real writer entry. Local near wrapper is inlined only as a notation definition below. */
+static void F250_W_writer_notation(void)
+{
+    push16(BP); BP=SP; push16(SI); push16(DI);  /* 131:0xAE020..0xAE024 160:= com1:= */
+#if BUILD == MOM131
+    SI=L(+6);                                 /* 131:0xAE025 160:— com1:— */
+    DI=F250_W_RETRY_DEFENSE;                   /* 131:0xAE028 160:— com1:— */
+    goto retry_test;                          /* 131:0xAE02B 160:— com1:— */
+retry:
+    AX=3; push16(AX);                         /* 131:0xAE02E,0xAE031 160:— com1:— */
+    opaque_far_call(F250_W_CALL_DRAW);         /* 131:0xAE032 160:— com1:— */
+    CX=pop16(); DI=AX; AX=DI;                  /* 131:0xAE037..0xAE03A 160:— com1:— */
+    if (AX == F250_W_DRAW_FIRST) {                            /* 131:0xAE03C,0xAE03F 160:— com1:— */
+        WARP_ADDR();                          /* 131:0xAE051 160:— com1:— */
+        if (W(ES_BX,F250_MT_BU_COMBAT_EFFECTS) & BUE_WARPED_ATTACK) /* 131:0xAE05E,0xAE064 160:— com1:— */
+            DI=F250_W_RETRY_ATTACK;           /* 131:0xAE066 160:— com1:— */
+        else {
+            WARP_ADDR();                      /* 131:0xAE06B 160:— com1:— */
+            AX=W(ES_BX,F250_MT_BU_COMBAT_EFFECTS); /* 131:0xAE078 160:— com1:— */
+            AX|=BUE_WARPED_ATTACK; push16(AX); /* 131:0xAE07C,0xAE07F 160:— com1:— */
+            WARP_ADDR(); AX=pop16();          /* 131:0xAE080,0xAE08D 160:— com1:— */
+            W(ES_BX,F250_MT_BU_COMBAT_EFFECTS)=AX; /* 131:0xAE08E 160:— com1:— */
+        }
+        goto retry_test;                      /* 131:0xAE069,0xAE092 160:— com1:— */
+    }
+    if (AX == F250_W_DRAW_SECOND) {                            /* 131:0xAE041,0xAE044 160:— com1:— */
+        WARP_ADDR();                          /* 131:0xAE095 160:— com1:— */
+        if (W(ES_BX,F250_MT_BU_COMBAT_EFFECTS) & BUE_WARPED_DEFENSE) /* 131:0xAE0A2,0xAE0A8 160:— com1:— */
+            DI=F250_W_RETRY_DEFENSE;          /* 131:0xAE0AA 160:— com1:— */
+        else {
+            WARP_ADDR();                      /* 131:0xAE0AF 160:— com1:— */
+            AX=W(ES_BX,F250_MT_BU_COMBAT_EFFECTS); /* 131:0xAE0BC 160:— com1:— */
+            AX|=BUE_WARPED_DEFENSE; push16(AX); /* 131:0xAE0C0,0xAE0C3 160:— com1:— */
+            WARP_ADDR(); AX=pop16();          /* 131:0xAE0C4,0xAE0D1 160:— com1:— */
+            W(ES_BX,F250_MT_BU_COMBAT_EFFECTS)=AX; /* 131:0xAE0D2 160:— com1:— */
+        }
+        goto retry_test;                      /* 131:0xAE0AD,0xAE0D6 160:— com1:— */
+    }
+    if (AX == F250_W_DRAW_THIRD) {                            /* 131:0xAE046,0xAE049,0xAE04B 160:— com1:— */
+        WARP_ADDR();                          /* 131:0xAE0D8 160:— com1:— */
+        if (W(ES_BX,F250_MT_BU_COMBAT_EFFECTS) & BUE_WARPED_RESIST) /* 131:0xAE0E5,0xAE0EB 160:— com1:— */
+            DI=F250_W_RETRY_RESIST;           /* 131:0xAE0ED 160:— com1:— */
+        else {
+            WARP_ADDR();                      /* 131:0xAE0F2 160:— com1:— */
+            AX=W(ES_BX,F250_MT_BU_COMBAT_EFFECTS); /* 131:0xAE0FF 160:— com1:— */
+            AX|=BUE_WARPED_RESIST; push16(AX); /* 131:0xAE103,0xAE106 160:— com1:— */
+            WARP_ADDR(); AX=pop16();          /* 131:0xAE107,0xAE114 160:— com1:— */
+            W(ES_BX,F250_MT_BU_COMBAT_EFFECTS)=AX; /* 131:0xAE115 160:— com1:— */
+        }
+    }
+    /* Other results reach the same test without a local store: 131:0xAE04E 160:— com1:— */
+retry_test:
+    if (s16(DI) < 0) goto retry;              /* 131:0xAE11B,0xAE11D,0xAE11F 160:— com1:— */
+#else
+    /* Eight executed NOPs replace stack load/initial retry marker. Entry SI is used.
+       131:— 160:0xAE025..0xAE02D com1:0xAE025..0xAE02D; jump skips near wrapper. */
+    WARP_ADDR();                              /* 131:— 160:0xAE03B com1:0xAE03B */
+    AX=3;                                    /* 131:— 160:0xAE048 com1:0xAE048 */
+    near_call(F250_W_draw_wrapper_notation);   /* 131:— 160:0xAE04B com1:0xAE04B */
+    if (AX == F250_W_DRAW_FIRST && !(W(ES_BX,F250_MT_BU_COMBAT_EFFECTS) & BUE_WARPED_ATTACK)) { /* 131:— 160:0xAE04E,0xAE053 com1:0xAE04E,0xAE053 */
+        W(ES_BX,F250_MT_BU_COMBAT_EFFECTS)|=BUE_WARPED_ATTACK; /* 131:— 160:0xAE05B com1:0xAE05B */
+        goto patched_done;                    /* 131:— 160:0xAE061 com1:0xAE061 */
+    }
+    AX=2;                                    /* 131:— 160:0xAE063 com1:0xAE063 */
+    near_call(F250_W_draw_wrapper_notation);   /* 131:— 160:0xAE066 com1:0xAE066 */
+    if (AX == F250_W_DRAW_FIRST && !(W(ES_BX,F250_MT_BU_COMBAT_EFFECTS) & BUE_WARPED_DEFENSE)) { /* 131:— 160:0xAE069,0xAE06E com1:0xAE069,0xAE06E */
+        W(ES_BX,F250_MT_BU_COMBAT_EFFECTS)|=BUE_WARPED_DEFENSE; /* 131:— 160:0xAE076 com1:0xAE076 */
+        goto patched_done;                    /* 131:— 160:0xAE07C com1:0xAE07C */
+    }
+    if (!(W(ES_BX,F250_MT_BU_COMBAT_EFFECTS) & BUE_WARPED_RESIST)) { /* 131:— 160:0xAE07E com1:0xAE07E */
+        W(ES_BX,F250_MT_BU_COMBAT_EFFECTS)|=BUE_WARPED_RESIST; /* 131:— 160:0xAE086 com1:0xAE086 */
+        goto patched_done;                    /* 131:— 160:0xAE08C com1:0xAE08C */
+    }
+    AX=2;                                    /* 131:— 160:0xAE08E com1:0xAE08E */
+    near_call(F250_W_draw_wrapper_notation);   /* 131:— 160:0xAE091 com1:0xAE091 */
+    if (AX == F250_W_DRAW_FIRST && !(W(ES_BX,F250_MT_BU_COMBAT_EFFECTS) & BUE_WARPED_DEFENSE)) /* 131:— 160:0xAE094,0xAE099 com1:0xAE094,0xAE099 */
+        goto set_defense;                    /* 131:— 160:0xAE09F com1:0xAE09F */
+    if (W(ES_BX,F250_MT_BU_COMBAT_EFFECTS) & BUE_WARPED_ATTACK) /* 131:— 160:0xAE0A9 com1:0xAE0A9 */
+        goto set_defense;                    /* 131:— 160:0xAE0AF com1:0xAE0AF */
+    W(ES_BX,F250_MT_BU_COMBAT_EFFECTS)|=BUE_WARPED_ATTACK; /* 131:— 160:0xAE0B1 com1:0xAE0B1 */
+    goto patched_done;                        /* presentation edge: binary falls through0xAE0B7 */
+set_defense:
+    W(ES_BX,F250_MT_BU_COMBAT_EFFECTS)|=BUE_WARPED_DEFENSE; /* 131:— 160:0xAE0A1 com1:0xAE0A1 */
+    goto patched_done;                        /* 131:— 160:0xAE0A7 com1:0xAE0A7 */
+patched_done:
+    /* CP1.60 executes107 NOPs before epilogue; CoM1 returns earlier.
+       131:— 160:0xAE0B7..0xAE122 com1:— */
+#endif
+    DI=pop16(); SI=pop16(); BP=pop16();        /* 131:0xAE122..0xAE124 160:= com1:0xAE0B7..0xAE0B9 */
+    far_return();                             /* 131:0xAE125 160:= com1:0xAE0BA */
+}
+#if BUILD == CP160 || BUILD == COM1
+static void F250_W_draw_wrapper_notation(void)
+{
+    push16(ES); push16(BX); push16(AX);        /* 131:— 160:0xAE02F..0xAE031 com1:0xAE02F..0xAE031 */
+    opaque_far_call(F250_W_CALL_DRAW);         /* 131:— 160:0xAE032 com1:0xAE032 */
+    CX=pop16(); BX=pop16(); ES=pop16();        /* 131:— 160:0xAE037..0xAE039 com1:0xAE037..0xAE039 */
+    near_return();                            /* 131:— 160:0xAE03A com1:0xAE03A */
+}
+#endif
+#undef WARP_MUL
+#undef WARP_ADDR
+#undef WARP_ARG

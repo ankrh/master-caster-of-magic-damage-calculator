@@ -1165,8 +1165,10 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
   2026-09-10 packet extends the handler to `0x82451`; retain its work, but establish which
   additional facts are needed before resuming it. The reviewed
   [Mind Storm / True Sight combat subunit](Reference%20docs/DOS%20reconstructed/F250.3.mind-truesight.evidence.md)
-  now supplies those battle writers and the local class-14 immunity guards. Warp writers,
-  overland True Sight and named runtime binding remain individually scoped gaps. Any new reconstruction retained must finish its required review before merge.
+  now supplies those battle writers and the local class-14 immunity guards. The
+  [Warp subunit](Reference%20docs/DOS%20reconstructed/F250.3.warp.evidence.md) supplies its
+  battle writer and versioned local recalculation. Overland True Sight and named runtime
+  binding remain individually scoped gaps. Any new reconstruction retained must finish its required review before merge.
   The [existing-source reconciliation](Reference%20docs/DOS%20reconstructed/F250.3.reconciliation.md)
   maps all nine keys and separates named binding/direct-writer gaps from known consumers.
   This subtask remains open; no permanent-record store is presumed.

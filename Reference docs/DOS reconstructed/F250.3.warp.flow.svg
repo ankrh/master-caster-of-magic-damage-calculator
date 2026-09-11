@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="820" viewBox="0 0 1120 820" role="img" aria-labelledby="title desc">
+<title id="title">DOS Warp Creature: writer and local recalculation</title>
+<desc id="desc">Conditional named routing reaches the Warp writer after a positive resistance result. MoM 1.31 retries selected existing bits; CP 1.60 and CoM1 use a bounded cascade. MoM1.31 and1.60 then call constructor and battlefield routines. CoM1 skips that local tail. Full calculator pass equivalence remains unproved.</desc>
+<defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#7197b5"/></marker></defs>
+<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#e7eff7;font-size:16px}.h{font-size:25px;font-weight:600}.sub{fill:#a8bfd3;font-size:14px}.box{fill:#162b40;stroke:#4f7899;stroke-width:1.5;rx:10}.known{fill:#163b35;stroke:#54ac94;stroke-width:1.5;rx:10}.gap{fill:#403020;stroke:#c49c65;stroke-width:1.5;rx:10}.edge{fill:none;stroke:#7197b5;stroke-width:2;marker-end:url(#arrow)}.label{font-weight:600;font-size:18px}</style>
+<rect width="1120" height="820" fill="#0b1725"/>
+<text x="36" y="43" class="h">Warp Creature: cast state first, recalculation is versioned</text>
+<text x="36" y="69" class="sub">F250.3 · 668 supplied instructions · raw SPELLDAT binding remains conditional on runtime loading</text>
+<rect x="250" y="94" width="620" height="70" class="box"/>
+<text x="273" y="121" class="label">Record 89 → class 5 → common opaque call → local id 89</text>
+<text x="273" y="147" class="sub">82B84 / 82D59 · tests use live state after calls; excluded siblings remain external</text>
+<path d="M560 164 V185" class="edge"/>
+<rect x="250" y="190" width="620" height="65" class="box"/>
+<text x="273" y="216" class="label">Resistance call result &gt; 0 → invoke writer at AE020</text>
+<text x="273" y="241" class="sub">82D91 → 82DA3 · nonpositive result skips the writer, then joins the versioned tail</text>
+<path d="M420 255 V275 H283 V295" class="edge"/><path d="M700 255 V275 H838 V295" class="edge"/>
+<rect x="35" y="301" width="495" height="190" class="box"/>
+<text x="57" y="333" class="label">MoM 1.31 · stack argument supplies SI</text>
+<text x="57" y="366">Opaque call(3): result 1 / 2 / 3</text>
+<text x="57" y="396">→ Attack / Defense / Resistance bit</text>
+<text x="57" y="426">Already set? Retry. Other negative result? Retry.</text>
+<text x="57" y="456" class="sub">Other nonnegative results exit without a store.</text>
+<text x="57" y="478" class="sub">No random distribution or termination guarantee established.</text>
+<rect x="585" y="301" width="500" height="190" class="box"/>
+<text x="607" y="333" class="label">CP 1.60 / CoM1 · inherited SI</text>
+<text x="607" y="366">Bounded cascade: call(3), then call(2), then call(2)</text>
+<text x="607" y="396">Select available bits through ordered fallbacks.</text>
+<text x="607" y="426">Every completed path performs one OR-store.</text>
+<text x="607" y="456" class="sub">Final fallback may OR an already-set Defense bit.</text>
+<text x="607" y="478" class="sub">ES:BX explicitly saved/restored around each opaque call.</text>
+<path d="M282 491 V514 H560 V535" class="edge"/><path d="M838 491 V514 H560" fill="none" stroke="#7197b5" stroke-width="2"/>
+<rect x="250" y="539" width="620" height="53" class="known"/>
+<text x="272" y="571" class="label">Store, if reached: Combat_Effects |= 0080 / 0100 / 0200</text>
+<path d="M420 592 V614 H283 V632" class="edge"/><path d="M700 592 V614 H838 V632" class="edge"/>
+<rect x="35" y="637" width="495" height="107" class="known"/>
+<text x="57" y="666" class="label">1.31 / 1.60: known recalculation pair</text>
+<text x="57" y="692">BU_Construct → BU_Apply_Battlefield_Effects</text>
+<text x="57" y="718" class="sub">82DFD / 82E16 · byte7 compare/write surrounds the pair.</text>
+<text x="57" y="737" class="sub">This local tail also runs when the writer was skipped.</text>
+<rect x="585" y="637" width="500" height="107" class="gap"/>
+<text x="607" y="666" class="label">CoM1: skips the entire local rebuild tail</text>
+<text x="607" y="692">82DA9 → external continuation at 82E53</text>
+<text x="607" y="718" class="sub">Known consumers do not prove when they run on this path.</text>
+<text x="607" y="737" class="sub">Later scheduling remains outside this bounded unit.</text>
+<text x="36" y="786" class="sub">Full calculator pass equivalence: not established. Preserve battle inputs, both Specials calls and intermediate state.</text>
+</svg>

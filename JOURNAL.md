@@ -8961,3 +8961,13 @@ binding for F250.4. F250.2's reconciliation is complete; full targeting/lifecycl
 remain separate. No numeric changes or provenance promotion. Independent derivations,
 reciprocal reviews and fresh revisions succeeded; raw bytes, links, rendered flow and citations
 passed. Integration review and final details: `.reviews/F250.2-truesight-continuation/REPORT.F250.2.md`.
+
+### F250.3 Warp writer subunit — 2026-09-11
+
+The [reviewed Warp evidence](Reference%20docs/DOS%20reconstructed/F250.3.warp.evidence.md)
+adds the missing battle-state writer and local caller across three DOS builds (668 instructions).
+Existing resistance, constructor, battlefield and arithmetic sources are reused. The local
+rebuild exists in 1.31/1.60 and is skipped in CoM1; this does not establish absent recalculation
+elsewhere or full-pass equivalence. Both independent derivations, reciprocal reviews and fresh
+revisions completed. No numeric change or provenance promotion. Validation and remaining
+F250.3 scope: `.reviews/F250.3-warp/REPORT.F250.3.md`.
