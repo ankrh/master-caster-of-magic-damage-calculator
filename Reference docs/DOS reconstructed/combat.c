@@ -5954,3 +5954,457 @@ static void F250_W_draw_wrapper_notation(void)
 #undef WARP_MUL
 #undef WARP_ADDR
 #undef WARP_ARG
+
+/* ===========================================================================
+ * F250.4 DOS player-target predicate: bounded source splice.
+ * Canonical evidence: F250.4.dos.evidence.md; raw: F250.4.dos.raw.md.
+ * Existing layout join: DS:922A -> BATTLE_UNIT[], stride6E; +22 Combat_Effects;
+ * +18 Attribs_1; mask0008 Illusion Immunity; mask0040 Death Immunity.
+ * DS:912C -> spell records, stride24; +17 magic_realm (1 Sorcery,4 Death).
+ * These names are existing-source joins, not raw packet inputs.
+ * Separate from A32 AI selection, resistance and cast-store routines above.
+ * This reference notation is intentionally not standalone compilable C.
+ * =========================================================================== */
+/* Architectural notation for this source splice:
+ * This is source-shaped C over live architectural state, using semantic primitives without implementing an emulator or inventing a game ABI.
+ *
+ * `AX`, `BX`, `CX`, `DX`, `SI`, `DI`, `BP`, `SP`, and segment registers denote live 16-bit registers. Ordinary assignments change only their destinations. C conditionals, notation macros, labels, and `goto` statements do not themselves change architectural flags.
+ *
+ * - `U16(x)` reduces an effective offset or value modulo 65536.
+ * - `R8`, `R16`, and `W8` access segmented memory, with little-endian words and 16-bit effective offsets. BP-based reads use live `SS`; absolute data reads use live `DS`.
+ * - `LES_BX(p)` loads `BX` and `ES` from the far pointer at live `DS:p`, without changing flags.
+ * - `ADD16(a,b)` returns the truncated sum and sets `CF,PF,AF,ZF,SF,OF` as 16-bit `ADD`.
+ * - `CMP8/16(a,b)` sets those flags as subtraction without storing its result.
+ * - `AND16`, `OR16`, and `XOR16` return the truncated result, set `SF,ZF,PF`, clear `CF,OF`, and leave `AF` architecturally undefined.
+ * - `TEST16(a,b)` supplies the flag effects of `AND16` without storing a result.
+ * - `IMUL_AX(x)` performs signed 16×16 multiplication of pre-instruction `AX` and `x`, writing the full result to `DX:AX`. `CF=OF` indicate failure to fit signed 16 bits; `SF,ZF,AF,PF` are undefined.
+ * - `CWD_AX()` sets `DX` to `FFFF` or `0000` according to bit 15 of `AX`, without changing flags.
+ * - `PUSH16(v)` evaluates its operand, decrements live `SP` by two, and writes at `SS:SP`. `POP16()` reads there and increments live `SP` by two. Neither changes flags. These are actual memory operations.
+ * - `ZF` denotes the current architectural zero flag.
+ *
+ * `FCALL_AT(site)` performs the far-call entry action: pushes current `CS`, pushes the runtime return offset, and transfers to the encoded target through its applicable runtime mechanism. `NCALL_AT(site,target)` pushes only the runtime return offset and performs the near transfer.
+ *
+ * Code following an opaque call describes execution **only if its indicated continuation is reached**. No return, preservation, cleanup convention, unchanged memory, or stack restoration is assumed. Every subsequent instruction uses the actual returned state.
+ *
+ * `EXIT_TO(address)` terminates this partial transcription by transferring into excluded code. It preserves general and segment registers, flags, memory, and stack at the boundary; only control position changes. `FALLTHROUGH_TO(address)` marks the same scope boundary without inventing an executed jump. Internal jumps likewise preserve non-control state.
+ *
+ * `RETF16()` pops runtime `IP`, then `CS`, and transfers there, with no immediate stack adjustment. File-offset labels are never used as pushed runtime return words.
+ */
+/* Encoded/resolved FCALL_AT mapping (all builds); every route remains opaque.
+ * FCALL_AT(0x086229): 0048:00E1 -> file0x8211; continuation0x8622E.
+ * FCALL_AT(0x086239): 0000:3C37 -> file0x6637; continuation0x8623E.
+ * FCALL_AT(0x086248): 0000:3BFE -> file0x65FE; continuation0x8624D.
+ * FCALL_AT(0x086257): 0000:3BFE -> file0x65FE; continuation0x8625C.
+ * FCALL_AT(0x086262): 04A8:002A -> file0xCF622; continuation0x86267.
+ * FCALL_AT(0x0862AE): 0050:09FF -> file0x8C3F; continuation0x862B3.
+ * FCALL_AT(0x0862BA): 04A8:002A -> file0xCF622; continuation0x862BF.
+ * FCALL_AT(0x0862F0): 04A8:002A -> file0xCF622; continuation0x862F5.
+ * FCALL_AT(0x0868D5): 0000:3C37 -> file0x6637; continuation0x868DA.
+ * FCALL_AT(0x0868F5): 0048:00E1 -> file0x8211; continuation0x868FA.
+ * FCALL_AT(0x086905): 0000:3BFE -> file0x65FE; continuation0x8690A.
+ * FCALL_AT(0x086914): 0000:3BFE -> file0x65FE; continuation0x86919.
+ * FCALL_AT(0x08691F): 0008:0503 -> file0x6DC3; continuation0x86924.
+ * FCALL_AT(0x086928): 0010:002C -> file0x726C; continuation0x8692D.
+ * FCALL_AT(0x086935): 0120:5973 -> file0x1E9D3; continuation0x8693A.
+ * FCALL_AT(0x086946): 0120:9459 -> file0x224B9; continuation0x8694B.
+ * NCALL_AT(0x8691C,0x85B59): near target body+02A9; return maps from0x8691F,
+ * body+106F. Explicit preceding PUSH CS remains separate. No callee return inferred.
+ */
+enum F250_4_Build {
+    F250_4_MOM_131,
+    F250_4_MOM_160,
+    F250_4_COM1
+};
+
+enum {
+    F250_4_SPELL_STRIDE = 0x24,
+    F250_4_TARGET_STRIDE = 0x6E,
+
+    F250_4_SPELL_POINTER = 0x912C,       /* offset; segment at 0x912E */
+    F250_4_TARGET_POINTER = 0x922A,
+
+    F250_4_SPELL_CLASS_OFFSET = 0x15,
+    F250_4_SPELL_REALM_OR_ATTRIBUTE_CLASS_OFFSET = 0x17,
+    F250_4_SPELL_MASK_LOW_OFFSET = 0x20,
+    F250_4_SPELL_MASK_HIGH_OFFSET = 0x22,
+
+    F250_4_TARGET_ATTRIBUTE_OFFSET = 0x18,
+    F250_4_TARGET_ALREADY_FIELD_OFFSET = 0x22,
+
+    F250_4_CLASS_0D = 0x0D,
+    F250_4_CLASS_10 = 0x10,
+    F250_4_CLASS_0E = 0x0E,
+
+    F250_4_CATEGORY_01 = 0x01,
+    F250_4_CATEGORY_04 = 0x04,
+
+    F250_4_ATTRIBUTE_0008 = 0x0008,
+    F250_4_ATTRIBUTE_0040 = 0x0040,
+
+    F250_4_SPELL_ID5_EXTERNAL = 0x0005,
+    F250_4_SPELL_VERTIGO = 0x0035,       /* decimal 53; conditional binding */
+    F250_4_SPELL_MIND_STORM = 0x0043,    /* decimal 67; conditional binding */
+    F250_4_SPELL_SPECIAL_49 = 0x0049,
+    F250_4_SPELL_SPECIAL_A2 = 0x00A2,
+    F250_4_SPELL_SPECIAL_A7 = 0x00A7,
+    F250_4_SPELL_SPECIAL_AF = 0x00AF,
+
+    F250_4_ALREADY_MASK_VERTIGO = 0x0001,
+    F250_4_ALREADY_MASK_MIND_STORM = 0x0008,
+
+    F250_4_BUFFER_C7FC = 0xC7FC,
+    F250_4_DATA_5B21 = 0x5B21,
+    F250_4_DATA_5B38 = 0x5B38,
+    F250_4_DATA_5B40 = 0x5B40,
+    F250_4_DATA_5B48 = 0x5B48,
+    F250_4_DATA_5B5F = 0x5B5F,
+    F250_4_DATA_5B6B = 0x5B6B,
+
+    F250_4_PATCH_BYTE_9282 = 0x9282
+};
+
+/* MOV AX,SI; MOV DX,24h; IMUL DX; LES BX,[912Ch]; ADD BX,AX */
+#define F250_4_SPELL_VIA_DX() do {                  \
+    AX = SI;                                \
+    DX = F250_4_SPELL_STRIDE;                      \
+    IMUL_AX(DX);                            \
+    LES_BX(F250_4_SPELL_POINTER);                  \
+    BX = ADD16(BX, AX);                      \
+} while (0)
+
+/* Each invocation reloads the frame word and the target far pointer. */
+#define F250_4_TARGET_VIA_DX() do {                         \
+    AX = R16(SS, U16(BP - 0x0C));                    \
+    DX = F250_4_TARGET_STRIDE;                             \
+    IMUL_AX(DX);                                    \
+    LES_BX(F250_4_TARGET_POINTER);                         \
+    BX = ADD16(BX, AX);                              \
+} while (0)
+
+/* MOV/LEA then PUSH: neither instruction changes flags. */
+#define F250_4_PAX(value) do { AX = (value); PUSH16(AX); } while (0)
+#define F250_4_PFRAME() F250_4_PAX(U16(BP - 0x28))
+
+/* Preserve both actual memory reads and the final CX assignment. */
+#define F250_4_POP_CX_TWICE() do { CX = POP16(); CX = POP16(); } while (0)
+
+/*
+ * 0x086210–0x086228 and 0x0868DC–0x0868F4. 131:0x086210,0x086228,0x0868DC,0x0868F4 160:= com1:=
+ * Pointer offset and segment are separate live memory reads.
+ */
+#define F250_4_SPELL_RECORD_ARGUMENTS() do {               \
+    AX = SI;                                        \
+    DX = F250_4_SPELL_STRIDE;                              \
+    IMUL_AX(DX);                                    \
+    DX = R16(DS, F250_4_SPELL_POINTER);                    \
+    DX = ADD16(DX, AX);                              \
+    PUSH16(R16(DS, F250_4_SPELL_POINTER + 2));             \
+    PUSH16(DX);                                     \
+    AX = XOR16(AX, AX);                              \
+    PUSH16(AX);                                     \
+    F250_4_PFRAME();                                       \
+} while (0)
+
+void F250_4_supplied_player_target_slices(enum F250_4_Build build)
+{
+    /* 0x086128–0x08613A: first class probe, all builds. */ /* 131:0x086128,0x08613A 160:= com1:= */
+    F250_4_SPELL_VIA_DX();
+    CMP8(R8(ES, U16(BX + F250_4_SPELL_CLASS_OFFSET)), F250_4_CLASS_0D);
+    if (ZF)
+        goto L86167;
+
+    if (build == F250_4_MOM_131) {
+        /* 0x08613C–0x086147: second multiply and pointer reload. */ /* 131:0x08613C,0x086147 160:— com1:— */
+        F250_4_SPELL_VIA_DX();
+    } else {
+        /* 0x08613C–0x086142: MoM 1.60 and CoM1. */ /* 131:— 160:0x08613C,0x086142 com1:0x08613C,0x086142 */
+        CMP16(SI, F250_4_SPELL_SPECIAL_A7);
+        if (ZF)
+            goto L86142;
+
+        /* Executed NOPs: 0x086145, 0x086146, 0x086147, 0x086148. */ /* 131:— 160:0x086145,0x086146,0x086147,0x086148 com1:0x086145,0x086146,0x086147,0x086148 */
+        /* ES:BX remains the first probe's pointer. */
+    }
+
+    /* 0x086149–0x08614E */ /* 131:0x086149,0x08614E 160:= com1:= */
+    CMP8(R8(ES, U16(BX + F250_4_SPELL_CLASS_OFFSET)), F250_4_CLASS_10);
+    if (ZF)
+        goto L86167;
+
+    if (build != F250_4_COM1) {
+        /* 0x086150–0x08615B: MoM 1.31 and MoM 1.60 reload. */ /* 131:0x086150,0x08615B 160:= com1:— */
+        F250_4_SPELL_VIA_DX();
+    } else {
+        /* 0x086150–0x086154: CoM1 patch. */ /* 131:— 160:— com1:0x086150,0x086154 */
+        CMP16(SI, F250_4_SPELL_SPECIAL_AF);
+        if (ZF)
+            goto L86142;
+
+        /* Executed NOPs: every byte 0x086156–0x08615C inclusive. */ /* 131:— 160:— com1:0x086156,0x08615C */
+        /* ES:BX still comes from the first probe. */
+    }
+
+    /* 0x08615D–0x086164 */ /* 131:0x08615D,0x086164 160:= com1:= */
+    CMP8(R8(ES, U16(BX + F250_4_SPELL_CLASS_OFFSET)), F250_4_CLASS_0E);
+    if (ZF)
+        goto L86167;
+    goto L862F6;                         /* JMP at 0x086164 */ /* 131:0x086164 160:= com1:= */
+
+L86142:
+    /*
+     * JMP 0x086142 -> 0x0862D4, present only in MoM 1.60/CoM1. 131:— 160:0x086142,0x0862D4 com1:0x086142,0x0862D4
+     * CoM1's JE at 0x086154 reaches this same jump. 131:— 160:— com1:0x086154
+     */
+    goto L862D4;
+
+L86167:
+    /* 0x086167–0x08616A */ /* 131:0x086167,0x08616A 160:= com1:= */
+    CMP16(SI, F250_4_SPELL_ID5_EXTERNAL);
+    if (!ZF)
+        goto L861DE;
+
+    /*
+     * Boundary at 0x08616C is fallthrough, not an executed jump. 131:0x08616C 160:= com1:=
+     * The excluded spell-5 body has no assumed rejoin.
+     */
+    FALLTHROUGH_TO(0x08616C); /* 131:0x08616C 160:= com1:= */
+
+L861DE:
+    /* 0x0861DE–0x0861EA */ /* 131:0x0861DE,0x0861EA 160:= com1:= */
+    F250_4_TARGET_VIA_DX();
+
+    /* 0x0861EC–0x086201 */ /* 131:0x0861EC,0x086201 160:= com1:= */
+    AX = R16(ES, U16(BX + F250_4_TARGET_ALREADY_FIELD_OFFSET));
+    CWD_AX();
+    PUSH16(AX);                         /* original target word */
+    AX = SI;
+    BX = F250_4_SPELL_STRIDE;
+    PUSH16(DX);                         /* its sign extension */
+    IMUL_AX(BX);
+    LES_BX(F250_4_SPELL_POINTER);
+    BX = ADD16(BX, AX);
+    AX = POP16();                       /* sign-extension word */
+    DX = POP16();                       /* original target word */
+
+    /* 0x086202–0x08620C */ /* 131:0x086202,0x08620C 160:= com1:= */
+    DX = AND16(DX, R16(ES, U16(BX + F250_4_SPELL_MASK_LOW_OFFSET)));
+    AX = AND16(AX, R16(ES, U16(BX + F250_4_SPELL_MASK_HIGH_OFFSET)));
+    DX = OR16(DX, AX);
+    if (ZF)
+        goto L8626B;
+
+    /* 0x08620E: local clear before any opaque call. */ /* 131:0x08620E 160:= com1:= */
+    DI = XOR16(DI, DI);
+
+    /* 0x086210–0x08622E */ /* 131:0x086210,0x08622E 160:= com1:= */
+    F250_4_SPELL_RECORD_ARGUMENTS();
+    FCALL_AT(0x086229); /* 131:0x086229 160:= com1:= */
+    SP = ADD16(SP, 0x0008);
+
+    /* 0x086231–0x08623F */ /* 131:0x086231,0x08623F 160:= com1:= */
+    F250_4_PAX(F250_4_DATA_5B48);
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    FCALL_AT(0x086239); /* 131:0x086239 160:= com1:= */
+    F250_4_POP_CX_TWICE();
+
+    /* 0x086240–0x08624E */ /* 131:0x086240,0x08624E 160:= com1:= */
+    F250_4_PFRAME();
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    FCALL_AT(0x086248); /* 131:0x086248 160:= com1:= */
+    F250_4_POP_CX_TWICE();
+
+    /* 0x08624F–0x08625D */ /* 131:0x08624F,0x08625D 160:= com1:= */
+    F250_4_PAX(F250_4_DATA_5B5F);
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    FCALL_AT(0x086257); /* 131:0x086257 160:= com1:= */
+    F250_4_POP_CX_TWICE();
+
+    /* 0x08625E–0x086268 */ /* 131:0x08625E,0x086268 160:= com1:= */
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    FCALL_AT(0x086262); /* 131:0x086262 160:= com1:= */
+    CX = POP16();
+    goto L862F6;
+
+L8626B:
+    if (build == F250_4_COM1) {
+        /* Executed NOPs: 0x08626B, 0x08626C. */ /* 131:— 160:— com1:0x08626B,0x08626C */
+        CMP16(SI, F250_4_SPELL_SPECIAL_49);     /* 0x08626D */ /* 131:— 160:— com1:0x08626D */
+        if (ZF)
+            goto L862C0;                /* JE at 0x086270 */ /* 131:— 160:— com1:0x086270 */
+
+        CMP16(SI, F250_4_SPELL_SPECIAL_A2);     /* 0x086272 */ /* 131:— 160:— com1:0x086272 */
+        if (ZF)
+            goto L862F6;                /* JE at 0x086276 */ /* 131:— 160:— com1:0x086276 */
+
+        /*
+         * No spell-pointer reload here.
+         * ES:BX remains from 0x0861FA–0x0861FE. 131:— 160:— com1:0x0861FA,0x0861FE
+         * The incoming zero-overlap path contains no opaque call.
+         */
+    } else {
+        /* 0x08626B–0x086276: MoM 1.31 and MoM 1.60. */ /* 131:0x08626B,0x086276 160:= com1:— */
+        F250_4_SPELL_VIA_DX();
+    }
+
+    /* 0x086278–0x08627D */ /* 131:0x086278,0x08627D 160:= com1:= */
+    CMP8(R8(ES, U16(BX + F250_4_SPELL_REALM_OR_ATTRIBUTE_CLASS_OFFSET)),
+         F250_4_CATEGORY_01);
+    if (!ZF)
+        goto L862C0;
+
+    /* 0x08627F–0x086293 */ /* 131:0x08627F,0x086293 160:= com1:= */
+    F250_4_TARGET_VIA_DX();
+    TEST16(R16(ES, U16(BX + F250_4_TARGET_ATTRIBUTE_OFFSET)),
+           F250_4_ATTRIBUTE_0008);
+    if (ZF)
+        goto L862C0;
+
+    /* 0x086295–0x0862AD */ /* 131:0x086295,0x0862AD 160:= com1:= */
+    DI = XOR16(DI, DI);
+    F250_4_PAX(0x0096);
+    F250_4_PAX(0x0001);
+    F250_4_PAX(0x0049);
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    AX = XOR16(AX, AX);
+    PUSH16(AX);
+    F250_4_PAX(F250_4_DATA_5B40);
+
+    /* 0x0862AE–0x0862BF */ /* 131:0x0862AE,0x0862BF 160:= com1:= */
+    FCALL_AT(0x0862AE); /* 131:0x0862AE 160:= com1:= */
+    SP = ADD16(SP, 0x000C);
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    FCALL_AT(0x0862BA); /* 131:0x0862BA 160:= com1:= */
+    CX = POP16();
+
+    /*
+     * Fallthrough after opaque calls.
+     * Do not cache SI, DS, BP, DI, segments, or pointer/data memory.
+     */
+
+L862C0:
+    /* 0x0862C0–0x0862D2 */ /* 131:0x0862C0,0x0862D2 160:= com1:= */
+    F250_4_SPELL_VIA_DX();
+    CMP8(R8(ES, U16(BX + F250_4_SPELL_REALM_OR_ATTRIBUTE_CLASS_OFFSET)),
+         F250_4_CATEGORY_04);
+    if (!ZF)
+        goto L862F6;
+
+L862D4:
+    /*
+     * 0x0862D4–0x0862E8. 131:0x0862D4,0x0862E8 160:= com1:=
+     * Also reached directly by the patched A7/AF routes.
+     */
+    F250_4_TARGET_VIA_DX();
+    TEST16(R16(ES, U16(BX + F250_4_TARGET_ATTRIBUTE_OFFSET)),
+           F250_4_ATTRIBUTE_0040);
+    if (ZF)
+        goto L862F6;
+
+    /* 0x0862EA–0x0862F5 */ /* 131:0x0862EA,0x0862F5 160:= com1:= */
+    DI = XOR16(DI, DI);
+    F250_4_PAX(F250_4_DATA_5B6B);
+    FCALL_AT(0x0862F0); /* 131:0x0862F0 160:= com1:= */
+    CX = POP16();
+
+L862F6:
+    /* JMP at 0x0862F6; skipped interval is not executed. */ /* 131:0x0862F6 160:= com1:= */
+    goto L8675C;
+
+L8675C:
+    /* JMP at 0x08675C; skipped interval is not executed. */ /* 131:0x08675C 160:= com1:= */
+    goto L868C9;
+
+L868C9:
+    /* 0x0868C9–0x0868CB: test current DI. */ /* 131:0x0868C9,0x0868CB 160:= com1:= */
+    DI = OR16(DI, DI);
+    if (!ZF)
+        goto L8692E;
+
+    /* 0x0868CD–0x0868DB */ /* 131:0x0868CD,0x0868DB 160:= com1:= */
+    F250_4_PAX(F250_4_DATA_5B21);
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    FCALL_AT(0x0868D5); /* 131:0x0868D5 160:= com1:= */
+    F250_4_POP_CX_TWICE();
+
+    /* 0x0868DC–0x0868FA: use actual state after the preceding call. */ /* 131:0x0868DC,0x0868FA 160:= com1:= */
+    F250_4_SPELL_RECORD_ARGUMENTS();
+    FCALL_AT(0x0868F5); /* 131:0x0868F5 160:= com1:= */
+    SP = ADD16(SP, 0x0008);
+
+    /* 0x0868FD–0x08690B */ /* 131:0x0868FD,0x08690B 160:= com1:= */
+    F250_4_PFRAME();
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    FCALL_AT(0x086905); /* 131:0x086905 160:= com1:= */
+    F250_4_POP_CX_TWICE();
+
+    /* 0x08690C–0x08691A */ /* 131:0x08690C,0x08691A 160:= com1:= */
+    F250_4_PAX(F250_4_DATA_5B38);
+    F250_4_PAX(F250_4_BUFFER_C7FC);
+    FCALL_AT(0x086914); /* 131:0x086914 160:= com1:= */
+    F250_4_POP_CX_TWICE();
+
+    /* 0x08691B and 0x08691C are two distinct instructions. */ /* 131:0x08691B,0x08691C 160:= com1:= */
+    PUSH16(CS);
+    NCALL_AT(0x08691C, 0x085B59); /* 131:0x08691C 160:= com1:= */
+
+    /* Only if control reaches 0x08691F, with actual live state. */ /* 131:0x08691F 160:= com1:= */
+    FCALL_AT(0x08691F); /* 131:0x08691F 160:= com1:= */
+
+    /* 0x086924–0x08692D */ /* 131:0x086924,0x08692D 160:= com1:= */
+    F250_4_PAX(build == F250_4_MOM_131 ? 0x0002 : 0x0001);
+    FCALL_AT(0x086928); /* 131:0x086928 160:= com1:= */
+    CX = POP16();
+
+L8692E:
+    /* 0x08692E–0x086932: independently retest current DI. */ /* 131:0x08692E,0x086932 160:= com1:= */
+    DI = OR16(DI, DI);
+    if (!ZF)
+        goto L86935;
+
+    EXIT_TO(0x085D68);                   /* JMP at 0x086932 */ /* 131:0x086932 160:= com1:= */
+
+L86935:
+    /* 0x086935 */ /* 131:0x086935 160:= com1:= */
+    FCALL_AT(0x086935); /* 131:0x086935 160:= com1:= */
+
+    if (build == F250_4_MOM_131) {
+        /* 0x08693A–0x086945: three MOV AX / PUSH AX pairs. */ /* 131:0x08693A,0x086945 160:— com1:— */
+        F250_4_PAX(0x0002);
+        F250_4_PAX(0x0318);
+        F250_4_PAX(0x0020);
+    } else {
+        /* 0x08693A–0x086944: MoM 1.60 and CoM1. */ /* 131:— 160:0x08693A,0x086944 com1:0x08693A,0x086944 */
+        W8(DS, F250_4_PATCH_BYTE_9282, 0x00);
+        PUSH16(0x0002);
+        PUSH16(0x0318);
+        PUSH16(0x0020);
+
+        /*
+         * DS is live after call 0x086935. 131:— 160:0x086935 com1:0x086935
+         * Immediate pushes leave AX and flags unchanged.
+         */
+    }
+
+    /* 0x086946–0x08694E */ /* 131:0x086946,0x08694E 160:= com1:= */
+    FCALL_AT(0x086946); /* 131:0x086946 160:= com1:= */
+    SP = ADD16(SP, 0x0006);
+    AX = R16(SS, U16(BP - 0x0C));
+
+    /* 0x086951: explicit jump to the next instruction. */ /* 131:0x086951 160:= com1:= */
+    goto L86953;
+
+L86953:
+    /* 0x086953–0x086958: preserve exact epilogue order. */ /* 131:0x086953,0x086958 160:= com1:= */
+    DI = POP16();
+    SI = POP16();
+    SP = BP;
+    BP = POP16();
+    RETF16();
+}
+
+#undef F250_4_SPELL_VIA_DX
+#undef F250_4_TARGET_VIA_DX
+#undef F250_4_PAX
+#undef F250_4_PFRAME
+#undef F250_4_POP_CX_TWICE
+#undef F250_4_SPELL_RECORD_ARGUMENTS

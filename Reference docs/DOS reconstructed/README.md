@@ -25,6 +25,7 @@ vocabulary matches.
 | `R6.version-differences.md` | Merged three-build difference index and overlay-aware call closure |
 | `F277.1.execution-census.md` | CP 1.60 / CoM 1 calculator-step mapping to constructor, Specials invocations and battlefield effects |
 | `F250.3.reconciliation.md` | DOS cast-store coverage and remaining claims; routes to the Mind Storm/combat True Sight, Warp and overland True Sight writer evidence and diagrams |
+| `F250.4.dos.evidence.md` | Player-target Vertigo/Mind Storm Illusion refusal; bounded `combat.c` splice, raw packet and flow diagram |
 
 The `.c` files are shared across items and grow as items land. Reconstruction bodies go in the
 `.c`; ledgers and prose go in the evidence markdown.

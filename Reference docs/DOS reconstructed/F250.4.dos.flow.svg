@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="770" viewBox="0 0 1100 770">
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#456"/></marker></defs>
+<style>text{font:17px sans-serif;fill:#243443}.title{font-size:26px;font-weight:bold}.small{font-size:15px}.box{fill:#edf5fa;stroke:#789;stroke-width:1.5}.warn{fill:#fff2dd;stroke:#aa8240;stroke-width:1.5}.arrow{fill:none;stroke:#456;stroke-width:2;marker-end:url(#a)}</style>
+<rect width="1100" height="770" fill="#fff"/>
+<text x="35" y="42" class="title">DOS player-target Illusion refusal — F250.4</text>
+<text x="35" y="73">MoM 1.31 · CP 1.60 · CoM 6.08 | bounded target-screen source</text>
+<rect class="box" x="35" y="105" width="620" height="80" rx="8"/>
+<text x="55" y="134">Class filter, 0x86128: Vertigo 53 / Mind Storm 67</text>
+<text x="55" y="163" class="small">Raw class 13 / 14, realm 1, masks 1 / 8; live-table binding conditional</text>
+<path class="arrow" d="M345 185 V218"/>
+<rect class="box" x="35" y="225" width="620" height="90" rx="8"/>
+<text x="55" y="256">Existing effect: battle word +0x22, 0x861DE</text>
+<text x="55" y="286" class="small">One word plus its sign extension intersects spell low / high masks</text>
+<path class="arrow" d="M655 270 H705"/>
+<rect class="warn" x="715" y="225" width="350" height="90" rx="8"/>
+<text x="735" y="256">Overlap: clear DI at 0x8620E</text>
+<text x="735" y="285" class="small">Opaque UI calls; skip realm tests</text>
+<path class="arrow" d="M345 315 V350"/>
+<text x="358" y="340" class="small">zero overlap</text>
+<rect class="box" x="35" y="357" width="620" height="90" rx="8"/>
+<text x="55" y="388">Sorcery + Illusion Immunity: clear DI, 0x86295</text>
+<text x="55" y="418" class="small">Calculated battle Attribs_1 +0x18, mask 0x0008; then opaque calls</text>
+<path class="arrow" d="M345 447 V480"/>
+<rect class="box" x="35" y="487" width="620" height="80" rx="8"/>
+<text x="55" y="518">Fresh live realm lookup, then Death guard, 0x862C0</text>
+<text x="55" y="546" class="small">Sequential after calls; no cached realm or assumed preservation</text>
+<path class="arrow" d="M345 567 V603"/>
+<path class="arrow" d="M890 315 V333 H1080 V642 H661"/>
+<rect class="warn" x="35" y="610" width="620" height="100" rx="8"/>
+<text x="55" y="641">0x862F6 → 0x8675C → 0x868C9: two live DI tests</text>
+<text x="55" y="670" class="small">Actual returned state controls UI repeat or target-local return.</text>
+<text x="55" y="696" class="small">Earlier selection and post-cast recalculation are outside this splice.</text>
+<text x="715" y="390" class="small">Version branches remain explicit:</text>
+<text x="715" y="419" class="small">A7 / AF class-filter routes;</text>
+<text x="715" y="448" class="small">CoM1 49 / A2 routes and ES:BX reuse;</text>
+<text x="715" y="477" class="small">UI argument and AX differences.</text>
+<text x="715" y="520" class="small">None changes the named local</text>
+<text x="715" y="547" class="small">53 / 67 predicate under supplied data.</text>
+<text x="35" y="747" class="small">605 instructions reviewed independently. This is a local refusal write, not an unconditional Boolean validator.</text>
+</svg>

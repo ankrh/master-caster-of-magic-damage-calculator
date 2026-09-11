@@ -203,3 +203,11 @@ assignments and bounded startup branch; reuse it for those claims.
 
 The [True Sight continuations](F250.2.truesight-continuation.evidence.md) connect the combat
 route to its known tail and establish overland recalculation before the script/common tail.
+
+## F250.4 player Illusion-refusal links
+
+[Evidence](F250.4.modern.evidence.md), [reconstruction](F250.4.modern.reconstruction.md),
+[raw packet](F250.4.modern.raw.md), [flow](F250.4.modern.flow.svg). The Illusion-key writer
+and conditional player/animation paths join the existing effect-entry refusal. Earlier
+admission, runtime loading and animation scheduling remain external. The
+[script reconciliation](F250.4.script-reconciliation.md) routes Warlord grants and DOS evidence.

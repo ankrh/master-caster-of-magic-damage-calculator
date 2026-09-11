@@ -4,6 +4,17 @@
 
 # Journal
 
+## 2026-09-11 — F250.4 Illusion-refusal reconciliation complete
+
+[DOS target-screen evidence](Reference%20docs/DOS%20reconstructed/F250.4.dos.evidence.md)
+adds the Vertigo/Mind Storm battle-attribute refusal in all three builds.
+[Modern caller/key evidence](Reference%20docs/Caster%20binary/F250.4.modern.evidence.md)
+adds the Illusion-byte loader and conditional animation path into the existing effect guard.
+Astra medium/Sol high completed both Method B units: 605 DOS and 398 modern instructions;
+raw hashes, source/citation coverage, links and rendered diagrams passed. Full admission,
+runtime installation and intervening state remain qualified. No calculator numbers or
+provenance statuses changed. F250 is complete; P1/P2/P8.1 precede F279.2.
+
 ## 2026-09-11 — F250.3 DOS writer reconciliation complete
 
 [Coverage ledger](Reference%20docs/DOS%20reconstructed/F250.3.reconciliation.md) maps all nine

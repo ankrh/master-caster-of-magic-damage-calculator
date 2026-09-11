@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="850" viewBox="0 0 1120 850">
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#456"/></marker></defs>
+<style>text{font:17px sans-serif;fill:#243443}.title{font-size:25px;font-weight:bold}.small{font-size:15px}.box{fill:#edf5fa;stroke:#789;stroke-width:1.5}.warn{fill:#fff2dd;stroke:#aa8240;stroke-width:1.5}.known{fill:#eaf6ed;stroke:#688872;stroke-width:1.5}.arrow{fill:none;stroke:#456;stroke-width:2;marker-end:url(#a)}</style>
+<rect width="1120" height="850" fill="white"/>
+<text x="30" y="40" class="title">Modern player caller and Illusion key — F250.4</text>
+<text x="30" y="70">CoM2 / Warlord shared binary; versioned INI and script layers remain separate</text>
+<rect class="box" x="30" y="105" width="660" height="80" rx="8"/>
+<text x="50" y="135">Target UI: local result ≥ 0 → CastSpell → CastCombatSpell</text>
+<text x="50" y="164" class="small">Menu / combat / initialization checks; earlier UI admission is external</text>
+<path class="arrow" d="M360 185 V218"/>
+<rect class="box" x="30" y="225" width="660" height="95" rx="8"/>
+<text x="50" y="255">Custom / group / bitset gates, then named 53 / 67 branches</text>
+<text x="50" y="284" class="small">Distinct live group calls; supplied groups 13 / 14 and clear bitset entries</text>
+<text x="50" y="307" class="small">Custom path can return before those named branches</text>
+<path class="arrow" d="M360 320 V353"/>
+<rect class="box" x="30" y="360" width="660" height="80" rx="8"/>
+<text x="50" y="390">Cast branch: StartAnimation stores 29 / 31 and clears counter</text>
+<text x="50" y="420" class="small">Caller then plays sound; setter does not invoke renderer</text>
+<path class="arrow" d="M360 440 V505" stroke-dasharray="5 5"/>
+<text x="380" y="478" class="small">Later renderer invocation; state may change</text>
+<rect class="box" x="30" y="512" width="660" height="92" rx="8"/>
+<text x="50" y="542">ShowAnimation reads current animation → selected entry</text>
+<text x="50" y="571" class="small">OneshotCenteredAnimation: speed 4, length / upper bound 7 or 9</text>
+<text x="50" y="593" class="small">Draw while signed quotient ≤ length; complete when greater</text>
+<path class="arrow" d="M360 604 V637"/>
+<rect class="warn" x="30" y="644" width="660" height="85" rx="8"/>
+<text x="50" y="674">Clear animation → fresh combat check → current spell getter</text>
+<text x="50" y="703" class="small">The eventual spell argument need not equal the initiating ID</text>
+<path class="arrow" d="M360 729 V760"/>
+<rect class="known" x="30" y="767" width="660" height="58" rx="8"/>
+<text x="50" y="802">Wrapper → existing CombatSpellEffect / Illusion guard</text>
+<rect class="box" x="725" y="105" width="365" height="160" rx="8"/>
+<text x="745" y="136">Illusion-key loader splice</text>
+<text x="745" y="168" class="small">Read result equals literal True?</text>
+<text x="745" y="195" class="small">Branch, then checked byte write:</text>
+<text x="745" y="222" class="small">spell record +0x50 := 1 / 0</text>
+<text x="745" y="249" class="small">Custom is separate byte +0x76</text>
+<rect class="warn" x="725" y="300" width="365" height="150" rx="8"/>
+<text x="745" y="330">Raw configuration ≠ live state</text>
+<text x="745" y="362" class="small">Both INIs: Vertigo / Mind Storm,</text>
+<text x="745" y="389" class="small">Illusion=True, groups 13 / 14.</text>
+<text x="745" y="418" class="small">Loading and later writes are conditional.</text>
+<rect class="known" x="725" y="505" width="365" height="172" rx="8"/>
+<text x="745" y="536">Existing source reused</text>
+<text x="745" y="568" class="small">Loader context and reader mapping;</text>
+<text x="745" y="595" class="small">calculated-target Illusion refusal;</text>
+<text x="745" y="622" class="small">effect stores and recalculation tail;</text>
+<text x="745" y="649" class="small">Warlord script writers / grants.</text>
+<text x="725" y="725" class="small">398 instructions, 14 bounded extents.</text>
+<text x="725" y="754" class="small">No new calculator gate or full-pass</text>
+<text x="725" y="781" class="small">equivalence claim in this source task.</text>
+</svg>

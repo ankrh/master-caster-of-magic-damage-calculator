@@ -1072,11 +1072,11 @@ function applySanctaBasilicaGrant(abilities, version, unitType, race, name) {
 // Magic Immunity's half is the cited mechanism: both engine families make the target's
 // resistance unreachable for any spell carrying a realm, so the roll cannot fail. Modern sets
 // Result := 100 against a `Random(10) + 1` roll; DOS adds 30 against a d10.
-// F250.3 establishes a DOS class-14 local Sorcery / battle Illusion Immunity refusal;
-// named Mind Storm binding and enclosing admission remain conditional. Vertigo remains open.
-// The MoM 1.31 A32 Sorcery/Illusion test is AI selection; CP/CoM use that island differently.
-// Modern Illusion metadata and partial targeting coverage do not settle this named predicate.
-// F250.4.script-reconciliation.md records the searched coverage and exact remaining question.
+// F250.4 maps the DOS player-target Sorcery/Illusion refusal to the calculated battle
+// attributes, and the modern Illusion-byte loader and conditional animation/caller links
+// to the existing calculated-target guard. Runtime loading, earlier admission and live
+// state across opaque calls remain qualified. See the DOS F250.4.dos.evidence.md and
+// modern F250.4.modern.evidence.md; the A32 AI test is a separate path.
 // The PROVENANCE below remains the Magic Immunity resistance mechanism only.
 // F250.1's versioned record census is in
 // `Reference docs/Caster binary/F250.1.spell-classification.evidence.md`.
@@ -1357,16 +1357,17 @@ function markedImmunitySteps(marked) {
 // the target's resistance unreachable for any spell carrying a realm, so the roll cannot fail.
 // The nine `debuffs:*:cast` steps below apply it rather than restating its citation, which is why
 // each of them is UNVERIFIED for its own write and none of them repeats these spans (F244.3b
-// review, findings 4 and 5). Illusion Immunity's half is assumed rather than cited, for the
-// reasons the paragraph above `MAGIC_IMMUNITY_GATED_CURSES` gives; the spans below are the Magic
-// Immunity mechanism alone.
+// review, findings 4 and 5). F250.4 establishes local engine Illusion-refusal predicates;
+// equivalence to this pre-cast flag/True Sight shortcut still depends on record and schedule
+// migration. The spans below remain the Magic Immunity resistance mechanism alone.
 // `record` is the sequence record — `magicImmunity` and `illusionImmunity` are seeded by the
 // template phase and `trueSight` is written by `buffs:trueSight`, all of which rank ahead of every
 // `debuffs` step, so the answer is a positioned read rather than a projection of the finished set.
 // `eyeOfHeaven` stays a captured nonRecord input in this implementation. Warlord UnitCalcPre
 // grants current True Sight at the early recalculation hook, under the owning wizard's combat
 // global test (F250.4.script-reconciliation.md). That grant does not establish this pre-cast
-// shortcut or the unresolved player-cast Illusion refusal; no other version receives it here.
+// shortcut's timing. F250.4 maps the local player-path guards separately; no other version
+// receives this Eye of Heaven shortcut here.
 // STAT-FORMULA[curseImmunityRefusal]
 // PROVENANCE[curseImmunityRefusal]: VERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; sources=Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:2:52d7a21af8d678318152f8fc | Reference docs/Caster binary/Combat.ResolutionHelpers.pas@span:3:402d57bfe8325957749d4792 | Reference docs/DOS reconstructed/combat.c@span:4:1a301c9fa03a6936a7e8bf35 | Reference docs/DOS reconstructed/combat.c@span:10:e890804f95697a32ae069372
 function curseRefusedByImmunity(record, key, version, eyeOfHeaven) {
@@ -1420,7 +1421,7 @@ function curseCastSteps(version, marked, eyeOfHeaven) {
     statStep({ id: 'blackSleep:cast', phase: 'debuffs', ...cast('blackSleep') }),
     // PROVENANCE[shatter:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.2 establishes modern BaseUnits.CombatEnchantmentFlags stores and existing recalculation copies/aggregates that layer. Local modern group/index assignments and selected call order are known. Runtime installation, named admission and equivalence to this undifferentiated flag step remain open. DOS A32 already proves Shatter writes battle Combat_Effects, while the permanent-record implementation remains unverified. See Reference docs/DOS reconstructed/F250.3.reconciliation.md.; pointer=Reference docs/Caster binary/F250.2.combat.evidence.md
     statStep({ id: 'shatter:cast', phase: 'debuffs', ...cast('shatter') }),
-    // PROVENANCE[vertigo:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.2 establishes modern BaseUnits.CombatEnchantmentFlags stores and existing recalculation copies/aggregates that layer. Local modern group/index assignments and selected call order are known. Runtime installation, named admission and equivalence to this undifferentiated flag step remain open. DOS A32 owns the generic class13/16 battle store, and named binding remains open. See Reference docs/DOS reconstructed/F250.3.reconciliation.md.; pointer=Reference docs/Caster binary/F250.2.combat.evidence.md
+    // PROVENANCE[vertigo:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.2 establishes modern BaseUnits.CombatEnchantmentFlags stores and existing recalculation copies/aggregates that layer. Local modern group/index assignments and selected call order are known. F250.4 supplies local Illusion-refusal evidence and conditional named caller/flag links. Runtime installation, full admission and equivalence to this undifferentiated flag step remain open. DOS A32 owns the generic class13/16 battle store, and named binding remains open. See Reference docs/DOS reconstructed/F250.3.reconciliation.md.; pointer=Reference docs/Caster binary/F250.2.combat.evidence.md
     statStep({ id: 'vertigo:cast', phase: 'debuffs', ...cast('vertigo') }),
     // PROVENANCE[warpAttack:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.2 maps WarpCreatureEffect to BaseUnits.CombatEnchantmentFlags indices 6/7/8. Caller admission, clearing and equivalence to this undifferentiated flag step remain open. F250.3 maps the DOS writer to battle Combat_Effects bits 0x80/0x100/0x200 and versioned local recalculation. Runtime binding, enclosing admission and full-pass equivalence remain conditional. See Reference docs/DOS reconstructed/F250.3.warp.evidence.md.; pointer=Reference docs/Caster binary/F250.2.combat.evidence.md
     statStep({ id: 'warpAttack:cast', phase: 'debuffs', ...cast('warpAttack') }),
@@ -1428,7 +1429,7 @@ function curseCastSteps(version, marked, eyeOfHeaven) {
     statStep({ id: 'warpDefense:cast', phase: 'debuffs', ...cast('warpDefense') }),
     // PROVENANCE[warpResist:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.2 maps WarpCreatureEffect to BaseUnits.CombatEnchantmentFlags indices 6/7/8. Caller admission, clearing and equivalence to this undifferentiated flag step remain open. F250.3 maps the DOS writer to battle Combat_Effects bits 0x80/0x100/0x200 and versioned local recalculation. Runtime binding, enclosing admission and full-pass equivalence remain conditional. See Reference docs/DOS reconstructed/F250.3.warp.evidence.md.; pointer=Reference docs/Caster binary/F250.2.combat.evidence.md
     statStep({ id: 'warpResist:cast', phase: 'debuffs', ...cast('warpResist') }),
-    // PROVENANCE[mindStorm:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.2 establishes modern BaseUnits.CombatEnchantmentFlags stores and existing recalculation copies/aggregates that layer. Local modern group/index assignments and selected call order are known. Runtime installation, named admission and equivalence to this undifferentiated flag step remain open. DOS F250.3 mind-truesight subunit reconstructs the battle writer, with named runtime binding and enclosing timing still conditional. See Reference docs/DOS reconstructed/F250.3.mind-truesight.evidence.md.; pointer=Reference docs/Caster binary/F250.2.combat.evidence.md
+    // PROVENANCE[mindStorm:cast]: UNVERIFIED versions=mom_1.31,mom_cp_1.60.00,com_6.08,com2_1.05.11,com2_warlord_1.5.12.9; gap=F250.2 establishes modern BaseUnits.CombatEnchantmentFlags stores and existing recalculation copies/aggregates that layer. Local modern group/index assignments and selected call order are known. F250.4 supplies local Illusion-refusal evidence and conditional named caller/flag links. Runtime installation, full admission and equivalence to this undifferentiated flag step remain open. DOS F250.3 mind-truesight subunit reconstructs the battle writer, with named runtime binding and enclosing timing still conditional. See Reference docs/DOS reconstructed/F250.3.mind-truesight.evidence.md.; pointer=Reference docs/Caster binary/F250.2.combat.evidence.md
     statStep({ id: 'mindStorm:cast', phase: 'debuffs', ...cast('mindStorm') }),
     // The Warlord Conjuring Pact script writes current hit/block stats, not a nausea flag.
     // PROVENANCE[nausea:cast]: UNVERIFIED versions=com2_warlord_1.5.12.9; gap=F250.4 identifies Conjuring Pact [343], EncConjuringPact94 and NonMagic=True. UnitCalcPre reads its base combat flag, tests current Fantastic and writes current hit/block stats for nonfantastic units. This synthetic permanent nausea flag and its Magic Immunity refusal are not those source operations. Complete Conjuring Pact admission remains separate from the known script effect.; pointer=Reference docs/Caster binary/F250.4.script-reconciliation.md
