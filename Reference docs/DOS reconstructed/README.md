@@ -19,11 +19,12 @@ vocabulary matches.
 |---|---|
 | `unitcalc.c` | Overland `Create_Unit`; battle-unit constructor, stat recompute, `BU_Apply_Specials`, and their callees |
 | `combat.c` | Combat dispatch, target admission, spell resolution, `BU_AttackTarget`, and `BU_ProcessAttack` |
+| `overland.c` | Overland spell writer and post-store dispatch continuations |
 | `spelldat.c` | Source-shaped `SPELLDAT.LBX` records materialized by dedicated table-reconstruction items |
 | `<ID>.evidence.md` | One item's coverage ledgers, counts, findings and any `disputed` rows |
 | `R6.version-differences.md` | Merged three-build difference index and overlay-aware call closure |
 | `F277.1.execution-census.md` | CP 1.60 / CoM 1 calculator-step mapping to constructor, Specials invocations and battlefield effects |
-| `F250.3.reconciliation.md` | DOS cast-store coverage and remaining claims; routes to the Mind Storm/True Sight and Warp writer evidence and diagrams |
+| `F250.3.reconciliation.md` | DOS cast-store coverage and remaining claims; routes to the Mind Storm/combat True Sight, Warp and overland True Sight writer evidence and diagrams |
 
 The `.c` files are shared across items and grow as items land. Reconstruction bodies go in the
 `.c`; ledgers and prose go in the evidence markdown.

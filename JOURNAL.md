@@ -4,6 +4,16 @@
 
 # Journal
 
+## 2026-09-11 — F250.3 DOS writer reconciliation complete
+
+[Coverage ledger](Reference%20docs/DOS%20reconstructed/F250.3.reconciliation.md) maps all nine
+keys using existing consumers and reviewed missing writers. The final overland True Sight
+unit establishes the permanent enchantment store and conditional CoM1 Status clear. Astra
+medium/Sol high completed Method B after Claude quota exhaustion; 373 instruction bytes,
+hashes, three-build citations and rendered flow passed. Runtime loading, full admission and
+enclosing timing remain qualified; full-pass equivalence is not established. The calculator
+retains all 21 UNVERIFIED claims. F250.4 and the approved preparation tasks continue.
+
 ## 2026-09-10 — F277.2 invocation decision complete
 
 The user selected [explicit invocations of one shared Specials routine](Reference%20docs/DOS%20reconstructed/F277.2.invocation-decision.md).
