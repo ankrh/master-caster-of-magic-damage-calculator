@@ -15,13 +15,13 @@ function runF19Checks(ctx) {
     version: 'com2_warlord_1.5.12.9', ...overrides,
   }));
 
-  const darkForce = modern({ abilities: { darkForce: true } });
+  const darkForce = modern({ markedAbilities: { darkForce: true } });
   assertClose(darkForce.toHitMelee, 0.4, 'F19 Dark Force adds 10 percentage points To Hit');
   assertClose(darkForce.toBlock, 0.4, 'F19 Dark Force adds 10 percentage points To Block');
 
   const heavenly = modern({
     prefix: 'b', atk: 2, def: 3, res: 4,
-    abilities: { heavenlyLight: true },
+    markedAbilities: { heavenlyLight: true },
     modernAttacks: {
       ranged: { strength: 3, type: 'missile' },
       thrown: { strength: 4, type: 'thrown' },
@@ -46,7 +46,7 @@ function runF19Checks(ctx) {
   assertEqual(heavenly.encMagicIndependentOfMaterial, true,
     'F19 Heavenly Light grants independent EncMagic');
   const attackerHeavenly = modern({
-    prefix: 'a', atk: 2, def: 3, res: 4, abilities: { heavenlyLight: true },
+    prefix: 'a', atk: 2, def: 3, res: 4, markedAbilities: { heavenlyLight: true },
     modernAttacks: {
       ranged: { strength: 3, type: 'missile' },
       thrown: { strength: 4, type: 'thrown' },
@@ -72,7 +72,7 @@ function runF19Checks(ctx) {
     heavenly.encMagicIndependentOfMaterial,
     'F19 Attacker-card Heavenly Light keeps the independent EncMagic grant');
   const rustedIntoNormalMaterial = warlord({
-    prefix: 'b', weapon: 'mithril', abilities: { heavenlyLight: true, rust: true },
+    prefix: 'b', weapon: 'mithril', markedAbilities: { heavenlyLight: true, rust: true },
     modernAttacks: { ranged: { strength: 4, type: 'missile' } },
   });
   assertClose(rustedIntoNormalMaterial.modernAttacks.ranged.toHit, 0.4,
@@ -80,7 +80,7 @@ function runF19Checks(ctx) {
 
   const moons = modern({
     atk: 2, def: 3, res: 6,
-    abilities: { badMoon: true, goodMoon: true },
+    markedAbilities: { badMoon: true, goodMoon: true },
     modernAttacks: {
       ranged: { strength: 3, type: 'missile' },
       thrown: { strength: 4, type: 'thrown' },
@@ -97,7 +97,7 @@ function runF19Checks(ctx) {
   const conjunction = modern({
     baseFantastic: true, baseRace: 'Nature', unitType: 'fantastic_nature',
     atk: 2, def: 3, res: 4,
-    abilities: { natureConjunction: true, goodMoon: true, badMoon: true },
+    markedAbilities: { natureConjunction: true, goodMoon: true, badMoon: true },
     modernAttacks: {
       ranged: { strength: 3, type: 'magic' },
       fireBreath: { strength: 4, type: 'fire' },
@@ -113,14 +113,14 @@ function runF19Checks(ctx) {
 
   const warded = modern({
     baseFantastic: true, baseRace: 'Chaos', unitType: 'fantastic_chaos',
-    def: 6, res: 7, abilities: { spellWard: 'chaos' },
+    def: 6, res: 7, markedAbilities: { spellWard: 'chaos' },
   });
   assertEqual(warded.def, 3, 'F19 matching Spell Ward removes three Defense');
   assertEqual(warded.res, 4, 'F19 matching Spell Ward removes three Resistance');
   assertClose(warded.toHitMelee, 0.1, 'F19 matching Spell Ward removes 20 percentage points To Hit');
   const wrongWard = modern({
     baseFantastic: true, baseRace: 'Chaos', unitType: 'fantastic_chaos',
-    def: 6, res: 7, abilities: { spellWard: 'nature' },
+    def: 6, res: 7, markedAbilities: { spellWard: 'nature' },
   });
   assertEqual(wrongWard.def, 6, 'F19 nonmatching Spell Ward is inert');
   // F195: the block at $005A5D36 is a settlement guard over five realm arms and nothing else,
@@ -132,7 +132,7 @@ function runF19Checks(ctx) {
     const race = { nature: 'Nature', sorcery: 'Sorcery', chaos: 'Chaos', life: 'Life', death: 'Death' }[realm];
     const nonFantasticWard = modern({
       identity: { baseFantastic: false, baseRace: race }, unitType: 'normal',
-      def: 6, res: 7, abilities: { spellWard: realm },
+      def: 6, res: 7, markedAbilities: { spellWard: realm },
     });
     assertEqual(nonFantasticWard.def, 3,
       `F195 the ${realm} Spell Ward arm reaches a non-Fantastic unit of that realm`);
@@ -140,12 +140,12 @@ function runF19Checks(ctx) {
       `F195 the ${realm} Spell Ward arm takes Resistance from a non-Fantastic unit of that realm`);
   }
   const unrealmedWard = modern({
-    unitType: 'normal', def: 6, res: 7, abilities: { spellWard: 'life' },
+    unitType: 'normal', def: 6, res: 7, markedAbilities: { spellWard: 'life' },
   });
   assertEqual(unrealmedWard.def, 6,
     'F195 Spell Ward is still inert against a unit the recalculation gives no realm');
   const sanctifiedWard = warlord({
-    unitType: 'normal', def: 6, res: 7, abilities: { sanctify: true, spellWard: 'life' },
+    unitType: 'normal', def: 6, res: 7, markedAbilities: { sanctify: true, spellWard: 'life' },
   });
   assertEqual(sanctifiedWard.def, 3,
     'F195 a Sanctified non-clergy unit is Life-realmed without being Fantastic, and is warded');
@@ -153,7 +153,7 @@ function runF19Checks(ctx) {
   // Defense and Resistance would pass against a ward that had lost its To Hit arm.
   const chaosWardToHit = modern({
     identity: { baseFantastic: false, baseRace: 'Chaos' }, unitType: 'normal',
-    def: 6, res: 7, abilities: { spellWard: 'chaos' },
+    def: 6, res: 7, markedAbilities: { spellWard: 'chaos' },
   });
   assertClose(chaosWardToHit.toHitMelee, 0.1,
     'F195 the ward takes 20 percentage points To Hit from a non-Fantastic unit of its realm');
@@ -168,34 +168,37 @@ function runF19Checks(ctx) {
   // Ravashack, Everchosen and Avatar are the Warlord ones.
   const lifeHeroWard = modern({
     isHero: true, identity: { baseFantastic: false, baseRace: 'Life' },
-    def: 6, res: 7, abilities: { spellWard: 'life' },
+    def: 6, res: 7, markedAbilities: { spellWard: 'life' },
   });
   assertEqual(lifeHeroWard.def, 3,
     'F195 a realm-tagged non-Fantastic hero is warded through the live-identity realm fallback');
   const deathHeroWard = warlord({
     isHero: true, identity: { baseFantastic: false, baseRace: 'Death' },
-    def: 6, res: 7, abilities: { spellWard: 'death' },
+    def: 6, res: 7, markedAbilities: { spellWard: 'death' },
   });
   assertEqual(deathHeroWard.def, 3,
     'F195 the Warlord Death heroes take the IsDeathUnit arm without being Fantastic');
 
-  const auraMaximum = modern({
-    res: 1, def: 2, abilities: {
-      resistanceToAll: 4, prayermasterAura: 6, divineBarrierAura: 3,
-    },
-  });
-  assertEqual(auraMaximum.res, 7,
-    'F19 Prayermaster competes with Resistance to All by maximum rather than stacking');
-  assertEqual(auraMaximum.def, 5, 'F19 Divine Barrier adds its entered aura value');
+  for (const auraSource of ['innateAbilities', 'markedAbilities']) {
+    const auraMaximum = modern({
+      res: 1, def: 2, innateAbilities: auraSource === 'innateAbilities' ? { resistanceToAll: 4 } : {},
+      markedAbilities: { prayermasterAura: 6, divineBarrierAura: 3,
+        ...(auraSource === 'markedAbilities' ? { resistanceToAll: 4 } : {}) },
+    });
+    assertEqual(auraMaximum.res, 7,
+      `[${auraSource}] ` + ('F19 Prayermaster competes with Resistance to All by maximum rather than stacking'));
+    assertEqual(auraMaximum.def, 5, `[${auraSource}] ` + ('F19 Divine Barrier adds its entered aura value'));
+}
+
   const soulLinked = modern({
     baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
-    abilities: { soulLinkerAura: 5 },
+    markedAbilities: { soulLinkerAura: 5 },
   });
   assertClose(soulLinked.toHitMelee, 0.35, 'F19 Soul Linker raises Fantastic To Hit');
   assertClose(soulLinked.toBlock, 0.35, 'F19 Soul Linker raises Fantastic To Block');
   const cappedSoulLinker = modern({
     baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
-    hitChance: 70, abilities: { soulLinkerAura: 99 },
+    hitChance: 70, markedAbilities: { soulLinkerAura: 99 },
   });
   assertClose(cappedSoulLinker.toHitMelee, 1,
     'F19 late Soul Linker To Hit observes AttackRoll\'s natural 100% probability bound');
@@ -206,7 +209,7 @@ function runF19Checks(ctx) {
   'F19 chance trace attributes Soul Linker before the resolution probability bound');
 
   const auraChannels = modern({
-    atk: 2, abilities: { guidingBeaconAura: 4, leadershipAura: 5 },
+    atk: 2, markedAbilities: { guidingBeaconAura: 4, leadershipAura: 5 },
     modernAttacks: {
       ranged: { strength: 3, type: 'missile' },
       thrown: { strength: 4, type: 'thrown' },
@@ -221,7 +224,7 @@ function runF19Checks(ctx) {
   assertEqual(auraChannels.modernAttacks.fireBreath.strength, 5,
     'F19 modern auras leave Breath unchanged');
   const magicalLeadership = modern({
-    abilities: { leadershipAura: 5 },
+    markedAbilities: { leadershipAura: 5 },
     modernAttacks: { ranged: { strength: 3, type: 'magic' } },
   });
   assertEqual(magicalLeadership.modernAttacks.ranged.strength, 3,
@@ -229,10 +232,7 @@ function runF19Checks(ctx) {
 
   const baseNormalMadeFantastic = modern({
     baseFantastic: false, baseRace: null, unitType: 'normal',
-    abilities: {
-      destiny: true, badMoon: true, goodMoon: true, natureConjunction: true,
-      spellWard: 'life', soulLinkerAura: 5, leadershipAura: 7,
-    },
+    markedAbilities: { destiny: true, badMoon: true, goodMoon: true, natureConjunction: true, spellWard: 'life', soulLinkerAura: 5, leadershipAura: 7 },
   });
   // Destiny's identity write is to `BaseUnits` ($0059A390), so it moves the **permanent** record
   // as well as the calculated one. The three astronomical events read `B.Fantastic` and therefore
@@ -249,10 +249,7 @@ function runF19Checks(ctx) {
 
   const baseFantasticMadeNormal = warlord({
     baseFantastic: true, baseRace: 'Nature', unitType: 'fantastic_nature',
-    abilities: {
-      spiritLink: true, badMoon: true, goodMoon: true, natureConjunction: true,
-      spellWard: 'nature', soulLinkerAura: 5, leadershipAura: 4,
-    },
+    markedAbilities: { spiritLink: true, badMoon: true, goodMoon: true, natureConjunction: true, spellWard: 'nature', soulLinkerAura: 5, leadershipAura: 4 },
   });
   // Spirit Link's cast clears the **permanent** Fantastic flag (`buffs:spiritLink:fantastic`,
   // F245) while its region-`b` write asserts the calculated one, so this card is the separating
@@ -270,7 +267,7 @@ function runF19Checks(ctx) {
   }
 
   const createdBesideRanged = warlord({
-    abilities: { lightningBlade: true },
+    markedAbilities: { lightningBlade: true },
     modernAttacks: { ranged: { strength: 4, type: 'missile' } },
   });
   assertEqual(createdBesideRanged.modernAttacks.ranged.strength, 4,
@@ -278,14 +275,14 @@ function runF19Checks(ctx) {
   assertEqual(createdBesideRanged.modernAttacks.lightningBreath.strength, 1,
     'F19 Lightning Blade creates strength-one Breath beside Ranged');
   const overwrittenLightning = warlord({
-    abilities: { lightningBlade: true },
+    markedAbilities: { lightningBlade: true },
     modernAttacks: { lightningBreath: { strength: 7, type: 'lightning' } },
   });
   assertEqual(overwrittenLightning.modernAttacks.lightningBreath.strength, 1,
     'F19 Lightning Blade assignment overwrites existing Breath when Thrown is absent');
 
   const workshopChannels = warlord({
-    abilities: { militaryWorkshop: true, armorPiercing: true },
+    innateAbilities: { armorPiercing: true }, markedAbilities: { militaryWorkshop: true },
     modernAttacks: {
       ranged: { strength: 2, type: 'missile' },
       thrown: { strength: 3, type: 'thrown' },
@@ -304,7 +301,7 @@ function runF19Checks(ctx) {
     'F19 Military Workshop grants Poison from any eligible modern channel');
 
   const workshopLightning = warlord({
-    abilities: { militaryWorkshop: true, lightningBlade: true, armorPiercing: true },
+    innateAbilities: { armorPiercing: true }, markedAbilities: { militaryWorkshop: true, lightningBlade: true },
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
   });
   assertEqual(workshopLightning.modernAttacks.lightningBreath.strength, 8,
@@ -313,8 +310,7 @@ function runF19Checks(ctx) {
     'F19 Lightning Blade clears the upgraded Thrown source');
 
   const baseNormalConvertedFantastic = warlord({
-    abilities: { militaryWorkshop: true, lightningBlade: true, ccDefense: true,
-      armorPiercing: true },
+    innateAbilities: { armorPiercing: true }, markedAbilities: { militaryWorkshop: true, lightningBlade: true, ccDefense: true },
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
   });
   assertEqual(baseNormalConvertedFantastic.abilities.liveFantastic, true,
@@ -326,8 +322,7 @@ function runF19Checks(ctx) {
 
   const baseFantasticClearedLive = warlord({
     baseFantastic: true, baseRace: 'Nature', unitType: 'fantastic_nature',
-    abilities: { militaryWorkshop: true, lightningBlade: true, spiritLink: true,
-      armorPiercing: true },
+    innateAbilities: { armorPiercing: true }, markedAbilities: { militaryWorkshop: true, lightningBlade: true, spiritLink: true },
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
   });
   assertEqual(baseFantasticClearedLive.abilities.liveFantastic, false,
@@ -340,8 +335,7 @@ function runF19Checks(ctx) {
     'F19 base-Fantastic unit does not gain Workshop poison after Spirit Link');
 
   const warlordPermanentControlsInBaseCoM2 = modern({
-    abilities: { militaryWorkshop: true, rocketry: true, lightningBlade: true,
-      armorPiercing: true },
+    innateAbilities: { armorPiercing: true }, markedAbilities: { militaryWorkshop: true, rocketry: true, lightningBlade: true },
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
   });
   assertEqual(warlordPermanentControlsInBaseCoM2.modernAttacks.thrown.strength, 3,
@@ -354,12 +348,7 @@ function runF19Checks(ctx) {
   for (const version of ['mom_1.31', 'mom_cp_1.60.00']) {
     const inert = ctx.deriveUnitStats(baseUnitInput({
       version, atk: 2, def: 3, res: 4,
-      abilities: {
-        darkForce: true, heavenlyLight: true, badMoon: true, goodMoon: true,
-        natureConjunction: true, spellWard: 'life', guidingBeaconAura: 5,
-        prayermasterAura: 5, divineBarrierAura: 5, soulLinkerAura: 5,
-        leadershipAura: 5,
-      },
+      markedAbilities: { darkForce: true, heavenlyLight: true, badMoon: true, goodMoon: true, natureConjunction: true, spellWard: 'life', guidingBeaconAura: 5, prayermasterAura: 5, divineBarrierAura: 5, soulLinkerAura: 5, leadershipAura: 5 },
     }));
     assertEqual(inert.atk, 2, `F19 modern controls are inert in ${version} melee`);
     assertEqual(inert.def, 3, `F19 modern controls are inert in ${version} Defense`);
@@ -369,11 +358,7 @@ function runF19Checks(ctx) {
   // com1:0x905BB, so the control is live there and only the MoM loop above still holds it inert.
   const inertInCoM1 = ctx.deriveUnitStats(baseUnitInput({
     version: 'com_6.08', atk: 2, def: 3, res: 4,
-    abilities: {
-      darkForce: true, badMoon: true, goodMoon: true,
-      natureConjunction: true, spellWard: 'life', prayermasterAura: 5,
-      leadershipAura: 5,
-    },
+    markedAbilities: { darkForce: true, badMoon: true, goodMoon: true, natureConjunction: true, spellWard: 'life', prayermasterAura: 5, leadershipAura: 5 },
   }));
   assertEqual(inertInCoM1.atk, 2, 'F19 modern-only controls are inert in CoM 1 melee');
   assertEqual(inertInCoM1.def, 3, 'F19 modern-only controls are inert in CoM 1 Defense');
@@ -428,75 +413,79 @@ function runF23Checks(ctx) {
     assert(fearPhase, `${version}: defender Cause Fear phase is present`);
     return fearPhase.atkDist[1] || 0;
   };
-  const fearedChance = (version, abilities) => {
-    const feared = ctx.deriveUnitStats(baseUnitInput({
-      version, prefix: 'a', figs: 1, atk: 5, def: 0, res: 5, hp: 10,
-      hitChance: 70, abilities,
-    }));
-    const fearSource = ctx.deriveUnitStats(baseUnitInput({
-      version, prefix: 'b', figs: 1, atk: 1, def: 0, res: 5, hp: 20,
-      abilities: { fear: true },
-    }));
-    return { feared, fearSource, chance: fearPhaseChance(feared, fearSource, version) };
-  };
+  for (const fearSourceHalf of ['innateAbilities', 'markedAbilities']) {
+    const fearedChance = (version, sourceInput) => {
+      const feared = ctx.deriveUnitStats(baseUnitInput({
+        version, prefix: 'a', figs: 1, atk: 5, def: 0, res: 5, hp: 10,
+        hitChance: 70, ...sourceInput,
+      }));
+      const fearSource = ctx.deriveUnitStats(baseUnitInput({
+        version, prefix: 'b', figs: 1, atk: 1, def: 0, res: 5, hp: 20,
+        [fearSourceHalf]: { fear: true },
+      }));
+      return { feared, fearSource, chance: fearPhaseChance(feared, fearSource, version) };
+    };
 
-  for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
-    const intrinsic = fearedChance(version, { deathImmunity: true });
-    assertEqual(intrinsic.feared.baseDeathImmunity, true,
-      `F23 ${version} preserves intrinsic Death Immunity on the base record`);
-    assertClose(intrinsic.chance, 0,
-      `F23 ${version} intrinsic Death Immunity skips Cause Fear`);
+    for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
+      const intrinsic = fearedChance(version, { innateAbilities: { deathImmunity: true } });
+      assertEqual(intrinsic.feared.baseDeathImmunity, true,
+        `[${fearSourceHalf}] ` + (`F23 ${version} preserves intrinsic Death Immunity on the base record`));
+      assertClose(intrinsic.chance, 0,
+        `[${fearSourceHalf}] ` + (`F23 ${version} intrinsic Death Immunity skips Cause Fear`));
 
-    const bloodLust = fearedChance(version, { bloodLust: true });
-    assertEqual(bloodLust.feared.baseDeathImmunity, false,
-      `F23 ${version} Blood Lust does not rewrite base Death Immunity`);
-    assertClose(bloodLust.chance, 0.8,
-      `F23 ${version} Blood Lust-derived Death Immunity still rolls against Cause Fear`);
+      const bloodLust = fearedChance(version, { markedAbilities: { bloodLust: true } });
+      assertEqual(bloodLust.feared.baseDeathImmunity, false,
+        `[${fearSourceHalf}] ` + (`F23 ${version} Blood Lust does not rewrite base Death Immunity`));
+      assertClose(bloodLust.chance, 0.8,
+        `[${fearSourceHalf}] ` + (`F23 ${version} Blood Lust-derived Death Immunity still rolls against Cause Fear`));
 
-    const magicImmune = fearedChance(version, { magicImmunity: true });
-    assertEqual(magicImmune.feared.baseDeathImmunity, false,
-      `F23 ${version} Magic Immunity remains distinct from base Death Immunity`);
-    assertEqual(ctx.effectiveResistance(magicImmune.feared, version, 'death'), 100,
-      `F23 ${version} Magic Immunity assigns effective Death resistance to 100`);
-    assertClose(ctx.fearFailProb(5, magicImmune.feared.abilities, version, false), 0.8,
-      `F23 ${version} fear helper does not replace the modern effective-resistance path`);
-    assertClose(magicImmune.chance, 0,
-      `F23 ${version} Magic Immunity still blocks Cause Fear through effective resistance`);
-
-    const transported = JSON.parse(JSON.stringify(bloodLust.feared));
-    const transportedSource = JSON.parse(JSON.stringify(bloodLust.fearSource));
-    assertEqual(transported.baseDeathImmunity, false,
-      `F23 ${version} Matrix-style structured transport preserves base Death Immunity`);
-    assertClose(fearPhaseChance(transported, transportedSource, version), 0.8,
-      `F23 ${version} Matrix-style resolver path keeps calculated Death Immunity rollable`);
-
-    const directIntrinsic = { ...intrinsic.feared };
-    delete directIntrinsic.baseDeathImmunity;
-    assertClose(fearPhaseChance(directIntrinsic, intrinsic.fearSource, version), 0,
-      `F23 ${version} direct resolver callers treat supplied Death Immunity as intrinsic`);
-    const directBloodLust = { ...bloodLust.feared };
-    delete directBloodLust.baseDeathImmunity;
-    assertClose(fearPhaseChance(directBloodLust, bloodLust.fearSource, version), 0.8,
-      `F23 ${version} direct resolver normalization captures base immunity before Blood Lust`);
+      for (const immunitySource of ['innateAbilities', 'markedAbilities']) {
+        const magicImmune = fearedChance(version, { [immunitySource]: { magicImmunity: true } });
+        assertEqual(magicImmune.feared.baseDeathImmunity, false,
+          `[${fearSourceHalf}/${immunitySource}] ` + (`F23 ${version} Magic Immunity remains distinct from base Death Immunity`));
+        assertEqual(ctx.effectiveResistance(magicImmune.feared, version, 'death'), 100,
+          `[${fearSourceHalf}/${immunitySource}] ` + (`F23 ${version} Magic Immunity assigns effective Death resistance to 100`));
+        assertClose(ctx.fearFailProb(5, magicImmune.feared.abilities, version, false), 0.8,
+          `[${fearSourceHalf}/${immunitySource}] ` + (`F23 ${version} fear helper does not replace the modern effective-resistance path`));
+        assertClose(magicImmune.chance, 0,
+          `[${fearSourceHalf}/${immunitySource}] ` + (`F23 ${version} Magic Immunity still blocks Cause Fear through effective resistance`));
   }
 
-  const animated = fearedChance('com2_1.05.11', { animated: true });
-  assertClose(animated.chance, 0.8,
-    'F23 CoM2 Animated-derived Death Immunity still rolls against Cause Fear');
+      const transported = JSON.parse(JSON.stringify(bloodLust.feared));
+      const transportedSource = JSON.parse(JSON.stringify(bloodLust.fearSource));
+      assertEqual(transported.baseDeathImmunity, false,
+        `[${fearSourceHalf}] ` + (`F23 ${version} Matrix-style structured transport preserves base Death Immunity`));
+      assertClose(fearPhaseChance(transported, transportedSource, version), 0.8,
+        `[${fearSourceHalf}] ` + (`F23 ${version} Matrix-style resolver path keeps calculated Death Immunity rollable`));
 
-  const rebuild = fearedChance('com2_warlord_1.5.12.9', { rebuild: true });
-  assertClose(rebuild.chance, 0.8,
-    'F23 Warlord Rebuild-derived Death Immunity still rolls against Cause Fear');
+      const directIntrinsic = { ...intrinsic.feared };
+      delete directIntrinsic.baseDeathImmunity;
+      assertClose(fearPhaseChance(directIntrinsic, intrinsic.fearSource, version), 0,
+        `[${fearSourceHalf}] ` + (`F23 ${version} direct resolver callers treat supplied Death Immunity as intrinsic`));
+      const directBloodLust = { ...bloodLust.feared };
+      delete directBloodLust.baseDeathImmunity;
+      assertClose(fearPhaseChance(directBloodLust, bloodLust.fearSource, version), 0.8,
+        `[${fearSourceHalf}] ` + (`F23 ${version} direct resolver normalization captures base immunity before Blood Lust`));
+    }
 
-  const divineProtection = fearedChance('com2_warlord_1.5.12.9', {
-    divineProtection: true,
-  });
-  assertEqual(divineProtection.feared.abilities.deathImmunity, true,
-    'F23 Warlord Divine Protection still grants calculated Death Immunity');
-  assertEqual(divineProtection.feared.baseDeathImmunity, false,
-    'F23 Warlord Divine Protection does not rewrite base Death Immunity');
-  assertClose(divineProtection.chance, 0.7,
-    'F23 Warlord Divine Protection-derived Death Immunity still rolls with Lucky resistance');
+    const animated = fearedChance('com2_1.05.11', { markedAbilities: { animated: true } });
+    assertClose(animated.chance, 0.8,
+      `[${fearSourceHalf}] ` + ('F23 CoM2 Animated-derived Death Immunity still rolls against Cause Fear'));
+
+    const rebuild = fearedChance('com2_warlord_1.5.12.9', { markedAbilities: { rebuild: true } });
+    assertClose(rebuild.chance, 0.8,
+      `[${fearSourceHalf}] ` + ('F23 Warlord Rebuild-derived Death Immunity still rolls against Cause Fear'));
+
+    const divineProtection = fearedChance('com2_warlord_1.5.12.9', {
+      markedAbilities: { divineProtection: true },
+    });
+    assertEqual(divineProtection.feared.abilities.deathImmunity, true,
+      `[${fearSourceHalf}] ` + ('F23 Warlord Divine Protection still grants calculated Death Immunity'));
+    assertEqual(divineProtection.feared.baseDeathImmunity, false,
+      `[${fearSourceHalf}] ` + ('F23 Warlord Divine Protection does not rewrite base Death Immunity'));
+    assertClose(divineProtection.chance, 0.7,
+      `[${fearSourceHalf}] ` + ('F23 Warlord Divine Protection-derived Death Immunity still rolls with Lucky resistance'));
+}
 
   for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
     const normalizedUndead = ctx.normalizeCombatUnit({
@@ -515,37 +504,37 @@ function runF50F51F53Checks(ctx) {
   }));
 
   const beaconRanged = derive({
-    rtb: 3, rtbType: 'missile', abilities: { guidingBeaconAura: 5 },
+    rtb: 3, rtbType: 'missile', markedAbilities: { guidingBeaconAura: 5 },
   });
   assertEqual(beaconRanged.rtb, 8,
     'F50 CoM 1 Guiding Beacon adds its side maximum to conventional Ranged');
   for (const rtbType of ['boulder', 'magic_c', 'magic_n', 'magic_s']) {
     const eligible = derive({
-      rtb: 3, rtbType, abilities: { guidingBeaconAura: 5 },
+      rtb: 3, rtbType, markedAbilities: { guidingBeaconAura: 5 },
     });
     assertEqual(eligible.rtb, 8,
       `F50 CoM 1 Guiding Beacon includes ${rtbType}`);
   }
   for (const rtbType of ['thrown', 'fire', 'lightning', 'gaze_stoning', 'gaze_death']) {
     const excluded = derive({
-      rtb: 3, rtbType, abilities: { guidingBeaconAura: 5 },
+      rtb: 3, rtbType, markedAbilities: { guidingBeaconAura: 5 },
     });
     assertEqual(excluded.rtb, 3,
       `F50 CoM 1 Guiding Beacon excludes ${rtbType}`);
   }
 
-  const barrier = derive({ def: 2, abilities: { divineBarrierAura: 5 } });
+  const barrier = derive({ def: 2, markedAbilities: { divineBarrierAura: 5 } });
   assertEqual(barrier.def, 7,
     'F50 CoM 1 Divine Barrier adds its side maximum without a unit gate');
   const linked = derive({
     baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
-    abilities: { soulLinkerAura: 5 },
+    markedAbilities: { soulLinkerAura: 5 },
   });
   assertClose(linked.toHitMelee, 0.33,
     'F50 CoM 1 Soul Linker gives ceil(value / 2) To Hit');
   assertClose(linked.toBlock, 0.32,
     'F50 CoM 1 Soul Linker gives floor(value / 2) To Block');
-  const unlinkedNormal = derive({ abilities: { soulLinkerAura: 5 } });
+  const unlinkedNormal = derive({ markedAbilities: { soulLinkerAura: 5 } });
   assertClose(unlinkedNormal.toHitMelee, 0.3,
     'F50 CoM 1 Soul Linker rejects non-Fantastic units');
   assertClose(unlinkedNormal.toBlock, 0.3,
@@ -554,10 +543,7 @@ function runF50F51F53Checks(ctx) {
   const orderedAuras = derive({
     baseFantastic: true, baseRace: 'Nature', unitType: 'fantastic_nature',
     rtb: 4, rtbType: 'missile', def: 8, nodeAura: 'nature',
-    abilities: {
-      guidingBeaconAura: 3, divineBarrierAura: 4, soulLinkerAura: 5,
-      mindStorm: true, warpAttack: true, warpDefense: true,
-    },
+    markedAbilities: { guidingBeaconAura: 3, divineBarrierAura: 4, soulLinkerAura: 5, mindStorm: true, warpAttack: true, warpDefense: true },
   });
   const orderedIds = orderedAuras.statTrace.map(event => event.id);
   for (const [earlier, later] of [
@@ -574,7 +560,7 @@ function runF50F51F53Checks(ctx) {
 
   const warded = derive({
     baseFantastic: true, baseRace: 'Chaos', unitType: 'fantastic_chaos',
-    def: 6, res: 7, abilities: { realmWard: 'chaos' },
+    def: 6, res: 7, markedAbilities: { realmWard: 'chaos' },
   });
   assertEqual(warded.def, 3, 'F51 matching CoM 1 Realm Ward removes three Defense');
   assertEqual(warded.res, 4, 'F51 matching CoM 1 Realm Ward removes three Resistance');
@@ -582,17 +568,17 @@ function runF50F51F53Checks(ctx) {
     'F51 matching CoM 1 Realm Ward removes 20 percentage points To Hit');
   const wrongWard = derive({
     baseFantastic: true, baseRace: 'Chaos', unitType: 'fantastic_chaos',
-    def: 6, res: 7, abilities: { realmWard: 'nature' },
+    def: 6, res: 7, markedAbilities: { realmWard: 'nature' },
   });
   assertEqual(wrongWard.def, 6, 'F51 nonmatching CoM 1 Realm Ward is inert');
-  const normalWard = derive({ def: 6, res: 7, abilities: { realmWard: 'chaos' } });
+  const normalWard = derive({ def: 6, res: 7, markedAbilities: { realmWard: 'chaos' } });
   assertEqual(normalWard.def, 6, 'F51 CoM 1 Realm Ward rejects non-Fantastic units');
   for (const realm of ['nature', 'sorcery', 'chaos', 'life', 'death']) {
     const matchingWard = derive({
       baseFantastic: true,
       baseRace: realm[0].toUpperCase() + realm.slice(1),
       unitType: `fantastic_${realm}`,
-      def: 6, res: 7, abilities: { realmWard: realm },
+      def: 6, res: 7, markedAbilities: { realmWard: realm },
     });
     assertEqual(matchingWard.def, 3,
       `F51 CoM 1 ${realm} Realm Ward maps to its matching Fantastic realm`);
@@ -600,9 +586,7 @@ function runF50F51F53Checks(ctx) {
 
   const wardOrder = derive({
     isHero: true, baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
-    def: 6, res: 9, abilities: {
-      supremeLight: true, realmWard: 'life', tactician: true,
-    },
+    def: 6, res: 9, markedAbilities: { supremeLight: true, realmWard: 'life', tactician: true },
   });
   const wardOrderIds = wardOrder.statTrace.map(event => event.id);
   assert(wardOrderIds.indexOf('supremeLight') < wardOrderIds.indexOf('realmWard')
@@ -612,13 +596,13 @@ function runF50F51F53Checks(ctx) {
   const warpedBeforeSupremeLight = derive({
     baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
     def: 1, res: 20,
-    abilities: { mindStorm: true, warpDefense: true, supremeLight: true },
+    markedAbilities: { mindStorm: true, warpDefense: true, supremeLight: true },
   });
   assertEqual(warpedBeforeSupremeLight.def, 4,
     'F53 CoM 1 signed -4 / 3 truncates to -1 before Supreme Light adds 5');
   const warpedBeforeTactician = derive({
     isHero: true, unitType: 'hero', def: 1,
-    abilities: { mindStorm: true, warpDefense: true, tactician: true },
+    markedAbilities: { mindStorm: true, warpDefense: true, tactician: true },
   });
   assertEqual(warpedBeforeTactician.def, 1,
     'F53 CoM 1 signed -4 / 3 truncates to -1 before hero Tactician adds 2');
@@ -635,10 +619,7 @@ function runF50F51F53Checks(ctx) {
       rtb: 3, rtbType: 'missile', def: 6, res: 7,
       ...(version.startsWith('com2')
         ? { modernAttacks: { ranged: { strength: 3, type: 'missile' } } } : {}),
-      abilities: {
-        realmWard: 'chaos', guidingBeaconAura: 0,
-        divineBarrierAura: 0, soulLinkerAura: 0,
-      },
+      markedAbilities: { realmWard: 'chaos', guidingBeaconAura: 0, divineBarrierAura: 0, soulLinkerAura: 0 },
     }));
     assertEqual(inert.def, 6, `F51 Realm Ward is inert in ${version}`);
     assertEqual(inert.res, 7, `F51 Realm Ward leaves Resistance unchanged in ${version}`);
@@ -648,9 +629,7 @@ function runF50F51F53Checks(ctx) {
     const inertAuras = ctx.deriveUnitStats(baseUnitInput({
       version, baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
       rtb: 3, rtbType: 'missile', def: 6,
-      abilities: {
-        guidingBeaconAura: 5, divineBarrierAura: 5, soulLinkerAura: 5,
-      },
+      markedAbilities: { guidingBeaconAura: 5, divineBarrierAura: 5, soulLinkerAura: 5 },
     }));
     assertEqual(inertAuras.rtb, 3, `F50 side maxima are inert in ${version} Ranged`);
     assertEqual(inertAuras.def, 6, `F50 side maxima are inert in ${version} Defense`);
@@ -662,9 +641,7 @@ function runF50F51F53Checks(ctx) {
       version, baseFantastic: true, baseRace: 'Life', unitType: 'fantastic_life',
       rtb: 3, rtbType: 'missile', def: 6,
       modernAttacks: { ranged: { strength: 3, type: 'missile' } },
-      abilities: {
-        guidingBeaconAura: 5, divineBarrierAura: 5, soulLinkerAura: 5,
-      },
+      markedAbilities: { guidingBeaconAura: 5, divineBarrierAura: 5, soulLinkerAura: 5 },
     }));
     assertEqual(unchangedModern.rtb, 8, `F50 modern Guiding Beacon remains full-value in ${version}`);
     assertEqual(unchangedModern.def, 11, `F50 modern Divine Barrier remains full-value in ${version}`);
@@ -682,7 +659,7 @@ function runF50F51F53Checks(ctx) {
   ];
   for (const [version, defense, expected] of unchangedWarpCases) {
     const warped = ctx.deriveUnitStats(baseUnitInput({
-      version, def: defense, abilities: { warpDefense: true },
+      version, def: defense, markedAbilities: { warpDefense: true },
     }));
     assertEqual(warped.def, expected, `F53 unchanged positive Warp Defense in ${version}`);
   }
@@ -770,7 +747,7 @@ function runR9G1eChecks(ctx) {
   const createdModernThrown = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', weapon: 'mithril', atk: 1,
     rtb: 0, rtbType: 'none', modernAttacks: {},
-    abilities: { outlanderWizard: true, explosive: true },
+    innateAbilities: { outlanderWizard: true }, markedAbilities: { explosive: true },
   }));
   assertClose(createdModernThrown.toHitRtb, 0.4,
     'R9-G1e modern material gate reads a Thrown field created before ApplyMagicWeapons');
@@ -789,13 +766,13 @@ function runR9G1eChecks(ctx) {
 
   const comFocus = ctx.deriveUnitStats(baseUnitInput({
     version: 'com_6.08', weapon: 'mithril', rtb: 2, rtbType: 'missile',
-    abilities: { focusMagic: true },
+    markedAbilities: { focusMagic: true },
   }));
   assertClose(comFocus.toHitRtb, 0.3,
     'R9-G1e CoM 1 Focus Magic suppresses the material shared-slot To-Hit write');
   const modernFocus = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', weapon: 'mithril', rtb: 2, rtbType: 'missile',
-    abilities: { focusMagic: true },
+    markedAbilities: { focusMagic: true },
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
   }));
   assertClose(modernFocus.modernAttacks.ranged.toHit, 0.3,
@@ -945,7 +922,7 @@ function runPriorityPrerequisitesChecks(ctx) {
   const warlord = 'com2_warlord_1.5.12.9';
   const summoned = templateId => ctx.deriveUnitStats(baseUnitInput({
     version: warlord, atk: 1, def: 0, res: 0, hp: 10,
-    abilities: { combatSummoned: true },
+    markedAbilities: { combatSummoned: true },
     identity: ctx.createUnitIdentity({
       version: warlord, templateId,
       baseRace: templateId === 37 ? 'Special' : 'High Men',

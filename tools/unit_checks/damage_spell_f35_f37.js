@@ -50,7 +50,7 @@ function makeUnit(ctx, version, prefix, overrides = {}) {
   return ctx.deriveUnitStats({
     prefix,
     version,
-    abilities: {},
+    innateAbilities: {}, markedAbilities: {},
     level: 'normal',
     weapon: 'normal',
     armor: 'normal',
@@ -115,11 +115,8 @@ function runModernOrderChecksFor(ctx, version) {
     version,
   }).compute(2, 2, 17).dist;
 
-  const attacker = makeUnit(ctx, version, 'a', { abilities: { immolation: true } });
   const target = makeUnit(ctx, version, 'b', { figs: 2, def: 100 });
-  const resolveAgainst = abilities => ctx.resolveCombat(attacker, { ...target, abilities }, {
-    version, isRanged: false, wallOfFire: false, distance: 1,
-  }).totalDmgToB;
+
 
   const noImmolationImmune = ctx.resolveCombat(
     makeUnit(ctx, version, 'a'), { ...target, abilities: { magicImmunity: true } },
@@ -161,16 +158,22 @@ function runModernOrderChecksFor(ctx, version) {
   // [F37-7] and against a Magic Immune one it does nothing.
   assertStrictArrayEqual(wall({ magicImmunity: true }), [1],
     `${version}: Wall of Fire does nothing to a Magic Immune target`);
+  for (const source of ['innateAbilities', 'markedAbilities']) {
+  const attacker = makeUnit(ctx, version, 'a', { [source]: { immolation: true } });
+  const resolveAgainst = abilities => ctx.resolveCombat(attacker, { ...target, abilities }, {
+    version, isRanged: false, wallOfFire: false, distance: 1,
+  }).totalDmgToB;
   // [F37-8] Immolation against a Black Sleeping target is Doom damage.
   assertIs(resolveAgainst({ blackSleep: true })[21], 1,
-    `${version}: Immolation against a Black Sleeping target is Doom damage`);
+    `[${source}] ` + (`${version}: Immolation against a Black Sleeping target is Doom damage`));
   // [F37-9] Immolation against a Magic Immune target is exactly the no-Immolation result.
   assertStrictArrayEqual(resolveAgainst({ magicImmunity: true }), noImmolationImmune,
-    `${version}: Immolation adds nothing against a Magic Immune target`);
+    `[${source}] ` + (`${version}: Immolation adds nothing against a Magic Immune target`));
   // [F37-10] and Black Sleep beside the immunity does not change that.
   assertStrictArrayEqual(resolveAgainst({ magicImmunity: true, blackSleep: true }),
     noImmolationBoth,
-    `${version}: Magic Immunity is ordered before Black Sleep in the Immolation path`);
+    `[${source}] ` + (`${version}: Magic Immunity is ordered before Black Sleep in the Immolation path`));
+  }
 }
 
 function runOrderChecks(ctx) {

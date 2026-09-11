@@ -518,9 +518,9 @@ function runStrayedMarionetteChecks(ctx, deps) {
   // flag, so a Wanderer stated without it takes the non-hero `buffs:rebuild` instead.
   const wandererIdentity = { version: WARLORD, heroTypeId: 48, isHero: true, unitType: 'hero',
     baseRace: '', baseFantastic: false };
-  const wanderer = (abilities = {}, over = {}) => derive(baseUnitInput({
+  const wanderer = (sourceInput = {}, over = {}) => derive(baseUnitInput({
     version: WARLORD, atk: 5, def: 5, res: 10, hp: 10, unitType: 'hero',
-    identity: wandererIdentity, abilities, ...over }));
+    identity: wandererIdentity, ...sourceInput, ...over }));
   const statusOf = (result, id) => {
     const entry = result.statExecutionTrace.find(event => event.id === id);
     return entry ? entry.status : 'absent';
@@ -542,7 +542,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   // `HAMechanicalMaster`, `HARitualMaster`, `HACharmed` and `EncSpellLock` again behind five
   // wizard retorts the calculator has no control for, and the owned branch models none of it.
   // That tail is F244.3g's, with the rest of the owned/ascension branch.
-  const owned = wanderer({ channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'nature' });
+  const owned = wanderer({ markedAbilities: { channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'nature' } });
   for (const key of ['transmuteEquipment', 'sage', 'charmed', 'spellLock']) {
     assert(!owned.abilities[key],
       `while an owned Channeler Marionette receives no ${key}: the branches are exclusive`);
@@ -573,7 +573,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   // record by `buffs:spellLock:cast`, ahead of region `b`, so the package is refused and the two
   // augmentations that read its flags go with it. Stats rather than flags are the assertion,
   // because that is what a user sees move.
-  const lockedWanderer = wanderer({ spellLock: true });
+  const lockedWanderer = wanderer({ markedAbilities: { spellLock: true } });
   assertEqual(statusOf(lockedWanderer, 'marionette:strayedPackage'), 'skipped',
     'a card-stated Spell Lock refuses the strayed package at its own rank');
   assertEqual(statusOf(lockedWanderer, 'transmuteEquipment:heroAugment'), 'skipped',
@@ -623,7 +623,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   const predicateOf = composedPredicate;
   const strayedSteps = captureSteps(() => wanderer());
   const ownedSteps = captureSteps(() => wanderer(
-    { channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'nature' }));
+    { markedAbilities: { channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'nature' } }));
 
   // The package's gate has two terms and both are load-bearing: the branch, and the Spell Lock
   // flag standing on the record at this step's own rank.
@@ -664,7 +664,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   const nonHeroSteps = captureSteps(() => derive(baseUnitInput({
     version: WARLORD, atk: 5, def: 5, res: 10, hp: 10,
     identity: { version: WARLORD, isHero: false, baseRace: '', baseFantastic: false },
-    abilities: {} })));
+    innateAbilities: {}, markedAbilities: {} })));
   assertEqual(
     !!predicateOf(nonHeroSteps, 'transmuteEquipment:heroAugment', 'b')({ transmuteEquipment: true }),
     false,
@@ -686,7 +686,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   for (const version of versions) {
     for (const key of STRAYED_UNCONTROLLED_KEYS) {
       const rawMark = () => derive(baseUnitInput({
-        version, atk: 1, def: 1, abilities: { [key]: true } }));
+        version, atk: 1, def: 1, innateAbilities: { [key]: true } }));
       // Where the table names the key nowhere in this version, the raw mark is refused at the seed
       // (F253.1) rather than reaching a record that publishes nothing; where it names it, the
       // original claim stands and the strayed package is the writer. Read off the table, not off a
@@ -716,7 +716,7 @@ function runStrayedMarionetteChecks(ctx, deps) {
   // together, so a partial revert fails here rather than silently in one version.
   for (const version of versions) {
     const stateLock = () => derive(baseUnitInput({ version, atk: 1, def: 1,
-      abilities: { spellLock: true } }));
+      markedAbilities: { spellLock: true } }));
     const offered = version === 'com_6.08' || version.startsWith('com2');
     // In the two MoM builds the table names `spellLock` nowhere, so the card's mark is refused at
     // the seed (F253.1); where the control is offered the cast step carries it onto the record.
@@ -851,7 +851,7 @@ function runOwnedMarionetteChecks(ctx, deps) {
   const owned = (extra = {}) => derive(baseUnitInput({
     version: WARLORD, atk: 5, def: 5, res: 10, hp: 10, unitType: 'hero',
     identity: wandererIdentity,
-    abilities: { channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'nature', ...extra } }));
+    markedAbilities: { channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'nature', ...extra } }));
   const bookKey = realm => `marionette${realm[0].toUpperCase()}${realm.slice(1)}Books`;
 
   // 1. Every book threshold, on both sides. The `over` value is the script's own comparison, so a
@@ -989,7 +989,7 @@ function runOwnedMarionetteChecks(ctx, deps) {
   for (const version of versions) {
     for (const key of OWNED_UNCONTROLLED_KEYS) {
       const rawMark = () => derive(baseUnitInput({
-        version, atk: 1, def: 1, abilities: { [key]: true } }));
+        version, atk: 1, def: 1, innateAbilities: { [key]: true } }));
       // Where the table names the key in this version at all, the mark reaches a record that
       // publishes nothing; where it names it nowhere the mark is refused at the seed instead
       // (F253.1). Which of the two applies is read off the table, not listed here.
@@ -1008,7 +1008,7 @@ function runOwnedMarionetteChecks(ctx, deps) {
   // with no `template` row, so without `buffs:bless:cast` the seed would drop every card's mark and
   // both Bless riders would stop firing in all five versions.
   for (const version of versions) {
-    const blessed = derive(baseUnitInput({ version, atk: 1, def: 1, abilities: { bless: true } }));
+    const blessed = derive(baseUnitInput({ version, atk: 1, def: 1, markedAbilities: { bless: true } }));
     assertEqual(!!blessed.abilities.bless, true,
       `${version}: buffs:bless:cast carries the card's own Bless mark to the record`);
   }
@@ -1052,8 +1052,8 @@ function runLavaSmelterGrantChecks(ctx, deps) {
   const derive = read('deriveUnitStats');
   const scopes = read('STEP_VERSION_SCOPES');
   const granted = LAVA_SMELTER_CASES.map(([key]) => key);
-  const warlordUnit = abilities => derive(baseUnitInput({
-    version: WARLORD, atk: 1, hitChance: 70, hp: 10, abilities }));
+  const warlordUnit = sourceInput => derive(baseUnitInput({
+    version: WARLORD, atk: 1, hitChance: 70, hp: 10, ...sourceInput }));
 
   for (const [key, control, legacy] of LAVA_SMELTER_CASES) {
     const stepKey = (read('ABILITY_KEY_ORIGINS')[key] || [])
@@ -1065,7 +1065,7 @@ function runLavaSmelterGrantChecks(ctx, deps) {
       versions.filter(version => version === WARLORD).sort(),
       `${stepKey[0]} is Warlord's alone`);
 
-    const byControl = warlordUnit({ [control]: true });
+    const byControl = warlordUnit({ innateAbilities: {  }, markedAbilities: { [control]: true } });
     assertEqual(!!byControl.abilities[key], true,
       `${control} writes ${key} onto the record, which the published set takes it from`);
     for (const other of granted) {
@@ -1074,12 +1074,12 @@ function runLavaSmelterGrantChecks(ctx, deps) {
         `${control} writes ${key} and no other Lava Smelter grant (${other})`);
     }
 
-    const byLegacy = warlordUnit({ lavaSmelter: legacy });
+    const byLegacy = warlordUnit({ innateAbilities: { lavaSmelter: legacy } });
     assertEqual(!!byLegacy.abilities[key], true,
       `the legacy selector value '${legacy}' still reaches ${key}`);
 
     const fantastic = derive(baseUnitInput({ version: WARLORD, atk: 1, hitChance: 70, hp: 10,
-      unitType: 'fantastic_chaos', abilities: { [control]: true } }));
+      unitType: 'fantastic_chaos', markedAbilities: { [control]: true } }));
     assertEqual(!!fantastic.abilities[key], false,
       `the block's BASEFANTASTIC gate refuses ${key} to a permanently Fantastic unit`);
 
@@ -1090,18 +1090,18 @@ function runLavaSmelterGrantChecks(ctx, deps) {
     // F253.2 turned into a halt. The claim is the same one layer earlier and stronger: the mineral
     // pair's control admits the write and the key does not, so stating the key stops the run.
     if (!versions.some(version => abilityOriginIsTemplate(key, version))) {
-      assertSeedRefusesKey(() => warlordUnit({ [key]: true }),
+      assertSeedRefusesKey(() => warlordUnit({ innateAbilities: { [key]: true }, markedAbilities: {  } }),
         `${key} has no control of its own, so the step is its only source and stating the key raw`);
     }
   }
 
   // The blade's own stat, which is what makes `hasWarlordBladeAt` a record read: Warlord's blade
   // melee bonus is 3 and the weapon becomes magic, and both are gone without the grant.
-  const bladed = warlordUnit({ lavaSmelterFieryBlade: true });
+  const bladed = warlordUnit({ markedAbilities: { lavaSmelterFieryBlade: true } });
   assertEqual(bladed.atk, 4, 'the Fiery Blade grant reaches `c:flameBlade` through the record');
   assertEqual(bladed.weapon, 'magic',
     'and reaches the weapon result field through the record the run leaves');
-  const unbladed = warlordUnit({});
+  const unbladed = warlordUnit({ innateAbilities: {  }, markedAbilities: {  } });
   assertEqual(unbladed.atk, 1, 'and neither lands without it');
   assertEqual(unbladed.weapon, 'normal', 'on either consumer');
 }
@@ -1128,41 +1128,41 @@ const OUTLANDER_REFORM_CASES = [
   { key: 'armorclad',
     step: 'training:armorclad',
     // The block is `IF (SPELLSTATE(W,STArmorClad)=2)` inside the `SCustomAttribute` mechanical gate.
-    on: { armorcladReform: true, mechanical: true },
+    on: { innateAbilities: { mechanical: true }, markedAbilities: { armorcladReform: true } },
     // Same research state, no permanent Mechanical flag: the Battle Armor branch, which grants no
     // permanent Armorclad.
-    off: { armorcladReform: true } },
+    off: { innateAbilities: {  }, markedAbilities: { armorcladReform: true } } },
   { key: 'powerEngine',
     step: 'training:powerEngine',
-    on: { heatPowerEngine: true, mechanical: true },
-    off: { heatPowerEngine: true } },
+    on: { innateAbilities: { mechanical: true }, markedAbilities: { heatPowerEngine: true } },
+    off: { innateAbilities: {  }, markedAbilities: { heatPowerEngine: true } } },
   { key: 'resistMagic',
     step: 'training:magitekScience',
-    on: { magitekScience: true, armorcladReform: true, mechanical: true },
+    on: { innateAbilities: { mechanical: true }, markedAbilities: { magitekScience: true, armorcladReform: true } },
     // The nested `IF (SPELLSTATE(W,STMagitekMaterialScience)=2)` sits inside the Armorclad block,
     // and the overland route gates on `GETENCHANTMENTFLAG(U,EncArmorClad,1)`. Without Armorclad
     // there is no grant however loudly the research state is set.
-    off: { magitekScience: true } },
+    off: { innateAbilities: {  }, markedAbilities: { magitekScience: true } } },
   { key: 'discipline',
     step: 'training:militaryDrilling',
-    on: { militaryDrilling: true },
-    off: {},
+    on: { innateAbilities: {  }, markedAbilities: { militaryDrilling: true } },
+    off: { innateAbilities: {  }, markedAbilities: {  } },
     value: 'overland' },
   // The Anti-Gravity Drive block's three writes (F244.3e). Haste is the unconditional one; Flying
   // and Illusion Immunity sit behind the block's own `IF (GETSTAT(U,ASailing,1)>0)`, so their
   // `off` case keeps the whole outer gate and drops Sailing alone.
   { key: 'haste',
     step: 'training:temporalDrive',
-    on: { temporalEngineering: true, heatPowerEngine: true, mechanical: true },
-    off: { temporalEngineering: true } },
+    on: { innateAbilities: { mechanical: true }, markedAbilities: { temporalEngineering: true, heatPowerEngine: true } },
+    off: { innateAbilities: {  }, markedAbilities: { temporalEngineering: true } } },
   { key: 'flying',
     step: 'training:temporalDrive',
-    on: { temporalEngineering: true, heatPowerEngine: true, mechanical: true, sailing: true },
-    off: { temporalEngineering: true, heatPowerEngine: true, mechanical: true } },
+    on: { innateAbilities: { mechanical: true, sailing: true }, markedAbilities: { temporalEngineering: true, heatPowerEngine: true } },
+    off: { innateAbilities: { mechanical: true }, markedAbilities: { temporalEngineering: true, heatPowerEngine: true } } },
   { key: 'illusionImmunity',
     step: 'training:temporalDrive',
-    on: { temporalEngineering: true, heatPowerEngine: true, mechanical: true, sailing: true },
-    off: { temporalEngineering: true, heatPowerEngine: true, mechanical: true } },
+    on: { innateAbilities: { mechanical: true, sailing: true }, markedAbilities: { temporalEngineering: true, heatPowerEngine: true } },
+    off: { innateAbilities: { mechanical: true }, markedAbilities: { temporalEngineering: true, heatPowerEngine: true } } },
 ];
 
 function runOutlanderReformGrantChecks(ctx, deps) {
@@ -1171,8 +1171,8 @@ function runOutlanderReformGrantChecks(ctx, deps) {
   const derive = read('deriveUnitStats');
   const scopes = read('STEP_VERSION_SCOPES');
   const table = read('ABILITY_KEY_ORIGINS');
-  const warlordUnit = (abilities, over = {}) => derive(baseUnitInput({
-    version: WARLORD, atk: 1, def: 1, hitChance: 70, hp: 10, abilities, ...over }));
+  const warlordUnit = (sourceInput, over = {}) => derive(baseUnitInput({
+    version: WARLORD, atk: 1, def: 1, hitChance: 70, hp: 10, ...sourceInput, ...over }));
 
   for (const testCase of OUTLANDER_REFORM_CASES) {
     const { key, step, on, off } = testCase;
@@ -1188,18 +1188,18 @@ function runOutlanderReformGrantChecks(ctx, deps) {
       versions.filter(version => version === WARLORD).sort(),
       `${step} is Warlord's alone`);
 
-    assertEqual(warlordUnit({ ...OUTLANDER_WIZARD, ...on }).abilities[key], expected,
+    assertEqual(warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, ...on.innateAbilities }, markedAbilities: { ...on.markedAbilities } }).abilities[key], expected,
       `${step} writes ${key} onto the record, which the published set takes it from`);
     // The gate the deleted map mutation used to make implicitly. Same marks, no Outlander wizard.
-    assert(!warlordUnit({ ...on }).abilities[key],
+    assert(!warlordUnit({ innateAbilities: { ...on.innateAbilities }, markedAbilities: { ...on.markedAbilities } }).abilities[key],
       `${step} refuses ${key} to a unit whose owner is not an Outlander wizard`);
-    assert(!warlordUnit({ ...OUTLANDER_WIZARD, ...off }).abilities[key],
+    assert(!warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, ...off.innateAbilities }, markedAbilities: { ...off.markedAbilities } }).abilities[key],
       `${step} refuses ${key} when the block's own eligibility term is absent`);
     // A key with a control of its own is a legitimate raw input somewhere; the two with none are
     // written by their step alone, so marking them by hand must publish nothing.
     if (!versions.some(version => abilityOriginIsTemplate(key, version))
       && !(table[key] || []).some(row => row.origin === 'buffs')) {
-      assert(!warlordUnit({ [key]: true }).abilities[key],
+      assert(!warlordUnit({ innateAbilities: { [key]: true }, markedAbilities: {  } }).abilities[key],
         `${key} has no control of its own, so the step is its only source and a raw mark writes `
         + 'nothing');
     }
@@ -1217,8 +1217,7 @@ function runOutlanderReformGrantChecks(ctx, deps) {
   //
   // Armorclad -> `training:magitekScience`: Resist Magic lands only where the record already
   // carries the flag `training:armorclad` wrote one position earlier.
-  const armorcladPlusScience = warlordUnit({
-    ...OUTLANDER_WIZARD, armorcladReform: true, mechanical: true, magitekScience: true });
+  const armorcladPlusScience = warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, mechanical: true }, markedAbilities: { armorcladReform: true, magitekScience: true } });
   assertEqual(armorcladPlusScience.abilities.resistMagic, true,
     'training:magitekScience reads the Armorclad flag off the record at its own position');
   assertEqual(armorcladPlusScience.def, 7,
@@ -1229,14 +1228,14 @@ function runOutlanderReformGrantChecks(ctx, deps) {
   const beam = { rtb: 6, rtbType: 'missile',
     modernAttacks: { ranged: { strength: 6, type: 'missile' } } };
   const cannon = warlordUnit(
-    { ...OUTLANDER_WIZARD, heatPowerEngine: true, mechanical: true, energyBeamWeapons: true }, beam);
+    { innateAbilities: { ...OUTLANDER_WIZARD, mechanical: true }, markedAbilities: { heatPowerEngine: true, energyBeamWeapons: true } }, beam);
   assertEqual(cannon.modernAttacks.ranged.strength, 9,
     'training:energyCannon reads the Power Engine flag off the record and makes its +50%');
   assertEqual(cannon.modernAttacks.ranged.type, 'magic', 'and retypes the slot to Beam');
   assertEqual(cannon.abilities.energyCannonDestruction, -6,
     'and the post-chain Destruction write reads the same flag off the finished record');
   const noEngine = warlordUnit(
-    { ...OUTLANDER_WIZARD, mechanical: true, energyBeamWeapons: true }, beam);
+    { innateAbilities: { ...OUTLANDER_WIZARD, mechanical: true }, markedAbilities: { energyBeamWeapons: true } }, beam);
   assertEqual(noEngine.modernAttacks.ranged.strength, 6, 'and none of it lands without the flag');
   assertEqual(noEngine.modernAttacks.ranged.type, 'missile', 'on either field');
   assert(noEngine.abilities.energyCannonDestruction == null, 'or on the rider');
@@ -1251,24 +1250,23 @@ function runOutlanderReformGrantChecks(ctx, deps) {
 
   // Discipline -> `c:discipline`: +1 Defense at Recruit, and the cast's own value overrides the
   // training grant's `overland` rather than being merged ahead of it.
-  const drilled = warlordUnit({ ...OUTLANDER_WIZARD, militaryDrilling: true });
+  const drilled = warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD }, markedAbilities: { militaryDrilling: true } });
   assertEqual(drilled.def, 2, 'c:discipline reads the Discipline value off the record');
-  assertEqual(warlordUnit({ ...OUTLANDER_WIZARD, militaryDrilling: true,
-    discipline: 'combat' }).abilities.discipline, 'combat',
+  assertEqual(warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD }, markedAbilities: { militaryDrilling: true, discipline: 'combat' } }).abilities.discipline, 'combat',
   'buffs:discipline:cast overrides the training grant, as the retired merge did');
-  assertEqual(warlordUnit({ ...OUTLANDER_WIZARD, militaryDrilling: true },
+  assertEqual(warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD }, markedAbilities: { militaryDrilling: true } },
     { unitType: 'fantastic_chaos' }).abilities.discipline, undefined,
   'and the overland route BASEFANTASTIC gate refuses a permanently Fantastic unit');
 
   // The card's own Resist Magic and Discipline, which became `buffs` writes when the keys became
   // record fields. Each must survive in exactly the versions its control is offered in.
   for (const version of versions) {
-    const marked = derive(baseUnitInput({ version, def: 1, abilities: { resistMagic: true } }));
+    const marked = derive(baseUnitInput({ version, def: 1, markedAbilities: { resistMagic: true } }));
     assertEqual(marked.abilities.resistMagic, true,
       `${version}: buffs:resistMagic:cast carries the card's mark onto the record`);
     const offered = version.startsWith('com2');
     const stateDiscipline = () => derive(baseUnitInput({ version, def: 1,
-      abilities: { discipline: 'overland' } }));
+      markedAbilities: { discipline: 'overland' } }));
     if (!offered) {
       // Outside the two modern builds the origin table names `discipline` nowhere, so the card's
       // value is refused at the seed rather than reaching a record that drops it (F253.1). That is
@@ -1304,14 +1302,13 @@ function runOutlanderReformGrantChecks(ctx, deps) {
   // is why deleting the last carry in F244.3g needed no change to the assertions below.
   const marionetteIdentity = { heroTypeId: 48, isHero: true, baseRace: '', baseFantastic: false,
     version: WARLORD };
-  const marionetteUnit = abilities => derive(baseUnitInput({
-    version: WARLORD, def: 1, res: 5, abilities, identity: marionetteIdentity }));
+  const marionetteUnit = sourceInput => derive(baseUnitInput({
+    version: WARLORD, def: 1, res: 5, ...sourceInput, identity: marionetteIdentity }));
   // The two keys sit on the package's two mutually exclusive branches: `resistMagic` is an owned
   // Channeler's five-sorcery-book grant, `rebuild` is one of the strayed branch's eight.
   const bookPackage = {
-    resistMagic: { channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'sorcery',
-      marionetteSorceryBooks: 13 },
-    rebuild: { marionetteBaseSkill: 0 },
+    resistMagic: { innateAbilities: {  }, markedAbilities: { channeler: true, marionetteBaseSkill: 0, marionettePrimary: 'sorcery', marionetteSorceryBooks: 13 } },
+    rebuild: { innateAbilities: {  }, markedAbilities: { marionetteBaseSkill: 0 } },
   };
   for (const [key, step] of [['resistMagic', 'resistMagic:cast'], ['rebuild', 'rebuild:cast']]) {
     const statusOf = (result, id) => {
@@ -1323,7 +1320,7 @@ function runOutlanderReformGrantChecks(ctx, deps) {
       `the Marionette book package still delivers ${key} to the record`);
     assertEqual(statusOf(granted, step), 'skipped',
       `but ${step} is skipped for it — a book grant is not a cast`);
-    const marked = marionetteUnit({ [key]: true });
+    const marked = marionetteUnit({ innateAbilities: {  }, markedAbilities: { [key]: true } });
     assertEqual(!!marked.abilities[key], true, `the card's own ${key} reaches the record`);
     assertEqual(statusOf(marked, step), 'applied',
       `and it gets there through ${step}`);
@@ -1332,12 +1329,12 @@ function runOutlanderReformGrantChecks(ctx, deps) {
   // The research states themselves are no longer deleted from the published map for a
   // non-Outlander owner: the ownership test is a term at each read (F244.3d). Both halves are
   // asserted, because dropping the term would be invisible in the published set alone.
-  const nonOutlander = warlordUnit({ rocketry: true }, beam);
+  const nonOutlander = warlordUnit({ markedAbilities: { rocketry: true } }, beam);
   assertEqual(nonOutlander.abilities.rocketry, true,
     'a non-Outlander unit keeps the raw research state in the published map');
   assert(!nonOutlander.abilities.blackpowder,
     'and the Blackpowder source refuses it, because the gate moved to the read');
-  assertEqual(warlordUnit({ ...OUTLANDER_WIZARD, rocketry: true }, beam).abilities.blackpowder,
+  assertEqual(warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD }, markedAbilities: { rocketry: true } }, beam).abilities.blackpowder,
     true,
     'while an Outlander wizard still reaches the Rocketry upgrade');
 
@@ -1353,38 +1350,37 @@ function runOutlanderReformGrantChecks(ctx, deps) {
 function runTemporalDriveChecks(ctx, deps) {
   const read = expression => vm.runInContext(expression, ctx);
   const { derive, warlordUnit, versions, table, scopes } = deps;
-  const drive = { temporalEngineering: true, heatPowerEngine: true, mechanical: true };
+  const drive = { innateAbilities: { mechanical: true }, markedAbilities: { temporalEngineering: true, heatPowerEngine: true } };
 
   // Read 1 - `training:temporalDrive` reads the Power Engine flag off the record, the way the
   // overland route spells it (`IF (GETENCHANTMENTFLAG(U,EncPowerEngine,1)>0)`). Without the
   // enclosing mechanical gate there is no flag and no Haste, however loudly the research is set.
-  assertEqual(warlordUnit({ ...OUTLANDER_WIZARD, ...drive }).abilities.haste, true,
+  assertEqual(warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, ...drive.innateAbilities }, markedAbilities: { ...drive.markedAbilities } }).abilities.haste, true,
     'training:temporalDrive reads the Power Engine flag off the record at its own position');
-  assert(!warlordUnit({ ...OUTLANDER_WIZARD,
-    temporalEngineering: true, heatPowerEngine: true }).abilities.haste,
+  assert(!warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD }, markedAbilities: { temporalEngineering: true, heatPowerEngine: true } }).abilities.haste,
   'and refuses the grant to a non-mechanical unit, which never gets the flag');
 
   // Read 2 - `b:bombsGrenades` reads Flying off the record rather than off a pre-sequence
   // constant. This is the interaction that made `flying` a record field: the Anti-Gravity grant
   // qualifies a zero-melee unit for Bombs & Grenades that the card never marked Flying, and the
   // write has to stand on the record by region `b` for the gate to see it. Thrown is the number.
-  const bombs = { explosive: true, sapiens: true };
+  const bombs = { innateAbilities: { sapiens: true }, markedAbilities: { explosive: true } };
   const bombsOver = { atk: 0, figs: 6, modernAttacks: {} };
   const flyingByGrant = warlordUnit(
-    { ...OUTLANDER_WIZARD, ...drive, sailing: true, ...bombs }, bombsOver);
+    { innateAbilities: { ...OUTLANDER_WIZARD, ...drive.innateAbilities, sailing: true, ...bombs.innateAbilities }, markedAbilities: { ...drive.markedAbilities, ...bombs.markedAbilities } }, bombsOver);
   assertEqual(flyingByGrant.modernAttacks.thrown.strength, 5,
     'b:bombsGrenades reads the Flying flag training:temporalDrive wrote onto the record');
-  const noFlying = warlordUnit({ ...OUTLANDER_WIZARD, ...drive, ...bombs }, bombsOver);
+  const noFlying = warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, ...drive.innateAbilities, ...bombs.innateAbilities }, markedAbilities: { ...drive.markedAbilities, ...bombs.markedAbilities } }, bombsOver);
   assert(!noFlying.modernAttacks.thrown || !noFlying.modernAttacks.thrown.strength,
     'and a zero-melee unit without it qualifies for nothing');
-  const flyingByCard = warlordUnit({ ...OUTLANDER_WIZARD, flying: true, ...bombs }, bombsOver);
+  const flyingByCard = warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, flying: true, ...bombs.innateAbilities }, markedAbilities: { ...bombs.markedAbilities } }, bombsOver);
   assertEqual(flyingByCard.modernAttacks.thrown.strength, 5,
     'while the card own Flying mark reaches the same gate through the template seed');
 
   // The card's own Haste, which became a `buffs` write when the key became a record field. Its
   // control is offered in every version, so the step is too.
   for (const version of versions) {
-    const hasted = derive(baseUnitInput({ version, atk: 1, def: 1, abilities: { haste: true } }));
+    const hasted = derive(baseUnitInput({ version, atk: 1, def: 1, markedAbilities: { haste: true } }));
     assertEqual(hasted.abilities.haste, true,
       `${version}: buffs:haste:cast carries the card's mark onto the record`);
   }
@@ -1400,8 +1396,7 @@ function runTemporalDriveChecks(ctx, deps) {
   // which is also what stops a caller bypassing the reform prerequisites with a raw mark.
   // Armorclad is in the set because `drive` carries Mechanical, and a mechanical unit without the
   // flag is refused by the `!COMBATOVERRIDE!` soldier gate the two region-`d` effects share.
-  const fullReform = warlordUnit({ ...OUTLANDER_WIZARD, ...drive, sailing: true,
-    armorcladReform: true, psychoConverter: true, pneumaReactor: true },
+  const fullReform = warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, ...drive.innateAbilities, sailing: true }, markedAbilities: { ...drive.markedAbilities, armorcladReform: true, psychoConverter: true, pneumaReactor: true } },
   { res: 5, level: 'veteran' });
   const originTable = read('ABILITY_KEY_ORIGINS');
   const retired = read('RETIRED_OUTLANDER_STATE_KEYS');
@@ -1421,7 +1416,7 @@ function runTemporalDriveChecks(ctx, deps) {
   // always had to be unforgeable and the two lists differ only in whether this build still
   // produces the name (F244.3e review, finding 1).
   for (const key of [...read('DERIVED_OUTLANDER_STATE_KEYS'), ...retired]) {
-    assert(!warlordUnit({ ...OUTLANDER_WIZARD, [key]: true }, { res: 5 }).abilities[key],
+    assert(!warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, [key]: true }, markedAbilities: {  } }, { res: 5 }).abilities[key],
       `a raw ${key} mark is stripped: the reform's names are outputs, never accepted inputs`);
   }
   // ...while the effect that gate admits still lands, off the reform record.
@@ -1434,11 +1429,11 @@ function runTemporalDriveChecks(ctx, deps) {
 // one of them proves the wiring and the others prove they share it.
 function runCombatOverrideChecks(deps) {
   const { warlordUnit } = deps;
-  const soldier = { psychoConverter: true, pneumaReactor: true, energyBeamWeapons: true };
+  const soldier = { innateAbilities: {  }, markedAbilities: { psychoConverter: true, pneumaReactor: true, energyBeamWeapons: true } };
   const over = { res: 5, level: 'veteran' };
   // A mechanical unit fails the gate - `GETENCHANTMENTFLAG(U,EncArmorClad,0)=0 %AND
   // GetStat(U,SCustomAttribute,1)=1` - and the record is where both terms come from.
-  const mechNoClad = warlordUnit({ ...OUTLANDER_WIZARD, ...soldier, mechanical: true }, over);
+  const mechNoClad = warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, ...soldier.innateAbilities, mechanical: true }, markedAbilities: { ...soldier.markedAbilities } }, over);
   assert(!mechNoClad.abilities.energyWeaponry,
     'the combat-soldier gate reads Mechanical off the record and refuses a mechanical unit');
   assert(mechNoClad.abilities.lifeSteal == null, 'and refuses Pneuma Field with it');
@@ -1451,13 +1446,13 @@ function runCombatOverrideChecks(deps) {
   // Armorclad on the record clears the same gate, which is what makes it a record read: the flag
   // comes from `training:armorclad`, several ranks earlier.
   const mechClad = warlordUnit(
-    { ...OUTLANDER_WIZARD, ...soldier, mechanical: true, armorcladReform: true }, over);
+    { innateAbilities: { ...OUTLANDER_WIZARD, ...soldier.innateAbilities, mechanical: true }, markedAbilities: { ...soldier.markedAbilities, armorcladReform: true } }, over);
   assertEqual(mechClad.abilities.energyWeaponry, true,
     'while the flag training:armorclad wrote onto the record clears it');
   assertEqual(mechClad.abilities.lifeSteal, -3, 'and Pneuma Field lands with it');
   assertClose(mechClad.toBlock, 0.36, 'and Psycho Force with them');
   // A non-mechanical regular unit passes with neither flag.
-  const regular = warlordUnit({ ...OUTLANDER_WIZARD, ...soldier }, over);
+  const regular = warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, ...soldier.innateAbilities }, markedAbilities: { ...soldier.markedAbilities } }, over);
   assertEqual(regular.abilities.energyWeaponry, true,
     'and a non-mechanical regular unit clears it with neither flag');
   assertClose(regular.toBlock, 0.36, 'on all three effects');
@@ -1465,13 +1460,13 @@ function runCombatOverrideChecks(deps) {
   // Rebuilt non-hero is refused exactly as a roster-Mechanical one is. That is the read this
   // section alone covers: the retired constant carried the same term, so no number moves, and
   // only the record path makes it answerable at the block's own rank.
-  const rebuilt = warlordUnit({ ...OUTLANDER_WIZARD, ...soldier, rebuild: true }, over);
+  const rebuilt = warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, ...soldier.innateAbilities }, markedAbilities: { ...soldier.markedAbilities, rebuild: true } }, over);
   assert(!rebuilt.abilities.energyWeaponry,
     'the permanent Mechanical write buffs:rebuild makes reaches the region-d soldier gate');
   assertClose(rebuilt.toBlock, 0.30, 'for Psycho Force as much as for the other two');
   // `d:energyWeaponry` is the key's one source: it has no control, so a raw mark publishes
   // nothing.
-  assert(!warlordUnit({ ...OUTLANDER_WIZARD, energyWeaponry: true }, over).abilities.energyWeaponry,
+  assert(!warlordUnit({ innateAbilities: { ...OUTLANDER_WIZARD, energyWeaponry: true }, markedAbilities: {  } }, over).abilities.energyWeaponry,
     'energyWeaponry has no control, so d:energyWeaponry is its only source');
 }
 
@@ -1721,7 +1716,18 @@ function runSeedExecutionChecks(ctx, deps) {
   // since absence rather than `false` is the documented publication rule.
   const derive = read('deriveUnitStats');
   const stripped = new Set(read('DERIVED_OUTLANDER_STATE_KEYS'));
+  // Enumerate each real control source before creating a probe; keys with no control are raw
+  // record statements. No merged value is used to infer an origin.
+  const grantInputs = [];
   for (const key of [...grantWrites, ...grantValueWrites]) {
+    const sources = [];
+    for (const [source, defs] of [['innateAbilities', read('ABILITY_DEFS')],
+      ['markedAbilities', read('ENCHANTMENT_DEFS')]]) {
+      if (defs.some(def => (def.calcKey || def.key) === key)) sources.push(source);
+    }
+    for (const source of sources.length ? sources : ['innateAbilities']) grantInputs.push([key, source]);
+  }
+  for (const [key, source] of grantInputs) {
     if (stripped.has(key)) continue;
     const writers = (table[key] || [])
       .flatMap(row => row.producers)
@@ -1736,11 +1742,11 @@ function runSeedExecutionChecks(ctx, deps) {
       // seed halts on it (F253.1), which is the same claim discharged one layer earlier and is
       // asserted as a halt rather than as an absent publication.
       if (noRowIn(key, version)) {
-        assertSeedRefusesKey(() => derive(baseUnitInput({ version, abilities: { [key]: true } })),
+        assertSeedRefusesKey(() => derive(baseUnitInput({ version, [source]: { [key]: true } })),
           `${version}: marking '${key}' is refused by the seed rather than published`);
         continue;
       }
-      const marked = derive(baseUnitInput({ version, abilities: { [key]: true } }));
+      const marked = derive(baseUnitInput({ version, [source]: { [key]: true } }));
       assert(!marked.abilities[key],
         `${version}: '${key}' has no writer in scope and no template row, so marking it publishes `
         + 'nothing — the record is the carrier');
@@ -2209,10 +2215,10 @@ function runSapiensLabelChecks(ctx, deps) {
   // `B.Fantastic := True` is re-made on every pass and does not touch `SMultiLabel` — so the
   // label has to survive it, which is what a projection of "Spirit Link cleared the flag" could
   // not express (F245).
-  const reform = { outlanderWizard: true, explosive: true };
+  const reform = { explosive: true };
   const grant = (unitType, innate, marked) => {
     const result = derive(baseUnitInput({ version: warlord, unitType, atk: 1, figs: 4,
-      innateAbilities: innate, markedAbilities: { ...reform, ...marked } }));
+      innateAbilities: { outlanderWizard: true, ...innate }, markedAbilities: { ...reform, ...marked } }));
     const entry = result.statExecutionTrace
       .find(step => step.phase === 'b' && step.id === 'bombsGrenades');
     return entry ? entry.status : 'absent';
@@ -2246,9 +2252,10 @@ function runImmunityRefusalMatrix(ctx, magicCurses) {
   const versions = read('ENGINE_VERSIONS');
   const warlord = 'com2_warlord_1.5.12.9';
   const sources = [
-    { name: 'stated Magic Immunity', abilities: { magicImmunity: true }, magic: true },
-    { name: 'stated Illusion Immunity', abilities: { illusionImmunity: true }, illusion: true },
-    { name: 'True Sight', abilities: { trueSight: true }, illusion: true },
+    { name: 'innate Magic Immunity', innateAbilities: { magicImmunity: true }, magic: true },
+    { name: 'cast Magic Immunity', markedAbilities: { magicImmunity: true }, magic: true },
+    { name: 'stated Illusion Immunity', innateAbilities: { illusionImmunity: true }, illusion: true },
+    { name: 'True Sight', markedAbilities: { trueSight: true }, illusion: true },
     // Sancta Basilica grants a High Men Paladin Magic Immunity. It is a pre-sequence transform, so
     // it is the case that proves a *granted* immunity refuses exactly what a stated one does —
     // the property the retired `finishedImmunities` projection used to provide by construction.
@@ -2258,8 +2265,8 @@ function runImmunityRefusalMatrix(ctx, magicCurses) {
     // `marionetteRegionBGrantDoesNotRefuseMindStormWarlord` (`presets_warlord_effects.js`) is the
     // fixture for that, and it asserts the opposite of what its predecessor did.
     { name: 'Sancta Basilica grant', warlordOnly: true, name_: 'Paladins',
-      abilities: { sanctaBasilica: true }, race: 'High Men', magic: true },
-    { name: 'no immunity', abilities: {} },
+      markedAbilities: { sanctaBasilica: true }, race: 'High Men', magic: true },
+    { name: 'no immunity', innateAbilities: {}, markedAbilities: {} },
   ];
   for (const version of versions) {
     for (const source of sources) {
@@ -2269,7 +2276,8 @@ function runImmunityRefusalMatrix(ctx, magicCurses) {
         // matrix would be asserting the version scope rather than the refusal.
         if (curse === 'nausea' && version !== warlord) continue;
         const input = baseUnitInput({ version, name: source.name_ || 'a custom unit',
-          race: source.race || '', abilities: { [curse]: true, ...source.abilities } });
+          race: source.race || '', innateAbilities: source.innateAbilities || {},
+          markedAbilities: { [curse]: true, ...source.markedAbilities } });
         const result = derive(input);
         const refused = !!source.magic
           || (!!source.illusion && illusionCurses.includes(curse));
@@ -2358,8 +2366,7 @@ function runPermanentAttackRecordChecks(ctx) {
   // the input-derived gate is false; a `ctx.base` carrying strength in a magical Ranged field
   // opens it, and an emptied `ctx.base` closes it over a card that states strength.
   const cannonInput = over => baseUnitInput({ version: WARLORD, atk: 4, def: 3, res: 5, hp: 6,
-    abilities: { outlanderWizard: true, heatPowerEngine: true, energyBeamWeapons: true,
-      mechanical: true },
+    innateAbilities: { outlanderWizard: true, mechanical: true }, markedAbilities: { heatPowerEngine: true, energyBeamWeapons: true },
     identity: { version: WARLORD, unitType: 'normal', baseRace: '', baseFantastic: false,
       isHero: false },
     ...over });
@@ -2419,18 +2426,20 @@ function runPermanentAttackRecordChecks(ctx) {
   // `slotGateAdmits`; regressing only that forwarding, with `slotGateAdmits` untouched, passed
   // every assertion above (F244.3i review, finding 5). So `e:holyBonus`'s CoM2 arm is run whole
   // and the Ranged channel's published strength is the assertion.
-  const auraCard = over => baseUnitInput({ version: WARLORD, atk: 4, def: 3, res: 5, hp: 6,
-    abilities: { holyBonus: 3 },
-    identity: { version: WARLORD, unitType: 'normal', baseRace: '', baseFantastic: false,
-      isHero: false },
-    modernAttacks: { ranged: { strength: 4, type: 'missile' } }, ...over });
-  const auraPlain = derive(auraCard({}));
-  assertEqual(auraPlain.modernAttacks.ranged.strength, 7,
-    'Holy Bonus reaches the Ranged channel of a record whose permanent Ranged field carries 4');
-  const auraEmptiedBase = deriveWithPatchedBase(auraCard({}), { rtbRanged: 0 });
-  assertEqual(auraEmptiedBase.modernAttacks.ranged.strength, 4,
-    'and is refused once the permanent record the copy published carries no Ranged strength, '
-    + 'though the card still states 4');
+  for (const auraSource of ['innateAbilities', 'markedAbilities']) {
+    const auraCard = over => baseUnitInput({ version: WARLORD, atk: 4, def: 3, res: 5, hp: 6,
+      [auraSource]: { holyBonus: 3 },
+      identity: { version: WARLORD, unitType: 'normal', baseRace: '', baseFantastic: false,
+        isHero: false },
+      modernAttacks: { ranged: { strength: 4, type: 'missile' } }, ...over });
+    const auraPlain = derive(auraCard({}));
+    assertEqual(auraPlain.modernAttacks.ranged.strength, 7,
+      `[${auraSource}] ` + ('Holy Bonus reaches the Ranged channel of a record whose permanent Ranged field carries 4'));
+    const auraEmptiedBase = deriveWithPatchedBase(auraCard({}), { rtbRanged: 0 });
+    assertEqual(auraEmptiedBase.modernAttacks.ranged.strength, 4,
+      `[${auraSource}] ` + ('and is refused once the permanent record the copy published carries no Ranged strength, '
+      + 'though the card still states 4'));
+  }
   // The shared slot's arm carries the type test the channel's does not: one DOS-shaped value
   // stands for ranged, Thrown, Breath and a gaze alike, so it is the Ranged field only while the
   // permanent type is a conventional ranged one.
@@ -2448,7 +2457,7 @@ function runPermanentAttackRecordChecks(ctx) {
   // the gate refuses; a `ctx.base` that types the shared value as nothing admits it, and the
   // reverse card is refused by a `ctx.base` that types it Missile.
   const ccMissile = captureRun(baseUnitInput({ version: 'mom_1.31', atk: 4, def: 3, res: 5, hp: 6,
-    rtb: 2, rtbType: 'missile', abilities: { ccFireBreath: true } }));
+    rtb: 2, rtbType: 'missile', markedAbilities: { ccFireBreath: true } }));
   const ccGate = composedPredicate(ccMissile.steps, 'chaosChannels:fireBreath', 'c');
   assertEqual(ccGate({}, { base: { rtb: 2, rangedType: 'missile', thrownType: 'none' } }), false,
     'c:chaosChannels:fireBreath is refused while the permanent record types the shared value Missile');
@@ -2462,7 +2471,7 @@ function runPermanentAttackRecordChecks(ctx) {
   // as nothing must admit the conversion — Fire Breath at MoM 1.31's strength 2, over the top of
   // the byte.
   const ccCard = baseUnitInput({ version: 'mom_1.31', atk: 4, def: 3, res: 5, hp: 6,
-    rtb: 2, rtbType: 'missile', abilities: { ccFireBreath: true } });
+    rtb: 2, rtbType: 'missile', markedAbilities: { ccFireBreath: true } });
   const ccRefused = derive(ccCard);
   assertEqual(ccRefused.thrownType, 'none',
     'Chaos Channels is refused on a Missile record and grants no Fire Breath');
@@ -2483,8 +2492,7 @@ function runPermanentAttackRecordChecks(ctx) {
   // it to the card-derived test passed everything above, because section 14 reached that
   // predicate only through `d:energyCannonThreshold` (F244.3i review, finding 3).
   const riderCard = channels => baseUnitInput({ version: WARLORD, atk: 4, def: 3, res: 5, hp: 6,
-    abilities: { outlanderWizard: true, heatPowerEngine: true, energyBeamWeapons: true,
-      mechanical: true },
+    innateAbilities: { outlanderWizard: true, mechanical: true }, markedAbilities: { heatPowerEngine: true, energyBeamWeapons: true },
     identity: { version: WARLORD, unitType: 'normal', baseRace: '', baseFantastic: false,
       isHero: false },
     modernAttacks: channels });
@@ -2510,9 +2518,9 @@ function runPermanentAttackRecordChecks(ctx) {
   // over a `!baseFantastic` reform field fails the first of these.
   const drillCard = over => baseUnitInput({ version: WARLORD, atk: 4, def: 1, res: 6, hp: 8,
     rtb: 0, rtbType: 'none', modernAttacks: {},
-    abilities: { outlanderWizard: true, militaryDrilling: true }, ...over });
+    innateAbilities: { outlanderWizard: true }, markedAbilities: { militaryDrilling: true }, ...over });
   const drilledApotheosis = derive(drillCard({
-    abilities: { outlanderWizard: true, militaryDrilling: true, destiny: true } }));
+    innateAbilities: { outlanderWizard: true }, markedAbilities: { militaryDrilling: true, destiny: true } }));
   assertEqual(drilledApotheosis.abilities.discipline, 'overland',
     'training:militaryDrilling reads Fantastic at its own rank, where Destiny has not written it');
   const drilledBaseFantastic = derive(drillCard({ unitType: 'fantastic_nature' }));
@@ -2544,7 +2552,7 @@ function runPermanentAttackRecordChecks(ctx) {
     ...(version.startsWith('com2') ? { modernAttacks: {} } : { rtb: 0, rtbType: 'none' }),
     ...over });
 
-  const eyeOn = derive(eyeInput(WARLORD, { abilities: { doomGaze: 4 }, enemyEyeOfHeaven: true }));
+  const eyeOn = derive(eyeInput(WARLORD, { innateAbilities: { doomGaze: 4 }, enemyEyeOfHeaven: true }));
   assertEqual(eyeOn.baseDoomGaze, 4,
     'the permanent record a:baseCopy publishes carries the unzeroed Doom Gaze — region `a` copies '
     + 'the permanent record, which Eye of Heaven never touches');
@@ -2580,19 +2588,19 @@ function runPermanentAttackRecordChecks(ctx) {
   // narrowed to `gazeDisabled && !!shapedGazeAbilities.doomGaze` passed it (F258.2 review,
   // finding 4).
   const eyeTouchOn = derive(eyeInput(WARLORD,
-    { abilities: { stoningGaze: -2, deathGaze: -3 }, enemyEyeOfHeaven: true }));
+    { innateAbilities: { stoningGaze: -2, deathGaze: -3 }, enemyEyeOfHeaven: true }));
   assertEqual(eyeTouchOn.abilities.stoningGaze, null,
     'SETSTAT(U,SStoningGaze,0,100) removes a stoning gaze the card states');
   assertEqual(eyeTouchOn.abilities.deathGaze, null,
     'and SETSTAT(U,SDeathGaze,0,100) a death gaze the card states, with no Doom Gaze in reach');
   const eyeTouchOff = derive(eyeInput(WARLORD,
-    { abilities: { stoningGaze: -2, deathGaze: -3 } }));
+    { innateAbilities: { stoningGaze: -2, deathGaze: -3 } }));
   assertEqual(eyeTouchOff.abilities.stoningGaze, -2,
     'while without the enchantment the stoning gaze keeps its modifier');
   assertEqual(eyeTouchOff.abilities.deathGaze, -3, 'and the death gaze keeps its own');
   assertEqual(eyeOn.abilities.doomGaze, 0, 'and the published Doom Gaze agrees with the record');
   // The other arm, so none of the above passes on a build that zeroes unconditionally.
-  const eyeOff = derive(eyeInput(WARLORD, { abilities: { doomGaze: 4 } }));
+  const eyeOff = derive(eyeInput(WARLORD, { innateAbilities: { doomGaze: 4 } }));
   assertEqual(eyeOff.effectiveDoomGaze, 4,
     'without the enchantment the Warlord Doom Gaze survives to the finished record');
   assertEqual(eyeOff.modifierTraces.doomGaze.entries.filter(e => !e.boundary).length, 0,
@@ -2604,14 +2612,14 @@ function runPermanentAttackRecordChecks(ctx) {
   // suite without these (F258.2 review, findings 2 and 3). The value is reachable: `doomGaze` has
   // no `min`, so its control takes the default floor of -50 (`ui_abilities.js`).
   for (const version of ['com2_1.05.11', WARLORD]) {
-    const negative = derive(eyeInput(version, { abilities: { doomGaze: -4 } }));
+    const negative = derive(eyeInput(version, { innateAbilities: { doomGaze: -4 } }));
     assertEqual(negative.effectiveDoomGaze, -4,
       `${version}: region e floors no Doom Gaze field, so a negative one survives the tail`);
     assertEqual(negative.modifierTraces.doomGaze.entries.filter(e => !e.boundary).length, 0,
       'and the chain shows the tail making no write on it');
   }
   const negativeUnderEye = derive(eyeInput(WARLORD,
-    { abilities: { doomGaze: -4 }, enemyEyeOfHeaven: true }));
+    { innateAbilities: { doomGaze: -4 }, enemyEyeOfHeaven: true }));
   assertEqual(negativeUnderEye.effectiveDoomGaze, 0,
     'while the region-d write assigns 0 rather than flooring, so a negative Doom Gaze rises to 0');
   const negativeWrites = negativeUnderEye.modifierTraces.doomGaze.entries
@@ -2623,7 +2631,7 @@ function runPermanentAttackRecordChecks(ctx) {
   // The region-`e` floor no longer touches the modern Doom Gaze field, so a grant made after the
   // seed must still reach the finished record: `c:blazingEyes` writes 3 onto a unit whose card
   // states none, and the floor used to be what re-published it.
-  const blazingCard = { abilities: { blazingEyes: true }, unitType: 'fantastic_chaos' };
+  const blazingCard = { markedAbilities: { blazingEyes: true }, unitType: 'fantastic_chaos' };
   const blazing = derive(eyeInput(WARLORD, blazingCard));
   assertEqual(blazing.effectiveDoomGaze, 3,
     'c:blazingEyes still reaches the finished record with the modern arm of the region-e floor gone');
@@ -2653,10 +2661,12 @@ function runPermanentAttackRecordChecks(ctx) {
   for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11']) {
     const slots = version.startsWith('com2') ? [{ modernAttacks: {} }] : dosSlots;
     for (const shared of slots) {
-      for (const abilities of [{ doomGaze: 4 }, { doomGaze: 4, ccFireBreath: true },
-        { stoningGaze: -2, deathGaze: -2 }, { ccFireBreath: true }]) {
-        assertEqual(eyeDigest(version, { ...shared, abilities, enemyEyeOfHeaven: true }),
-          eyeDigest(version, { ...shared, abilities }),
+      for (const sourceInput of [{ innateAbilities: { doomGaze: 4 } },
+        { innateAbilities: { doomGaze: 4 }, markedAbilities: { ccFireBreath: true } },
+        { innateAbilities: { stoningGaze: -2, deathGaze: -2 } },
+        { markedAbilities: { ccFireBreath: true } }]) {
+        assertEqual(eyeDigest(version, { ...shared, ...sourceInput, enemyEyeOfHeaven: true }),
+          eyeDigest(version, { ...shared, ...sourceInput }),
           `enemyEyeOfHeaven moves nothing in ${version}, which has no Eye of Heaven to model`);
       }
     }
@@ -2667,7 +2677,7 @@ function runPermanentAttackRecordChecks(ctx) {
   // byte became Fire Breath. The permanent record carries the gaze now, so it is refused.
   for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
     const ccDoom = derive(eyeInput(version, { rtb: 0, rtbType: 'none',
-      abilities: { doomGaze: 4, ccFireBreath: true }, enemyEyeOfHeaven: true }));
+      innateAbilities: { doomGaze: 4 }, markedAbilities: { ccFireBreath: true }, enemyEyeOfHeaven: true }));
     assertEqual(ccDoom.thrownType, 'none',
       `${version}: an Eye-of-Heaven'd Doom Gaze unit takes no Chaos Channels breath, the `
       + 'permanent record the copy published carrying the gaze');

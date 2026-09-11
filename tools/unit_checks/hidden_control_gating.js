@@ -3,7 +3,7 @@
 // derivation half, which no suite covered before (F130).
 //
 // The first half is the derive tier of `tools/hidden_control_leak_sweep.js` — the same hidden
-// (calcKey, version) pairs over the same shapes, comparing the derived stat record minus the
+// (source, calcKey, version) pairs over the same shapes, comparing the derived stat record minus the
 // `abilities` echo. The sweep's combat tier stays out of the suite at ~50s; this tier is ~8s.
 // The second half adds the one **combat** shape neither sweep builds (F168), for a cost too
 // small to measure: it is one exchange per pair rather than the sweep's dozens.
@@ -82,7 +82,7 @@ function baseInput(ctx, version, over) {
     ? { ...typed, modernAttacks: modernRecordForSharedSlot(ctx, typed.rtbType, typed.rtb) }
     : typed;
   return {
-    prefix: 'a', version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
+    prefix: 'a', version, innateAbilities: {}, markedAbilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
     rtbType: 'none', unitType: 'normal', figs: 6, atk: 6, rtb: 0, def: 4, res: 6, hp: 4, dmg: 0,
     toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0, cityWalls: 'none', nodeAura: 'none',
     trueLight: false, darkness: false, enemyEternalNight: false, rangedCheck: false,
@@ -107,7 +107,6 @@ function runHiddenControlGatingChecks(ctx) {
   const read = expression => vm.runInContext(expression, ctx);
   const versions = read('ENGINE_VERSIONS');
   const deriveUnitStats = read('deriveUnitStats');
-  const abilityUiDefs = read('abilityUiDefs');
   const abilityVersionGated = read('abilityVersionGated');
   // A key this version's origin table cannot hear — no row at all (F253.1), or rows every one of
   // which is admitted by a different input key (F253.2) — is refused outright by
@@ -118,26 +117,30 @@ function runHiddenControlGatingChecks(ctx) {
   // it a row, fails here.
   const refusedBySeed = (calcKey, version) => seedRefusesKeyIn(ctx, calcKey, version);
 
-  const byCalcKey = new Map();
-  for (const def of abilityUiDefs()) {
-    if (!def || !def.key) continue;
-    const calcKey = def.calcKey || def.key;
-    if (!byCalcKey.has(calcKey)) byCalcKey.set(calcKey, []);
-    byCalcKey.get(calcKey).push(def);
+  const bySourceKey = new Map();
+  for (const [source, defs] of [['innateAbilities', read('ABILITY_DEFS')],
+    ['markedAbilities', read('ENCHANTMENT_DEFS')]]) {
+    for (const def of defs) {
+      if (!def || !def.key) continue;
+      const calcKey = def.calcKey || def.key;
+      const pairKey = `${source}|${calcKey}`;
+      if (!bySourceKey.has(pairKey)) bySourceKey.set(pairKey, { source, calcKey, defs: [] });
+      bySourceKey.get(pairKey).defs.push(def);
+    }
   }
 
   // The unmodified derivation depends only on (version, identity, shape), not on which key is
   // being probed, so it is computed once per combination rather than once per pair — the same
-  // 21 baselines were being recomputed for all 485 pairs.
+  // baselines would otherwise be recomputed for every source-qualified pair.
   const baselines = new Map();
   const found = [];
   const refused = [];
   const expectedRefusals = [];
   let pairs = 0;
   for (const version of versions) {
-    for (const [calcKey, defs] of byCalcKey) {
-      // A calcKey counts as hidden only when every control naming it is gated: several controls
-      // map to one key, and a key one visible control owns is a real input.
+    for (const [pairKey, { source, calcKey, defs }] of bySourceKey) {
+      // A source-qualified key is hidden when every control in that source is gated.
+      // A visible control from the other source does not make this input available.
       if (!defs.every(def => abilityVersionGated(def, version))) continue;
       const values = [];
       for (const def of defs) {
@@ -147,7 +150,7 @@ function runHiddenControlGatingChecks(ctx) {
       }
       if (!values.length) continue;
       pairs += 1;
-      if (refusedBySeed(calcKey, version)) expectedRefusals.push(`${version}|${calcKey}`);
+      if (refusedBySeed(calcKey, version)) expectedRefusals.push(`${version}|${pairKey}`);
 
       let leaks = false;
       let seedRefused = false;
@@ -158,7 +161,7 @@ function runHiddenControlGatingChecks(ctx) {
           const derive = abilities => {
             try {
               const { abilities: echo, ...rest } = deriveUnitStats(
-                Object.assign(baseInput(ctx, version, over), { abilities }));
+                Object.assign(baseInput(ctx, version, over), { [source]: abilities }));
               return JSON.stringify(digest(rest));
             } catch (err) {
               return /no row in that version at all|admitted by a different input key/.test(err.message)
@@ -175,14 +178,14 @@ function runHiddenControlGatingChecks(ctx) {
           }
         }
       }
-      if (leaks) found.push(`${version}|${calcKey}`);
-      if (seedRefused) refused.push(`${version}|${calcKey}`);
+      if (leaks) found.push(`${version}|${pairKey}`);
+      if (seedRefused) refused.push(`${version}|${pairKey}`);
     }
   }
 
-  assert(pairs > 0, 'The hidden-control gating sweep found hidden (calcKey, version) pairs to probe');
+  assert(pairs > 0, 'The hidden-control gating sweep found hidden (source, calcKey, version) pairs to probe');
   assertSameKeyList(refused.sort(), expectedRefusals.sort(),
-    'The hidden (calcKey, version) pairs the record seed refuses outright are exactly those the '
+    'The hidden (source, calcKey, version) pairs the record seed refuses outright are exactly those the '
     + 'origin table gives no row in that version (F253.1). A pair on one list and not the other '
     + 'means the halt and the table disagree about what this version can carry');
   assertSameKeyList(found.sort(), [...KNOWN_DERIVED_LEAKS].sort(),
@@ -219,12 +222,12 @@ function runHiddenControlGatingChecks(ctx) {
     const attackerRiders = { dispelEvil: true,
       ...(refusedBySeed('exorcise', version) ? {} : { exorcise: -4 }) };
     const a = deriveUnitStats(unit('a', {
-      unitType: 'normal', res: 6, abilities: attackerRiders,
+      unitType: 'normal', res: 6, innateAbilities: attackerRiders,
     }));
-    const exchange = defenderAbilities => {
+    const exchange = (defenderAbilities, source = 'innateAbilities') => {
       try {
         const b = deriveUnitStats(unit('b', {
-          unitType: 'fantastic_death', abilities: defenderAbilities,
+          unitType: 'fantastic_death', [source]: defenderAbilities,
         }));
         const result = resolveCombat(a, b,
           { isRanged: false, version, wallOfFire: false, chaosConjunction: false });
@@ -236,14 +239,14 @@ function runHiddenControlGatingChecks(ctx) {
       }
     };
     const baseline = exchange({});
-    for (const [calcKey, defs] of byCalcKey) {
+    for (const [pairKey, { source, calcKey, defs }] of bySourceKey) {
       if (!defs.every(def => abilityVersionGated(def, version))) continue;
       for (const def of defs) {
         for (const value of valuesFor(def)) {
-          const probed = exchange({ [calcKey]: value });
+          const probed = exchange({ [calcKey]: value }, source);
           // A refused key moved nothing, by construction: the derivation would not run at all.
           if (probed !== SEED_REFUSAL && probed !== baseline) {
-            touchFound.push(`${version}|${calcKey}`);
+            touchFound.push(`${version}|${pairKey}`);
           }
         }
       }

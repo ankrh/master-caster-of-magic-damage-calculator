@@ -310,11 +310,11 @@ function runModernWeaponImmunityMappingChecks(ctx) {
       baseFantastic: false, specialUnit: 'chosen' }),
   });
   const constructCatapult = derive({
-    abilities: { combatSummoned: true },
+    markedAbilities: { combatSummoned: true },
     identity: identity(com2, { templateId: 37, baseRace: 'Special', baseFantastic: false }),
   });
   const callToArmsPaladins = derive({
-    abilities: { combatSummoned: true },
+    markedAbilities: { combatSummoned: true },
     identity: identity(com2, { templateId: 113, baseRace: 'High Men', baseFantastic: false }),
   });
   assert(chosen.identityTrace.some(t => t.id === 'chosen'),
@@ -331,37 +331,37 @@ function runModernWeaponImmunityMappingChecks(ctx) {
     ['adamantium weapon material', derive({ weapon: 'adamantium' }), true],
     ['hero standing grant', derive({ unitType: 'hero' }), true],
     ['natural Fantastic standing grant', derive({ unitType: 'fantastic_nature' }), true],
-    ['Combat Summoned conversion', derive({ abilities: { combatSummoned: true } }), true],
+    ['Combat Summoned conversion', derive({ markedAbilities: { combatSummoned: true } }), true],
     ['Chosen conversion', chosen, true],
     ['Construct Catapult conversion', constructCatapult, true],
     ['Call to Arms Paladins conversion', callToArmsPaladins, true],
-    ['Chaos Channels Fire Breath conversion', derive({ abilities: { ccFireBreath: true } }), true],
-    ['Chaos Channels Flight conversion', derive({ abilities: { ccFlight: true } }), true],
-    ['Chaos Channels Defense conversion', derive({ abilities: { ccDefense: true } }), true],
-    ['Destiny conversion', derive({ abilities: { destiny: true } }), true],
-    ['Warlord Apotheosis conversion', deriveWarlord({ abilities: { destiny: true } }), true],
-    ['Blood Lust conversion', derive({ abilities: { bloodLust: true } }), true],
-    ['Undead conversion', derive({ abilities: { undead: true } }), true],
-    ['Animated conversion', derive({ abilities: { animated: true } }), true],
-    ['Mystic Surge conversion', derive({ abilities: { mysticSurge: true } }), true],
-    ['Raise Dead conversion', derive({ abilities: { raiseDead: true } }), true],
-    ['Flame Blade', derive({ abilities: { flameBlade: true } }), true],
-    ['Holy Weapon', derive({ abilities: { holyWeapon: true } }), true],
-    ['Wraith Form', derive({ abilities: { wraithForm: true } }), true],
-    ['Ruler of Underworld', derive({ abilities: { rulerOfUnderworld: true } }), true],
-    ['Blazing March', derive({ abilities: { blazingMarch: true } }), true],
-    ['Warlord Flame Blade', deriveWarlord({ abilities: { flameBlade: true } }), true],
+    ['Chaos Channels Fire Breath conversion', derive({ markedAbilities: { ccFireBreath: true } }), true],
+    ['Chaos Channels Flight conversion', derive({ markedAbilities: { ccFlight: true } }), true],
+    ['Chaos Channels Defense conversion', derive({ markedAbilities: { ccDefense: true } }), true],
+    ['Destiny conversion', derive({ markedAbilities: { destiny: true } }), true],
+    ['Warlord Apotheosis conversion', deriveWarlord({ markedAbilities: { destiny: true } }), true],
+    ['Blood Lust conversion', derive({ markedAbilities: { bloodLust: true } }), true],
+    ['Undead conversion', derive({ markedAbilities: { undead: true } }), true],
+    ['Animated conversion', derive({ markedAbilities: { animated: true } }), true],
+    ['Mystic Surge conversion', derive({ markedAbilities: { mysticSurge: true } }), true],
+    ['Raise Dead conversion', derive({ markedAbilities: { raiseDead: true } }), true],
+    ['Flame Blade', derive({ markedAbilities: { flameBlade: true } }), true],
+    ['Holy Weapon', derive({ markedAbilities: { holyWeapon: true } }), true],
+    ['Wraith Form', derive({ markedAbilities: { wraithForm: true } }), true],
+    ['Ruler of Underworld', derive({ markedAbilities: { rulerOfUnderworld: true } }), true],
+    ['Blazing March', derive({ markedAbilities: { blazingMarch: true } }), true],
+    ['Warlord Flame Blade', deriveWarlord({ markedAbilities: { flameBlade: true } }), true],
     // Stated through the control the card offers, not the granted key: since F244.3c the Fiery
     // Blade flag reaches the record only through `training:lavaSmelter:flameBlade`, so a raw
     // `fieryBlade` mark writes nothing and this arm would pass on an empty case.
     ['Warlord Fiery Blade',
-      deriveWarlord({ abilities: { lavaSmelterFieryBlade: true } }), true],
-    ['Warlord Fiery Fury', deriveWarlord({ abilities: { fieryFury: true } }), true],
-    ['Warlord Wall of Fire garrison', deriveWarlord({ abilities: { wallOfFireBoost: true } }), true],
-    ['Warlord Artificer Mechanical', deriveWarlord({ abilities: { artificer: true, mechanical: true } }), true],
-    ['Warlord Sanctify Clergy', deriveWarlord({ abilities: { sanctify: true, clergy: true } }), true],
-    ['Warlord Sanctify non-clergy', deriveWarlord({ abilities: { sanctify: true } }), false],
-    ['Warlord Blood Lust without conversion', deriveWarlord({ abilities: { bloodLust: true } }), false],
+      deriveWarlord({ markedAbilities: { lavaSmelterFieryBlade: true } }), true],
+    ['Warlord Fiery Fury', deriveWarlord({ markedAbilities: { fieryFury: true } }), true],
+    ['Warlord Wall of Fire garrison', deriveWarlord({ markedAbilities: { wallOfFireBoost: true } }), true],
+    ['Warlord Artificer Mechanical', deriveWarlord({ innateAbilities: { mechanical: true }, markedAbilities: { artificer: true } }), true],
+    ['Warlord Sanctify Clergy', deriveWarlord({ innateAbilities: { clergy: true }, markedAbilities: { sanctify: true } }), true],
+    ['Warlord Sanctify non-clergy', deriveWarlord({ markedAbilities: { sanctify: true } }), false],
+    ['Warlord Blood Lust without conversion', deriveWarlord({ markedAbilities: { bloodLust: true } }), false],
   ];
   for (const [label, unit, expected] of encMagicCases) {
     assertEqual(unit.encMagic, expected, `${label} maps to calculated EncMagic`);
@@ -369,7 +369,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
 
   const spiritLinked = deriveWarlord({
     unitType: 'fantastic_chaos',
-    abilities: { spiritLink: true },
+    markedAbilities: { spiritLink: true },
   });
   assertEqual(spiritLinked.abilities.liveFantastic, false,
     'Spirit Link clears calculated Fantastic in phase d');
@@ -378,14 +378,14 @@ function runModernWeaponImmunityMappingChecks(ctx) {
   assertEqual(spiritLinked.encMagicIndependentOfMaterial, true,
     'Spirit Link EncMagic survives enemy weapon-material suppression');
 
-  const spiritLinkedNormalInput = deriveWarlord({ abilities: { spiritLink: true } });
+  const spiritLinkedNormalInput = deriveWarlord({ markedAbilities: { spiritLink: true } });
   assertEqual(spiritLinkedNormalInput.abilities.liveFantastic, false,
     'Spirit Link leaves a calculator-reachable normal input non-fantastic after phase d');
   assertEqual(spiritLinkedNormalInput.encMagic, true,
     'Spirit Link phase b makes even that input Fantastic when the standing EncMagic rule runs');
 
   const wiTarget = derive({
-    prefix: 'b', def: 0, abilities: { weaponImmunity: true },
+    prefix: 'b', def: 0, innateAbilities: { weaponImmunity: true },
   });
   assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, derive({}), com2, 0, 'melee'), 8,
     'Ordinary modern physical melee receives the CoM2 Weapon Immunity bonus');
@@ -395,7 +395,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
   const blazingThrown = derive({
     atk: 0, rtb: 2, rtbType: 'thrown',
     modernAttacks: { thrown: { strength: 2, type: 'thrown' } },
-    abilities: { blazingMarch: true },
+    markedAbilities: { blazingMarch: true },
   });
   assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, blazingThrown, com2, 0, 'thrown'), 0,
     'CoM2 Blazing March EncMagic reaches Thrown even though the strength bonus does not');
@@ -417,9 +417,9 @@ function runModernWeaponImmunityMappingChecks(ctx) {
       modernAttacks: { fireBreath: { strength: 2, type: 'fire' } } }), 'thrown'],
     ['Lightning Breath', derive({ rtb: 2, rtbType: 'lightning',
       modernAttacks: { lightningBreath: { strength: 2, type: 'lightning' } } }), 'thrown'],
-    ['Doom Gaze', derive({ abilities: { doomGaze: 2 } }), 'gaze'],
-    ['Death Gaze', derive({ abilities: { deathGaze: 0 } }), 'gaze'],
-    ['Stoning Gaze', derive({ abilities: { stoningGaze: 0 } }), 'gaze'],
+    ['Doom Gaze', derive({ innateAbilities: { doomGaze: 2 } }), 'gaze'],
+    ['Death Gaze', derive({ innateAbilities: { deathGaze: 0 } }), 'gaze'],
+    ['Stoning Gaze', derive({ innateAbilities: { stoningGaze: 0 } }), 'gaze'],
   ];
   for (const [label, attacker, attackType] of attackLocalMagicCases) {
     assertEqual(ctx.computeCasterDefenseForAttack(wiTarget, attacker, com2, 0, attackType), 0,
@@ -463,7 +463,7 @@ function runModernWeaponImmunityMappingChecks(ctx) {
       version, figs: record.figures, atk: record.melee, def: record.defense,
       res: record.resist, hp: record.hp, rtb: record.ranged, rtbType: 'magic_lightning',
       modernAttacks: { ranged: { strength: record.ranged, type: 'magic_lightning' } },
-      abilities: { armorPiercing: true },
+      innateAbilities: { armorPiercing: true },
     }));
     assertEqual(ctx.computeCasterDefenseForAttack(lightningResistTarget, attacker, version, 0, 'ranged'), 8,
       `${record.name} id-30 ranged sets islightning, so Lightning Resist clears Armor Piercing`);
@@ -473,14 +473,14 @@ function runModernWeaponImmunityMappingChecks(ctx) {
       version, figs: record.figures, atk: record.melee, def: record.defense,
       res: record.resist, hp: record.hp, rtb: record.ranged, rtbType: 'magic',
       modernAttacks: { ranged: { strength: record.ranged, type: 'magic' } },
-      abilities: { armorPiercing: true },
+      innateAbilities: { armorPiercing: true },
     }));
     assertEqual(ctx.computeCasterDefenseForAttack(lightningResistTarget, magicAttacker, version, 0, 'ranged'), 4,
       `${record.name} retyped to a plain magical projectile leaves islightning false, so Armor Piercing still halves`);
   }
 
   const rulerTarget = derive({
-    prefix: 'b', def: 0, abilities: { rulerOfUnderworld: true },
+    prefix: 'b', def: 0, markedAbilities: { rulerOfUnderworld: true },
   });
   for (const material of ['magic', 'mithril', 'adamantium']) {
     assertEqual(ctx.computeCasterDefenseForAttack(
@@ -489,14 +489,14 @@ function runModernWeaponImmunityMappingChecks(ctx) {
   }
   assertEqual(ctx.computeCasterDefenseForAttack(
     rulerTarget,
-    deriveWarlord({ abilities: { artificer: true, mechanical: true } }),
+    deriveWarlord({ innateAbilities: { mechanical: true }, markedAbilities: { artificer: true } }),
     warlord, 0, 'melee'), 10,
     'Enemy Ruler of Underworld suppresses Artificer\'s derived material grant');
   assertEqual(ctx.computeCasterDefenseForAttack(
-    rulerTarget, derive({ abilities: { flameBlade: true } }), com2, 0, 'melee'), 0,
+    rulerTarget, derive({ markedAbilities: { flameBlade: true } }), com2, 0, 'melee'), 0,
     'A later Flame Blade EncMagic write survives enemy Ruler of Underworld suppression');
   assertEqual(ctx.computeCasterDefenseForAttack(
-    rulerTarget, deriveWarlord({ abilities: { wallOfFireBoost: true } }), warlord, 0, 'melee'), 0,
+    rulerTarget, deriveWarlord({ markedAbilities: { wallOfFireBoost: true } }), warlord, 0, 'melee'), 0,
     'The earlier Warlord Wall of Fire EncMagic write also survives material suppression');
 }
 

@@ -1,4 +1,4 @@
-// M15: the engine rules that decide what reaches `deriveUnitStats`' `abilities` object.
+// M15: the engine rules that decide what reaches `deriveUnitStats`' source inputs.
 //
 // Two of them used to live in `ui_*.js` and so could only be exercised through Playwright:
 // how several controls naming one `calcKey` combine (`mergeAbilityCalcValue`), and the DOS
@@ -54,8 +54,8 @@ function runAbilityInputChecks(ctx) {
   const receivedDef = enchantmentDefs.find(def => (def.calcKey || def.key) === 'holyBonus');
   assert(!!ownDef && !!receivedDef && ownDef !== receivedDef,
     'Holy Bonus is provided by an ability control and received through a separate enchantment control');
-  const derive = abilities => ctx.deriveUnitStats(baseUnitInput({
-    version: 'mom_1.31', atk: 5, def: 4, res: 6, abilities,
+  const derive = innateAbilities => ctx.deriveUnitStats(baseUnitInput({
+    version: 'mom_1.31', atk: 5, def: 4, res: 6, innateAbilities,
   }));
   // Provided against received, stated as the two halves the boundary now carries (F252.1): the
   // unit was *built* with its own Holy Bonus and the card *marks* the one it receives. The
@@ -123,8 +123,8 @@ function runAbilityInputChecks(ctx) {
   // rule is a citation (`PROVENANCE[abilityCalcKeyMerge]`), not an assertion.
   const misleadDef = defByKey('mislead');
   const liabilityDef = defByKey('liability');
-  const deriveWarlord = abilities => ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_warlord_1.5.12.9', atk: 5, def: 4, res: 6, abilities,
+  const deriveWarlord = markedAbilities => ctx.deriveUnitStats(baseUnitInput({
+    version: 'com2_warlord_1.5.12.9', atk: 5, def: 4, res: 6, markedAbilities,
   }));
   const neitherGrant = deriveWarlord({ mislead: mergedValue(ctx, [misleadDef, liabilityDef], [false, false]) });
   const ownGrant = deriveWarlord({ mislead: mergedValue(ctx, [misleadDef, liabilityDef], [true, false]) });

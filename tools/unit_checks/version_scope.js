@@ -43,12 +43,14 @@ const SCOPE_IDS_WITHOUT_PROVENANCE = [];
 // swept without editing this file. Mutually exclusive effects (Iron Skin supersedes Stone
 // Skin, Flame Blade supersedes Metal Fires) are why each key is also probed on its own.
 function abilityScopeProbeValues(ctx) {
-  const defs = [...evalInContext(ctx, 'ABILITY_DEFS'), ...evalInContext(ctx, 'ENCHANTMENT_DEFS')];
+  const defs = [['innateAbilities', evalInContext(ctx, 'ABILITY_DEFS')],
+    ['markedAbilities', evalInContext(ctx, 'ENCHANTMENT_DEFS')]];
   const values = new Map();
-  for (const def of defs) {
+  for (const [source, sourceDefs] of defs) for (const def of sourceDefs) {
     const key = def.calcKey || def.key;
-    if (!values.has(key)) values.set(key, new Set());
-    const bucket = values.get(key);
+    const sourceKey = `${source}|${key}`;
+    if (!values.has(sourceKey)) values.set(sourceKey, { key, source, values: new Set() });
+    const bucket = values.get(sourceKey).values;
     if (def.type === 'bool') bucket.add(true);
     else if (def.type === 'num' || def.type === 'numcheck') bucket.add(3);
     else if (def.type === 'select') {
@@ -58,7 +60,7 @@ function abilityScopeProbeValues(ctx) {
       }
     }
   }
-  return [...values].map(([key, set]) => [key, [...set]]);
+  return [...values.values()].map(({ key, source, values }) => [key, [...values], source]);
 }
 
 // Every `phase:id` the calculator's sources actually construct a step for. The sweep proves a
@@ -393,19 +395,23 @@ function runCanonicalVersionScopeChecks(ctx) {
   // immunity refuses, so that is checked here — through `deriveUnitStats`, which is the only path
   // a page can take. Eye of Heaven is Warlord-only, which is the one arm that must differ by
   // version.
-  const curseGated = (abilities, version) =>
-    ctx.deriveUnitStats(baseUnitInput({ version, abilities })).abilities;
+  const curseGated = (sourceInput, version) =>
+    ctx.deriveUnitStats(baseUnitInput({ version, ...sourceInput })).abilities;
   for (const version of engineVersions) {
-    assertEqual(!!curseGated({ magicImmunity: true, vertigo: true, weakness: true }, version).vertigo,
-      false, `Magic Immunity refuses Vertigo in ${version}`);
-    assertEqual(!!curseGated({ magicImmunity: true, blackPrayer: true }, version).blackPrayer,
-      true, `Magic Immunity leaves the bypass list alone in ${version}`);
-    assertEqual(!!curseGated({ trueSight: true, mindStorm: true, weakness: true }, version).mindStorm,
+    for (const source of ['innateAbilities', 'markedAbilities']) {
+    assertEqual(!!curseGated({ [source]: { magicImmunity: true }, markedAbilities: {
+      ...(source === 'markedAbilities' ? { magicImmunity: true } : {}), vertigo: true, weakness: true } }, version).vertigo,
+      false, `[${source}] ` + (`Magic Immunity refuses Vertigo in ${version}`));
+    assertEqual(!!curseGated({ [source]: { magicImmunity: true }, markedAbilities: {
+      ...(source === 'markedAbilities' ? { magicImmunity: true } : {}), blackPrayer: true } }, version).blackPrayer,
+      true, `[${source}] ` + (`Magic Immunity leaves the bypass list alone in ${version} (${source})`));
+    }
+    assertEqual(!!curseGated({ markedAbilities: { trueSight: true, mindStorm: true, weakness: true } }, version).mindStorm,
       false, `Illusion Immunity refuses Mind Storm in ${version}`);
-    assertEqual(!!curseGated({ trueSight: true, mindStorm: true, weakness: true }, version).weakness,
+    assertEqual(!!curseGated({ markedAbilities: { trueSight: true, mindStorm: true, weakness: true } }, version).weakness,
       true, `Illusion Immunity reaches only its own two curses in ${version}`);
     const warlord = version === 'com2_warlord_1.5.12.9';
-    assertEqual(!!curseGated({ eyeOfHeaven: true, vertigo: true }, version).vertigo,
+    assertEqual(!!curseGated({ markedAbilities: { eyeOfHeaven: true, vertigo: true } }, version).vertigo,
       !warlord, `Eye of Heaven confers Illusion Immunity only in Warlord (${version})`);
   }
 
@@ -418,9 +424,17 @@ function runCanonicalVersionScopeChecks(ctx) {
   // in the versions whose table does carry it, and the sweep's own step-coverage assertion below
   // is what says nothing was lost by dropping it here.
   const statableIn = (key, version) => !seedRefusesKeyIn(ctx, key, version);
-  const abilityMapFor = version => Object.fromEntries(probes
-    .filter(([key]) => statableIn(key, version))
-    .map(([key, values]) => [key, values[0]]));
+  const abilityHalvesFor = version => {
+    const halves = { innateAbilities: {}, markedAbilities: {} };
+    for (const [key, values, source] of probes) {
+      if (!statableIn(key, version)) continue;
+      // These two numeric sources must remain distinguishable in the aggregate witness.
+      const providedMagnitude = source === 'innateAbilities'
+        && (key === 'holyBonus' || key === 'resistanceToAll');
+      halves[source][key] = providedMagnitude ? 2 : values[0];
+    }
+    return halves;
+  };
   const unitTypes = ['normal', 'hero', 'fantastic_life', 'fantastic_death', 'fantastic_chaos',
     'fantastic_nature', 'fantastic_sorcery', 'fantastic_arcane'];
   // Every token the DOS-shaped shared slot can carry, read from `SLOT_ATTACK_TYPES` (`data.js`)
@@ -503,21 +517,21 @@ function runCanonicalVersionScopeChecks(ctx) {
         for (const rtbType of rtbTypes) {
           // `orihalcon` is the armor control's only non-normal value; passing a weapon quality
           // such as `magic` here would name the armor axis without exercising it.
-          record(sweepInput({ ...globalState, version, abilities: abilityMapFor(version),
+          record(sweepInput({ ...globalState, version, ...abilityHalvesFor(version),
             unitType, rtbType, level: 'elite', weapon: 'magic', armor: 'orihalcon', dmg: 2 }));
         }
       }
     }
-    for (const [key, values] of probes) {
+    for (const [key, values, source] of probes) {
       if (!statableIn(key, version)) continue;
       for (const value of values) {
         // `missile` is the conventional ranged projectile both engine families spell, paired
         // with the `thrown` probe below. This pair read `ranged`, an F117 straggler the token
         // list's own correction missed: it names nothing in any vocabulary, so all 1085 of these
         // probes swept a typeless slot. `buildSlotContext`'s halt (F181) is what surfaced it.
-        record(sweepInput({ version, abilities: { [key]: value },
+        record(sweepInput({ version, [source]: { [key]: value },
           unitType: 'normal', rtbType: 'missile', level: 'elite' }));
-        record(sweepInput({ version, abilities: { [key]: value },
+        record(sweepInput({ version, [source]: { [key]: value },
           unitType: 'fantastic_chaos', rtbType: 'thrown', level: 'elite' }));
       }
     }

@@ -50,7 +50,7 @@ function makeUnit(ctx, version, prefix, overrides = {}) {
   return ctx.deriveUnitStats({
     prefix,
     version,
-    abilities: {},
+    innateAbilities: {}, markedAbilities: {},
     level: 'normal',
     weapon: 'normal',
     armor: 'normal',
@@ -90,21 +90,21 @@ function runLiteralConsumerChecks(ctx) {
     res: 5,
     hp: 10,
     toBlkMod: 70,
-    abilities: { deathImmunity: true, ...extraAbilities },
+    innateAbilities: { deathImmunity: true }, markedAbilities: extraAbilities || {},
   });
   const resolve = (attacker, defender, isRanged = false) => ctx.resolveCombat(attacker, defender, {
     version, isRanged, wallOfFire: false, distance: 1,
   });
   const exorcise = { exorcise: 47 };
-  const melee = resolve(makeUnit(ctx, version, 'a', { atk: 1, abilities: exorcise }), target());
+  const melee = resolve(makeUnit(ctx, version, 'a', { atk: 1, innateAbilities: exorcise }), target());
   const ranged = resolve(makeUnit(ctx, version, 'a', {
-    rtb: 1, rtbType: 'missile', abilities: exorcise,
+    rtb: 1, rtbType: 'missile', innateAbilities: exorcise,
   }), target(), true);
   const gaze = resolve(makeUnit(ctx, version, 'a', {
-    rtb: 1, rtbType: 'gaze_death', abilities: exorcise,
+    rtb: 1, rtbType: 'gaze_death', innateAbilities: exorcise,
   }), target());
   const twoFigure = resolve(makeUnit(ctx, version, 'a', {
-    figs: 2, atk: 1, abilities: exorcise,
+    figs: 2, atk: 1, innateAbilities: exorcise,
   }), makeUnit(ctx, version, 'b', {
     figs: 2,
     unitType: 'fantastic_nature',
@@ -113,14 +113,14 @@ function runLiteralConsumerChecks(ctx) {
     res: 5,
     hp: 10,
     toBlkMod: 70,
-    abilities: { deathImmunity: true },
+    innateAbilities: { deathImmunity: true },
   }));
 
   const versionData = evalInContext(ctx, 'VERSION_DATA');
   const angel = Object.values(versionData[version] || {}).find(unit => unit.name === 'Angel');
   const parsedAngelAbilities = ctx.parseAbilitiesFromUnit(angel);
   const angelStrike = resolve(makeUnit(ctx, version, 'a', {
-    atk: 1, abilities: { exorcise: parsedAngelAbilities.exorcise },
+    atk: 1, innateAbilities: { exorcise: parsedAngelAbilities.exorcise },
   }), target());
   const abilityDefs = evalInContext(ctx, 'ABILITY_DEFS');
   const tooltip = abilityDefs.find(def => def.key === 'exorcise').tooltip;

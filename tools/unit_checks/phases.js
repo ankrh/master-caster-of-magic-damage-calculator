@@ -19,7 +19,7 @@ function runPhaseChecks(ctx) {
     const attacker = ctx.deriveUnitStats(baseUnitInput({
       version, atk: 0, def: 0, hp: 10, unitType: 'normal',
       hitRanged: 70, hitThrown: 70, hitBreath: 70,
-      abilities: { bloodLust: true, doomGaze: 4 },
+      innateAbilities: { doomGaze: 4 }, markedAbilities: { bloodLust: true },
       modernAttacks: {
         thrown: { strength: 3, type: 'thrown' },
         fireBreath: { strength: 3, type: 'fire' },
@@ -44,7 +44,7 @@ function runPhaseChecks(ctx) {
   }));
   const fantasticAttacker = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', atk: 1, def: 0, hp: 10, hitChance: 70,
-    abilities: { bloodLust: true },
+    markedAbilities: { bloodLust: true },
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
   }));
   const fantasticResult = ctx.resolveCombat(fantasticAttacker, fantasticTarget,
@@ -54,7 +54,7 @@ function runPhaseChecks(ctx) {
 
   const com1Attacker = ctx.deriveUnitStats(baseUnitInput({
     version: 'com_6.08', atk: 1, rtb: 3, rtbType: 'thrown', def: 0, hp: 10,
-    toHitMod: 70, toHitRtbMod: 70, abilities: { bloodLust: true },
+    toHitMod: 70, toHitRtbMod: 70, markedAbilities: { bloodLust: true },
   }));
   const com1Target = ctx.deriveUnitStats(baseUnitInput({
     version: 'com_6.08', atk: 0, def: 0, hp: 20, unitType: 'normal',
@@ -68,7 +68,7 @@ function runPhaseChecks(ctx) {
     const rangedAttacker = ctx.deriveUnitStats(baseUnitInput({
       version: 'com2_1.05.11', atk: 0, def: 0, hp: 10,
       hitRanged: 70, hitThrown: 70, hitBreath: 70,
-      abilities: { bloodLust: true },
+      markedAbilities: { bloodLust: true },
       modernAttacks: { ranged: { strength: 3, type } },
     }));
     const rangedResult = ctx.resolveCombat(rangedAttacker, bloodLustTarget,
@@ -143,7 +143,7 @@ function runPhaseChecks(ctx) {
                             rtbType = 'none', isRanged = false, record = 'ranged' }) => {
     const dosTouchTarget = ctx.deriveUnitStats(baseUnitInput({
       version, prefix: 'b', figs: 1, atk: 0, def: 1, res: 0,
-      hp: 10, toBlkMod: 70, abilities: { deathImmunity: true },
+      hp: 10, toBlkMod: 70, innateAbilities: { deathImmunity: true },
     }));
     const attacker = ctx.deriveUnitStats(baseUnitInput({
       version, atk, rtb, rtbType, def: 0, hp: 10,
@@ -226,11 +226,11 @@ function runPhaseChecks(ctx) {
   const zeroMeleeGazeTouch = version => {
     const attacker = ctx.deriveUnitStats(baseUnitInput({
       version, atk: 0, rtb: 1, rtbType: 'gaze_death', def: 0, hp: 10,
-      toHitRtbMod: 70, abilities: { stoningTouch: -10 },
+      toHitRtbMod: 70, innateAbilities: { stoningTouch: -10 },
     }));
     const target = ctx.deriveUnitStats(baseUnitInput({
       version, prefix: 'b', figs: 2, atk: 0, def: 1, res: 0, hp: 10,
-      toBlkMod: 70, abilities: { deathImmunity: true },
+      toBlkMod: 70, innateAbilities: { deathImmunity: true },
     }));
     return ctx.resolveCombat(attacker, target,
       { version, isRanged: false, wallOfFire: false, distance: 1 });
@@ -361,7 +361,7 @@ function runRiderHistogramChecks(ctx) {
   // leaves `phases` null, and the rider histograms hang off the rows.
   const modernAttacker = {
     atk: 4, hitChance: 70, hp: 10, figs: 2,
-    abilities: { stoningTouch: -3, poison: 2, haste: true },
+    innateAbilities: { stoningTouch: -3, poison: 2 }, markedAbilities: { haste: true },
   };
   const modernTarget = { figs: 3, def: 0, toBlkMod: 0, res: 5, hp: 6 };
 
@@ -399,7 +399,7 @@ function runRiderHistogramChecks(ctx) {
     // R5: presence is the placement gate, not the value. A rider the attacker does not carry
     // emits no key; a placed one whose roll can never succeed emits with all its mass at 0.
     const plain = resolve(version,
-      { atk: 4, hitChance: 70, hp: 10, abilities: { haste: true } },
+      { atk: 4, hitChance: 70, hp: 10, markedAbilities: { haste: true } },
       { figs: 3, def: 0, toBlkMod: 0, res: 5, hp: 6 });
     for (const phase of plain.phases || []) {
       for (const rider of phase.riders || []) {
@@ -408,7 +408,7 @@ function runRiderHistogramChecks(ctx) {
       }
     }
     const resistant = resolve(version,
-      { atk: 4, hitChance: 70, hp: 10, abilities: { stoningTouch: 0, haste: true } },
+      { atk: 4, hitChance: 70, hp: 10, innateAbilities: { stoningTouch: 0 }, markedAbilities: { haste: true } },
       { figs: 3, def: 0, toBlkMod: 0, res: 10, hp: 6 });
     const stoningRows = (resistant.phases || []).flatMap(
       phase => (phase.riders || []).filter(rider => rider.key === 'stoningTouch'));
@@ -422,22 +422,23 @@ function runRiderHistogramChecks(ctx) {
     // The other half of that pair: an immunity that skips the block outright is a false gate,
     // so it emits nothing at all rather than an empty panel. `ApplyAttack` tests
     // `not magicimmunity` before every one of these rolls.
-    const immune = resolve(version,
-      { atk: 4,
-        hitChance: 70,
-        hp: 10,
-        abilities: {
-          stoningTouch: 0, deathTouch: 0, exorcise: 0, destruction: 0, lifeSteal: 0,
-          poison: 2, haste: true,
-        } },
-      { figs: 3, def: 0, toBlkMod: 0, res: 5, hp: 6, unitType: 'fantastic_death',
-        abilities: { magicImmunity: true, poisonImmunity: true } });
-    for (const phase of immune.phases || []) {
-      for (const rider of phase.riders || []) {
-        assertEqual(rider.key, 'melee',
-          `F222 ${version} an immunity that skips the block emits no key in ${phase.label}`);
+    for (const immunitySource of ['innateAbilities', 'markedAbilities']) {
+      const immune = resolve(version,
+        { atk: 4,
+          hitChance: 70,
+          hp: 10,
+          innateAbilities: { stoningTouch: 0, deathTouch: 0, exorcise: 0, destruction: 0, lifeSteal: 0, poison: 2 }, markedAbilities: { haste: true } },
+        { figs: 3, def: 0, toBlkMod: 0, res: 5, hp: 6, unitType: 'fantastic_death',
+          innateAbilities: { poisonImmunity: true,
+            ...(immunitySource === 'innateAbilities' ? { magicImmunity: true } : {}) },
+          markedAbilities: immunitySource === 'markedAbilities' ? { magicImmunity: true } : {} });
+      for (const phase of immune.phases || []) {
+        for (const rider of phase.riders || []) {
+          assertEqual(rider.key, 'melee',
+            `[${immunitySource}] ` + (`F222 ${version} an immunity that skips the block emits no key in ${phase.label}`));
+        }
       }
-    }
+  }
   }
 
   // F222.3: the same emission from the three DOS resolvers. The rider set differs — no
@@ -522,7 +523,7 @@ function runRiderHistogramChecks(ctx) {
     for (const version of versions) {
       const composition = compositionOf(resolve(version,
         { figs: 2, atk: 2, hp: 10, ...(version.startsWith('com2')
-          ? { hitChance: 100 } : { toHitMod: 7, ...dosChannel }), abilities },
+          ? { hitChance: 100 } : { toHitMod: 7, ...dosChannel }), innateAbilities: abilities },
         { figs: 4, def: 0, toBlkMod: 0, res: 5, hp: 10 }), 'b');
       assert(composition[bucket] > 0,
         `F222 ${version} ${name} reaches the post-combat composition as ${bucket} damage `
@@ -536,9 +537,9 @@ function runRiderHistogramChecks(ctx) {
   for (const version of ['mom_1.31', 'com_6.08']) {
     const composition = compositionOf(resolve(version,
       { figs: 1, atk: 0, hp: 10, toHitMod: 7, rtb: 1, rtbType: 'gaze_death', toHitRtbMod: 7,
-        abilities: { deathGaze: 0, stoningTouch: -10 } },
+        innateAbilities: { deathGaze: 0, stoningTouch: -10 } },
       { figs: 2, def: 0, toBlkMod: 0, res: 0, hp: 10,
-        abilities: { deathImmunity: true } }), 'b');
+        innateAbilities: { deathImmunity: true } }), 'b');
     assert(composition.irrec > 0,
       `F222 ${version} a gaze-carried Stoning Touch reaches the composition as irrecoverable `
       + `damage (got irrec ${composition.irrec}, regular ${composition.regular})`);
@@ -548,7 +549,7 @@ function runRiderHistogramChecks(ctx) {
   for (const version of ['mom_1.31', 'com2_1.05.11']) {
     const composition = compositionOf(resolve(version,
       { figs: 2, atk: 2, hp: 10, ...(version.startsWith('com2')
-        ? { hitChance: 100 } : { toHitMod: 7 }), abilities: { deathTouch: -3 } },
+        ? { hitChance: 100 } : { toHitMod: 7 }), innateAbilities: { deathTouch: -3 } },
       { figs: 4, def: 0, toBlkMod: 0, res: 5, hp: 10 }), 'b');
     assertEqual(composition.irrec, 0,
       `F222 ${version} Death Touch writes no irrecoverable damage`);
@@ -576,7 +577,7 @@ function runRiderHistogramChecks(ctx) {
   ]) {
     phaseDistSums(
       resolve(version,
-        { figs: 2, atk: 3, toHitMod: 3, hp: 10, abilities: { firstStrike: true, haste: true } },
+        { figs: 2, atk: 3, toHitMod: 3, hp: 10, innateAbilities: { firstStrike: true }, markedAbilities: { haste: true } },
         target),
       `F222 ${version} hp${target.hp} FS+Haste`);
   }
@@ -588,7 +589,7 @@ function runRiderHistogramChecks(ctx) {
     // Each family states To Hit on its own fields (`SPEC.md`, *Attack channels on the card*).
     const toHit = version.startsWith('com2') ? { hitChance: 100 } : { toHitMod: 7 };
     const small = resolve(version,
-      { figs: 1, atk: 2, hp: 10, ...toHit, abilities: { poison: 2, haste: true } },
+      { figs: 1, atk: 2, hp: 10, ...toHit, innateAbilities: { poison: 2 }, markedAbilities: { haste: true } },
       { figs: 4, def: 0, toBlkMod: 0, res: 4, hp: 20 });
     let partitioned = 0;
     for (const phase of small.phases || []) {
@@ -639,7 +640,7 @@ function runRiderHistogramChecks(ctx) {
       ...(seedRefusesKeyIn(ctx, 'exorcise', version) ? {} : { exorcise: -1 }) };
     if (seedRefusesKeyIn(ctx, 'exorcise', version)) {
       assertSeedRefusesKey(() => resolve(version, { atk: 4, toHitMod: 3, hp: 10, figs: 2,
-        abilities: { ...dosRiders, ...lifeRiders, exorcise: -1 } }, dosTarget),
+        innateAbilities: { ...dosRiders, ...lifeRiders, exorcise: -1 } }, dosTarget),
       `F222 ${version} refuses an 'exorcise' input outright rather than dropping it`);
     }
     const riders = { ...dosRiders, ...lifeRiders };
@@ -647,7 +648,7 @@ function runRiderHistogramChecks(ctx) {
     // ranged flag record — `touchRecordForPhase` sends every non-melee DOS call to it.
     const dos = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
-        rtb: 3, rtbType: 'thrown', toHitRtbMod: 3, abilities: riders },
+        rtb: 3, rtbType: 'thrown', toHitRtbMod: 3, innateAbilities: riders },
       dosTarget);
     const dosRows = (dos.phases || []).filter(phase => (phase.riders || []).length);
     assert(dosRows.length >= 2,
@@ -677,7 +678,7 @@ function runRiderHistogramChecks(ctx) {
     const dosGaze = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
         rtb: 1, rtbType: 'gaze_stoning', toHitRtbMod: 3,
-        abilities: { stoningGaze: 0, ...riders } },
+        innateAbilities: { stoningGaze: 0, ...riders } },
       dosTarget);
     const gazeRow = (dosGaze.phases || []).find(phase => /Gaze/.test(phase.label));
     assert(!!gazeRow, `F222 ${version} deals an attacker gaze row`);
@@ -696,7 +697,7 @@ function runRiderHistogramChecks(ctx) {
     // PMF and sum-to-total checks, against `totalDmgToB`, which is that volley's own total.
     const dosVolley = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
-        rtb: 3, rtbType: 'missile', toHitRtbMod: 3, abilities: riders },
+        rtb: 3, rtbType: 'missile', toHitRtbMod: 3, innateAbilities: riders },
       dosTarget, { isRanged: true });
     const volleyKeys = (dosVolley.riders || []).map(rider => rider.key);
     for (const key of [lifeRider, 'stoningTouch', 'deathTouch', 'poison', 'melee']) {
@@ -715,7 +716,7 @@ function runRiderHistogramChecks(ctx) {
     // Resistance of 10 leaves `stoningFailProb` no margin, and the block is still entered.
     const dosResistant = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
-        rtb: 3, rtbType: 'thrown', toHitRtbMod: 3, abilities: { stoningTouch: 0 } },
+        rtb: 3, rtbType: 'thrown', toHitRtbMod: 3, innateAbilities: { stoningTouch: 0 } },
       { ...dosTarget, res: 10 });
     const dosStoningRows = (dosResistant.phases || []).flatMap(
       phase => (phase.riders || []).filter(rider => rider.key === 'stoningTouch'));
@@ -732,19 +733,23 @@ function runRiderHistogramChecks(ctx) {
     // `!(Attribs_1 & USA_IMMUNITY_MAGIC)` guard that opens the rider group — so none of them
     // emits. Poison sits outside that gate, at `0x9A2D8` behind its own Poison-Immunity test,
     // and still does.
+    for (const immunitySource of ['innateAbilities', 'markedAbilities']) {
     const dosImmune = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
         rtb: 3, rtbType: 'thrown', toHitRtbMod: 3,
-        abilities: { ...riders, lifeSteal: -3 } },
-      { ...dosTarget, abilities: { magicImmunity: true } });
+        innateAbilities: { ...riders, lifeSteal: -3 } },
+      { ...dosTarget, innateAbilities: {}, markedAbilities: {},
+        [immunitySource]: { magicImmunity: true } });
     const immuneKeys = new Set((dosImmune.phases || [])
       .flatMap(phase => (phase.riders || []).map(rider => rider.key)));
     for (const key of [lifeRider, 'stoningTouch', 'deathTouch', 'lifeSteal', 'lifeStealHeal']) {
       assert(!immuneKeys.has(key),
-        `F222 ${version} the DOS Magic-Immunity gate leaves ${key} with no histogram`);
+        `[${immunitySource}] ` + (`F222 ${version} the DOS Magic-Immunity gate leaves ${key} with no histogram`));
     }
     assert(immuneKeys.has('poison'),
-      `F222 ${version} Poison is outside the DOS Magic-Immunity gate and still emits`);
+      `[${immunitySource}] ` + (`F222 ${version} Poison is outside the DOS Magic-Immunity gate and still emits`));
+
+    }
 
     // Life Steal is the one DOS rider with a source-side histogram (R2), and it runs the DOS
     // healing record rather than the modern one (`calcDosLifeStealHealOutcomes`). One attacking
@@ -753,7 +758,7 @@ function runRiderHistogramChecks(ctx) {
     // `applyFsBlockNoHaste` — the 24-HP top-figure test, here satisfied so the strike is dealt.
     const dosDrain = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 1,
-        abilities: { lifeSteal: -3, firstStrike: true } },
+        innateAbilities: { lifeSteal: -3, firstStrike: true } },
       { figs: 2, def: 0, toBlkMod: 0, res: 5, hp: 6 });
     const drainRow = (dosDrain.phases || []).find(
       phase => (phase.riders || []).some(rider => rider.key === 'lifeSteal'));
@@ -774,7 +779,7 @@ function runRiderHistogramChecks(ctx) {
     // build reaches. Its rider tally is a separate code path from the dealt-strike arm above.
     const dosBigTarget = resolve(version,
       { atk: 4, toHitMod: 3, hp: 10, figs: 2,
-        abilities: { ...riders, firstStrike: true } },
+        innateAbilities: { ...riders, firstStrike: true } },
       { ...dosTarget, figs: 1, hp: 30 });
     const bigRows = (dosBigTarget.phases || []).filter(phase => (phase.riders || []).length);
     assert(bigRows.length > 0,
@@ -790,6 +795,7 @@ function runRiderHistogramChecks(ctx) {
           dist, remHP, `F222 ${version} ${phase.label} ${side}`);
       }
     }
+
   }
 
   // F222.4: every base-roll slot has a name for the side it rolled on.
@@ -814,18 +820,18 @@ function runRiderHistogramChecks(ctx) {
       a: { atk: 4, hp: 10, rtb: 3, rtbType: 'fire' },
       aModern: { atk: 4, hp: 10, modernAttacks: { fireBreath: { strength: 3, type: 'fire' } } } },
     { name: 'attacker gaze', match: /Gaze/, sides: { def: 'Stoning Gaze' },
-      a: { atk: 4, hp: 10, rtb: 1, rtbType: 'gaze_stoning', abilities: { stoningGaze: -3 } } },
+      a: { atk: 4, hp: 10, rtb: 1, rtbType: 'gaze_stoning', innateAbilities: { stoningGaze: -3 } } },
     { name: 'defender gaze', match: /Gaze/, sides: { atk: 'Stoning Gaze' },
       a: { atk: 4, hp: 10 },
-      b: { rtb: 1, rtbType: 'gaze_stoning', abilities: { stoningGaze: -3 } } },
+      b: { rtb: 1, rtbType: 'gaze_stoning', innateAbilities: { stoningGaze: -3 } } },
     { name: 'First Strike', match: /^First Strike/, sides: { def: 'First Strike' },
-      a: { atk: 4, hp: 10, abilities: { firstStrike: true } } },
+      a: { atk: 4, hp: 10, innateAbilities: { firstStrike: true } } },
     { name: 'Hasted 2nd Strike', match: /^Hasted 2nd Strike/,
       sides: { def: 'Hasted 2nd Strike', atk: 'Counter-attack' },
-      a: { atk: 4, hp: 10, abilities: { firstStrike: true, haste: true } } },
+      a: { atk: 4, hp: 10, innateAbilities: { firstStrike: true }, markedAbilities: { haste: true } } },
     { name: 'Hasted Melee', match: /^Hasted Melee/,
       sides: { def: 'Hasted Melee', atk: 'Counter-attack' },
-      a: { atk: 4, hp: 10, abilities: { haste: true } } },
+      a: { atk: 4, hp: 10, markedAbilities: { haste: true } } },
     { name: 'Wall of Fire', match: /^Wall of Fire/, sides: {},
       a: { atk: 4, hp: 10 }, opts: { wallOfFire: true } },
   ];
@@ -955,17 +961,14 @@ function runRiderChainChecks(ctx) {
   // rider: the claim is about the chains, and the histograms themselves are covered above.
   const attacker = {
     atk: 4, hitChance: 70, hp: 4, figs: 1,
-    abilities: {
-      stoningTouch: -3, deathTouch: -2, lifeSteal: -1, destruction: -1, exorcise: -2,
-      poison: 1,
-    },
+    innateAbilities: { stoningTouch: -3, deathTouch: -2, lifeSteal: -1, destruction: -1, exorcise: -2, poison: 1 },
   };
   const target = {
     figs: 1, def: 4, toBlkMod: 0, res: 8, hp: 4, unitType: 'fantastic_chaos',
     // Resist Elements through the `elemArmor` select, which is the control that offers it here:
     // the raw `resistElements` key is Warlord's Lava Smelter grant alone since F244.3c, so a raw
     // mark writes nothing outside Warlord and this target would carry no resistance bonus.
-    abilities: { bless: true, elemArmor: 'resistElements', resistMagic: true },
+    markedAbilities: { bless: true, elemArmor: 'resistElements', resistMagic: true },
   };
 
   for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
@@ -1069,14 +1072,14 @@ function runRiderChainChecks(ctx) {
     // seeded record field in any build — and is the Life rider the MoM routine does place.
     const dosAttacker = {
       atk: 4, toHitMod: 1, hp: 4, figs: 1,
-      abilities: {
+      innateAbilities: {
         stoningTouch: -3, deathTouch: -2, poison: 1, dispelEvil: true,
         ...(seedRefusesKeyIn(ctx, 'exorcise', version) ? {} : { exorcise: -1 }),
       },
     };
     const dosTarget = {
       figs: 1, def: 5, toBlkMod: 0, res: 8, hp: 4, unitType: 'fantastic_chaos',
-      abilities: { bless: true, elemArmor: 'resistElements' },
+      markedAbilities: { bless: true, elemArmor: 'resistElements' },
     };
     const result = resolve(version, dosAttacker, dosTarget, { riderChains: true });
     const defender = ctx.deriveUnitStats(
@@ -1119,10 +1122,10 @@ function runRiderChainChecks(ctx) {
   // base-roll slot must not carry the other roll's chain.
   const gazer = {
     atk: 4, hitChance: 70, hp: 4, figs: 1,
-    abilities: { stoningGaze: -2, deathGaze: -1 },
+    innateAbilities: { stoningGaze: -2, deathGaze: -1 },
   };
   const gazed = { figs: 1, def: 4, toBlkMod: 0, res: 8, hp: 4,
-    abilities: { bless: true, elemArmor: 'resistElements' } };
+    markedAbilities: { bless: true, elemArmor: 'resistElements' } };
   const gazeResult = resolve('com2_1.05.11', gazer, gazed, { riderChains: true });
   const gazeRows = (gazeResult.phases || []).filter(phase => /Gaze/.test(phase.label));
   assert(gazeRows.length >= 2, 'F222.5 the modern gazer emits a row per kill gaze');
@@ -1143,7 +1146,7 @@ function runRiderChainChecks(ctx) {
   for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
     const dosGaze = resolve(version,
       { rtbType: 'gaze_multiple', rtb: 1, toHitRtbMod: 3, hp: 10, figs: 1,
-        abilities: { stoningGaze: -3, deathGaze: -3 } },
+        innateAbilities: { stoningGaze: -3, deathGaze: -3 } },
       { figs: 4, def: 0, toBlkMod: 0, res: 5, hp: 10 }, { riderChains: true });
     const row = (dosGaze.phases || []).find(phase => /Gaze/.test(phase.label));
     assert(!!row, `F225.2 ${version} deals a DOS combined gaze row`);
@@ -1164,9 +1167,9 @@ function runRiderChainChecks(ctx) {
     // rather than a row of zeroes claiming a roll the engine never made (0x99D8F).
     const immune = resolve(version,
       { rtbType: 'gaze_multiple', rtb: 1, toHitRtbMod: 3, hp: 10, figs: 1,
-        abilities: { stoningGaze: -3, deathGaze: -3 } },
+        innateAbilities: { stoningGaze: -3, deathGaze: -3 } },
       { figs: 4, def: 0, toBlkMod: 0, res: 5, hp: 10,
-        abilities: { stoningImmunity: true } }, { riderChains: true });
+        innateAbilities: { stoningImmunity: true } }, { riderChains: true });
     const immuneRow = (immune.phases || []).find(phase => /Gaze/.test(phase.label));
     assert(!(immuneRow.riders || []).some(rider => rider.key === 'stoningGaze'),
       `F225.2 ${version} Stoning Immunity skips the loop and draws no histogram`);
@@ -1175,8 +1178,8 @@ function runRiderChainChecks(ctx) {
   // A rider whose roll is made and cannot succeed draws at zero, and shows the chain that says
   // why: the figure the roll had to beat is in it.
   const hopeless = resolve('com2_1.05.11',
-    { atk: 4, hitChance: 70, hp: 4, figs: 1, abilities: { stoningTouch: 0 } },
-    { figs: 1, def: 0, toBlkMod: 0, res: 10, hp: 4, abilities: { elemArmor: 'resistElements' } },
+    { atk: 4, hitChance: 70, hp: 4, figs: 1, innateAbilities: { stoningTouch: 0 } },
+    { figs: 1, def: 0, toBlkMod: 0, res: 10, hp: 4, markedAbilities: { elemArmor: 'resistElements' } },
     { riderChains: true });
   const zeroRows = allRiders(hopeless).filter(({ rider }) => rider.key === 'stoningTouch');
   assert(zeroRows.length > 0, 'F222.5 a rider that cannot land still emits a row');
@@ -1192,7 +1195,7 @@ function runRiderChainChecks(ctx) {
   // gaze row's base-roll slot always draws, so an immunity that makes the engine skip the kill
   // roll must take the chain with it rather than leave a figure nothing was rolled against.
   const skipped = resolve('com2_1.05.11', gazer,
-    { ...gazed, abilities: { ...gazed.abilities, stoningImmunity: true } },
+    { ...gazed, innateAbilities: { ...gazed.innateAbilities, stoningImmunity: true } },
     { riderChains: true });
   const skippedRows = (skipped.phases || []).filter(phase => /Stoning Gaze/.test(phase.label));
   assert(skippedRows.length > 0, 'F222.5 the skipped gaze still draws its row');
@@ -1224,32 +1227,37 @@ function runRiderChainChecks(ctx) {
       `F222.5 ${phase.label} does carry the Defense its conventional component rolled against`);
   }
 
-  // Immolation is a spell cast, and the modern engine reads no Defense on either of the two
-  // arms it can take before reaching one.
-  const immolator = { atk: 4, hitChance: 70, hp: 4, figs: 1,
-    abilities: { immolation: true, stoningTouch: -3 } };
-  const immolationDefense = (targetAbilities) => {
-    const result = resolve('com2_1.05.11', immolator,
-      { figs: 1, def: 4, toBlkMod: 0, res: 8, hp: 4, abilities: targetAbilities },
-      { riderChains: true });
-    return allRiders(result).filter(({ rider }) => rider.key === 'immolation')
-      .map(({ rider }) => (rider.chains || []).length);
-  };
-  const rolled = immolationDefense({});
-  assert(rolled.length > 0 && rolled.every(count => count === 1),
-    'F222.5 an Immolation that rolls against Defense carries that chain');
-  for (const [name, abilities] of [['Magic Immunity', { magicImmunity: true }],
-    ['Black Sleep', { blackSleep: true }]]) {
-    const counts = immolationDefense(abilities);
-    assert(counts.length > 0, `F222.5 Immolation still draws under ${name}`);
-    assert(counts.every(count => count === 0),
-      `F222.5 and claims no Defense chain under ${name}`);
+  // The Immolation consumer reads no Defense on either early-return arm. Its enabling
+  // flag is tested independently as an innate property and a marked effect.
+  for (const immolationSource of ['innateAbilities', 'markedAbilities']) {
+    const immolator = { atk: 4, hitChance: 70, hp: 4, figs: 1,
+      innateAbilities: { stoningTouch: -3,
+        ...(immolationSource === 'innateAbilities' ? { immolation: true } : {}) },
+      markedAbilities: immolationSource === 'markedAbilities' ? { immolation: true } : {} };
+    const immolationDefense = (sourceInput) => {
+      const result = resolve('com2_1.05.11', immolator,
+        { figs: 1, def: 4, toBlkMod: 0, res: 8, hp: 4, ...sourceInput },
+        { riderChains: true });
+      return allRiders(result).filter(({ rider }) => rider.key === 'immolation')
+        .map(({ rider }) => (rider.chains || []).length);
+    };
+    const rolled = immolationDefense({});
+    assert(rolled.length > 0 && rolled.every(count => count === 1),
+      `[${immolationSource}] ` + ('F222.5 an Immolation that rolls against Defense carries that chain'));
+    for (const [name, sourceInput] of [
+      ['innate Magic Immunity', { innateAbilities: { magicImmunity: true } }],
+      ['cast Magic Immunity', { markedAbilities: { magicImmunity: true } }],
+      ['Black Sleep', { markedAbilities: { blackSleep: true } }]]) {
+      const counts = immolationDefense(sourceInput);
+      assert(counts.length > 0, `[${immolationSource}] ` + (`F222.5 Immolation still draws under ${name}`));
+      assert(counts.every(count => count === 0),
+        `[${immolationSource}] ` + (`F222.5 and claims no Defense chain under ${name}`));
+    }
   }
-
   // The DOS defense chain: continuous, and carrying the City Walls bonus its own routine adds
   // after the sequence rather than losing it or double-counting it.
   const walled = resolve('mom_cp_1.60.00',
-    { atk: 6, toHitMod: 1, hp: 4, figs: 1, abilities: { stoningTouch: -3 } },
+    { atk: 6, toHitMod: 1, hp: 4, figs: 1, innateAbilities: { stoningTouch: -3 } },
     { figs: 1, def: 5, toBlkMod: 0, res: 8, hp: 4, cityWalls: '3' },
     { riderChains: true });
   const walledBase = allRiders(walled).map(({ rider }) => rider)
@@ -1347,9 +1355,9 @@ function runModernRidersF25Checks(ctx) {
     for (const [name, gaze] of F25_GAZE_CASES) {
       const opts = { version, isRanged: false, wallOfFire: false, distance: 1 };
       const baseline = ctx.resolveCombat(
-        f25Unit(ctx, version, 'a', { abilities: gaze }), target, opts);
+        f25Unit(ctx, version, 'a', { innateAbilities: gaze }), target, opts);
       const actual = ctx.resolveCombat(
-        f25Unit(ctx, version, 'a', { abilities: { ...gaze, ...F25_RIDER_ABILITIES } }),
+        f25Unit(ctx, version, 'a', { innateAbilities: { ...gaze, ...F25_RIDER_ABILITIES } }),
         target, opts);
       const gazeOf = result => result.phases.find(phase => phase.label.includes(name));
       const meleeOf = result => result.phases.find(phase => phase.label.startsWith('Melee'));
@@ -1387,7 +1395,7 @@ function runModernRidersF25Checks(ctx) {
   const baseRanged = ctx.resolveCombat(
     f25Unit(ctx, version, 'a', rangedChannel), rangedTarget, rangedOpts);
   const richRanged = ctx.resolveCombat(
-    f25Unit(ctx, version, 'a', { ...rangedChannel, abilities: F25_RIDER_ABILITIES }),
+    f25Unit(ctx, version, 'a', { ...rangedChannel, innateAbilities: F25_RIDER_ABILITIES }),
     rangedTarget, rangedOpts);
   // [F25-4]
   assert(JSON.stringify(richRanged.totalDmgToB) !== JSON.stringify(baseRanged.totalDmgToB),
@@ -1433,7 +1441,7 @@ function runHasteGazeFearF30F31Checks(ctx) {
   const makeUnit = (version, prefix, overrides = {}) => ctx.deriveUnitStats({
     prefix,
     version,
-    abilities: {},
+    innateAbilities: {}, markedAbilities: {},
     level: 'normal',
     weapon: 'normal',
     armor: 'normal',
@@ -1468,7 +1476,7 @@ function runHasteGazeFearF30F31Checks(ctx) {
   for (const version of MODERN) {
     const target = makeUnit(version, 'b');
     const gazeResult = gaze => ctx.resolveCombat(
-      makeUnit(version, 'a', { abilities: { haste: true, ...gaze } }), target, opts(version));
+      makeUnit(version, 'a', { innateAbilities: gaze, markedAbilities: { haste: true } }), target, opts(version));
 
     // [HGF-1] F30 — Haste repeats each *initiating* modern gaze.  `combat.js:877` is the site
     // (`const repeats = aHaste ? 2 : 1`), and pinning it to 1 passes the corpus and every other
@@ -1501,7 +1509,7 @@ function runHasteGazeFearF30F31Checks(ctx) {
     // per defender gaze whatever the attacker's Haste, and repeating it there is caught by
     // nothing: it moves only the opening row order, which no fixture reads.
     const retaliation = ctx.resolveCombat(makeUnit(version, 'a', { atk: 1 }),
-      makeUnit(version, 'b', { abilities: { haste: true, doomGaze: 1 } }), opts(version));
+      makeUnit(version, 'b', { innateAbilities: { doomGaze: 1 }, markedAbilities: { haste: true } }), opts(version));
     assertIs(countLabel(retaliation, 'Defender Doom Gaze'), 1,
       `[HGF-4] F30 ${version} a Hasted defender's retaliation gaze still resolves once`);
     assertCloseToPrecision(retaliation.totalDmgToA[1], 1, 12,
@@ -1511,9 +1519,9 @@ function runHasteGazeFearF30F31Checks(ctx) {
     // defender gaze, rather than the two sides interleaving.
     const ordered = ctx.resolveCombat(
       makeUnit(version, 'a', {
-        abilities: { haste: true, stoningGaze: 10, deathGaze: 10, doomGaze: 1 },
+        innateAbilities: { stoningGaze: 10, deathGaze: 10, doomGaze: 1 }, markedAbilities: { haste: true },
       }),
-      makeUnit(version, 'b', { abilities: { stoningGaze: 10, deathGaze: 10, doomGaze: 1 } }),
+      makeUnit(version, 'b', { innateAbilities: { stoningGaze: 10, deathGaze: 10, doomGaze: 1 } }),
       opts(version));
     assertStrictArrayEqual(ordered.phases.map(phase => phase.label).slice(0, 9), [
       'Attacker Stoning Gaze', 'Attacker Stoning Gaze',
@@ -1522,46 +1530,51 @@ function runHasteGazeFearF30F31Checks(ctx) {
       'Defender Stoning Gaze', 'Defender Death Gaze', 'Defender Doom Gaze',
     ], `[HGF-5] F30 ${version} both gaze repeats precede the retaliation gazes`);
 
-    // [HGF-6] F31 — Each modern melee ApplyAttack call runs its own Cause Fear loop, so the two
-    // Hasted strikes make *independent* samples and a two-figure attacker's total is
-    // Binomial(4, 1/2).  The DOS-style shared sample gives 2 x Binomial(2, 1/2) —
-    // `[0.25, 0, 0.5, 0, 0.25]`, the same mean, a different spread.  Since
-    // `hasteIndependentFearSampleCoM2` the corpus sees that for `firstStrike = false`; the
-    // `firstStrike = true` arm below is a different code path (see the header) and is carried
-    // only here.
-    const independent = [0.0625, 0.25, 0.375, 0.25, 0.0625];
-    for (const firstStrike of [false, true]) {
-      const result = ctx.resolveCombat(
-        makeUnit(version, 'a', {
-          figs: 2, atk: 1, res: 8,
-          abilities: { haste: true, ...(firstStrike ? { firstStrike: true } : {}) },
-        }),
-        makeUnit(version, 'b', { res: 8, hp: 10, abilities: { fear: true } }),
-        opts(version));
-      independent.forEach((probability, damage) => {
-        assertCloseToPrecision(result.totalDmgToB[damage], probability, 12,
-          `[HGF-6] F31 ${version} firstStrike=${firstStrike} damage=${damage}: the two Hasted `
-          + 'melee calls sample Cause Fear independently');
-      });
-    }
+    for (const fearSource of ['innateAbilities', 'markedAbilities']) {
+      // [HGF-6] F31 — Each modern melee ApplyAttack call runs its own Cause Fear loop, so the two
+      // Hasted strikes make *independent* samples and a two-figure attacker's total is
+      // Binomial(4, 1/2).  The DOS-style shared sample gives 2 x Binomial(2, 1/2) —
+      // `[0.25, 0, 0.5, 0, 0.25]`, the same mean, a different spread.  Since
+      // `hasteIndependentFearSampleCoM2` the corpus sees that for `firstStrike = false`; the
+      // `firstStrike = true` arm below is a different code path (see the header) and is carried
+      // only here.
+      const independent = [0.0625, 0.25, 0.375, 0.25, 0.0625];
+      for (const firstStrike of [false, true]) {
+        const result = ctx.resolveCombat(
+          makeUnit(version, 'a', {
+            figs: 2, atk: 1, res: 8,
+            innateAbilities: firstStrike ? { firstStrike: true } : {}, markedAbilities: { haste: true },
+          }),
+          makeUnit(version, 'b', { res: 8, hp: 10, [fearSource]: { fear: true } }),
+          opts(version));
+        independent.forEach((probability, damage) => {
+          assertCloseToPrecision(result.totalDmgToB[damage], probability, 12,
+            `[${fearSource}] ` + (`[HGF-6] F31 ${version} firstStrike=${firstStrike} damage=${damage}: the two Hasted `
+            + 'melee calls sample Cause Fear independently'));
+        });
+      }
 
-    // [HGF-7] F58 — the second call's sample is published as its own row.  Dropping the Haste
-    // row leaves the totals untouched, so only a row-level assertion sees it.
-    const feared = ctx.resolveCombat(
-      makeUnit(version, 'a', { figs: 2, atk: 1, res: 8, abilities: { fear: true, haste: true } }),
-      makeUnit(version, 'b', { figs: 2, atk: 1, res: 8, abilities: { fear: true } }),
-      opts(version));
-    const rows = fearRows(feared);
-    assertStrictArrayEqual(rows.map(row => row.label),
-      ['Main Cause Fear', 'Haste Cause Fear', 'Counter Cause Fear'],
-      `[HGF-7] F58 ${version} each modern melee ApplyAttack call publishes its own Cause Fear row`);
-    const twoFigures = [0.25, 0.5, 0.25];
-    assertStrictArrayEqual(rows[0].atkDist, twoFigures,
-      `[HGF-7] F58 ${version} the first call's feared-count sample is Binomial(2, 1/2)`);
-    assertStrictArrayEqual(rows[1].atkDist, twoFigures,
-      `[HGF-7] F58 ${version} the Haste call's sample is its own draw of the same shape`);
-    assertStrictArrayEqual(rows[2].defDist, twoFigures,
-      `[HGF-7] F58 ${version} the counter call samples the defender's Cause Fear`);
+      // [HGF-7] F58 — the second call's sample is published as its own row.  Dropping the Haste
+      // row leaves the totals untouched, so only a row-level assertion sees it.
+      for (const attackerFearSource of ['innateAbilities', 'markedAbilities']) {
+        const feared = ctx.resolveCombat(
+          makeUnit(version, 'a', { figs: 2, atk: 1, res: 8, innateAbilities: attackerFearSource === 'innateAbilities' ? { fear: true } : {},
+            markedAbilities: { haste: true, ...(attackerFearSource === 'markedAbilities' ? { fear: true } : {}) } }),
+          makeUnit(version, 'b', { figs: 2, atk: 1, res: 8, [fearSource]: { fear: true } }),
+          opts(version));
+        const rows = fearRows(feared);
+        assertStrictArrayEqual(rows.map(row => row.label),
+          ['Main Cause Fear', 'Haste Cause Fear', 'Counter Cause Fear'],
+          `[${fearSource}/${attackerFearSource}] ` + (`[HGF-7] F58 ${version} each modern melee ApplyAttack call publishes its own Cause Fear row`));
+        const twoFigures = [0.25, 0.5, 0.25];
+        assertStrictArrayEqual(rows[0].atkDist, twoFigures,
+          `[${fearSource}/${attackerFearSource}] ` + (`[HGF-7] F58 ${version} the first call's feared-count sample is Binomial(2, 1/2)`));
+        assertStrictArrayEqual(rows[1].atkDist, twoFigures,
+          `[${fearSource}/${attackerFearSource}] ` + (`[HGF-7] F58 ${version} the Haste call's sample is its own draw of the same shape`));
+        assertStrictArrayEqual(rows[2].defDist, twoFigures,
+          `[${fearSource}/${attackerFearSource}] ` + (`[HGF-7] F58 ${version} the counter call samples the defender's Cause Fear`));
+    }
+  }
   }
 
   // The remaining three are Warlord-only in the retired spec and stay that way: each turns on the
@@ -1572,42 +1585,43 @@ function runHasteGazeFearF30F31Checks(ctx) {
   // Cause Fear loop.  `ApplyAttack` returns early on zero *source* figures, not on a dead target,
   // so `cap = 0` still carries a real feared-count sample; returning `[1]` there instead is caught
   // by nothing, because a suppressed sample changes no damage.
-  const deadTarget = fearRows(ctx.resolveCombat(
-    makeUnit(warlord, 'a', { figs: 2, atk: 1, res: 8, abilities: { haste: true, doomGaze: 10 } }),
-    makeUnit(warlord, 'b', { figs: 2, atk: 1, res: 8, abilities: { fear: true } }),
-    opts(warlord)));
-  assertStrictArrayEqual(deadTarget.map(row => row.label),
-    ['Main Cause Fear', 'Haste Cause Fear', 'Counter Cause Fear'],
-    '[HGF-8] F58 a dead target still leaves all three modern Cause Fear rows');
-  assertStrictArrayEqual(deadTarget[0].atkDist, [0.25, 0.5, 0.25],
-    '[HGF-8] F58 the melee call against a dead target still samples Cause Fear');
-  assertStrictArrayEqual(deadTarget[1].atkDist, [0.25, 0.5, 0.25],
-    '[HGF-8] F58 so does its Haste repeat');
+  for (const fearSource of ['innateAbilities', 'markedAbilities']) {
+    const deadTarget = fearRows(ctx.resolveCombat(
+      makeUnit(warlord, 'a', { figs: 2, atk: 1, res: 8, innateAbilities: { doomGaze: 10 }, markedAbilities: { haste: true } }),
+      makeUnit(warlord, 'b', { figs: 2, atk: 1, res: 8, [fearSource]: { fear: true } }),
+      opts(warlord)));
+    assertStrictArrayEqual(deadTarget.map(row => row.label),
+      ['Main Cause Fear', 'Haste Cause Fear', 'Counter Cause Fear'],
+      `[${fearSource}] ` + ('[HGF-8] F58 a dead target still leaves all three modern Cause Fear rows'));
+    assertStrictArrayEqual(deadTarget[0].atkDist, [0.25, 0.5, 0.25],
+      `[${fearSource}] ` + ('[HGF-8] F58 the melee call against a dead target still samples Cause Fear'));
+    assertStrictArrayEqual(deadTarget[1].atkDist, [0.25, 0.5, 0.25],
+      `[${fearSource}] ` + ('[HGF-8] F58 so does its Haste repeat'));
 
-  // [HGF-9] F31 — the defender snapshot is frozen across the pending pair.  Both Hasted calls
-  // precede all three tail `Dealdamage` calls, so the second one still sees the live one-HP
-  // defender and its positive result still triggers Bloodsucker.  Skipping the second call once
-  // the first call's damage would have killed the target passes the corpus and the whole Node
-  // tree, and halves the healing benefit.
-  const snapshot = ({ firstStrike = false, fear = false } = {}) => ctx.resolveCombat(
-    makeUnit(warlord, 'a', {
-      res: 8, atk: 1, dmg: 9,
-      abilities: { haste: true, bloodSucker: true, ...(firstStrike ? { firstStrike: true } : {}) },
-    }),
-    makeUnit(warlord, 'b', { res: 8, hp: 1, abilities: fear ? { fear: true } : {} }),
-    opts(warlord));
-  assertCloseToPrecision(snapshot().aLifeStealExpected, 4, 12,
-    '[HGF-9] F31 both Hasted calls see the live one-HP defender, so both heal 2');
-  const independentFear = snapshot({ fear: true });
-  assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[0], 0.25, 12,
-    '[HGF-9] F31 neither call triggers when both fear samples fail');
-  assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[2], 0.5, 12,
-    '[HGF-9] F31 exactly one of the two independent fear samples admits a trigger');
-  assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[4], 0.25, 12,
-    '[HGF-9] F31 pending first-call damage does not suppress the two-success outcome');
-  assertCloseToPrecision(snapshot({ firstStrike: true }).aLifeStealExpected, 2, 12,
-    '[HGF-9] F31 an admitted First Strike is dealt at once, so only its own trigger remains');
-
+    // [HGF-9] F31 — the defender snapshot is frozen across the pending pair.  Both Hasted calls
+    // precede all three tail `Dealdamage` calls, so the second one still sees the live one-HP
+    // defender and its positive result still triggers Bloodsucker.  Skipping the second call once
+    // the first call's damage would have killed the target passes the corpus and the whole Node
+    // tree, and halves the healing benefit.
+    const snapshot = ({ firstStrike = false, fear = false } = {}) => ctx.resolveCombat(
+      makeUnit(warlord, 'a', {
+        res: 8, atk: 1, dmg: 9,
+        innateAbilities: { bloodSucker: true, ...(firstStrike ? { firstStrike: true } : {}) }, markedAbilities: { haste: true },
+      }),
+      makeUnit(warlord, 'b', { res: 8, hp: 1, [fearSource]: fear ? { fear: true } : {} }),
+      opts(warlord));
+    assertCloseToPrecision(snapshot().aLifeStealExpected, 4, 12,
+      `[${fearSource}] ` + ('[HGF-9] F31 both Hasted calls see the live one-HP defender, so both heal 2'));
+    const independentFear = snapshot({ fear: true });
+    assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[0], 0.25, 12,
+      `[${fearSource}] ` + ('[HGF-9] F31 neither call triggers when both fear samples fail'));
+    assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[2], 0.5, 12,
+      `[${fearSource}] ` + ('[HGF-9] F31 exactly one of the two independent fear samples admits a trigger'));
+    assertCloseToPrecision(independentFear.aAppliedHealingBenefitDist[4], 0.25, 12,
+      `[${fearSource}] ` + ('[HGF-9] F31 pending first-call damage does not suppress the two-success outcome'));
+    assertCloseToPrecision(snapshot({ firstStrike: true }).aLifeStealExpected, 2, 12,
+      `[${fearSource}] ` + ('[HGF-9] F31 an admitted First Strike is dealt at once, so only its own trigger remains'));
+  }
   // [HGF-10] F31 — Haste healing stays correlated while melee damage is still pending.  Both
   // initiating calls heal 2 before the counter is computed, so the counter reads the *revised*
   // source record (five current HP) and lands all three of its deterministic damage, even though
@@ -1618,9 +1632,8 @@ function runHasteGazeFearF30F31Checks(ctx) {
     const healed = ctx.resolveCombat(
       makeUnit(warlord, 'a', {
         res: 10, atk: 1, dmg: 9,
-        abilities: {
-          haste: true, bloodSucker: true, ...(firstStrike ? { firstStrike: true } : {}),
-        },
+        innateAbilities: { bloodSucker: true, ...(firstStrike ? { firstStrike: true } : {}) },
+        markedAbilities: { haste: true },
       }),
       makeUnit(warlord, 'b', { res: 10, atk: 3, hp: 100 }), opts(warlord));
     assertCloseToPrecision(healed.totalDmgToA[3], 1, 12,
@@ -1768,7 +1781,7 @@ function runLifeStealHealingChecks(ctx) {
   // are two sites, the DOS-healing path and the Haste path, and each needs its own probe: moving
   // one cutoff leaves the other's result standing.
   const com1Unit = (prefix, overrides = {}) => ctx.deriveUnitStats({
-    prefix, version: 'com_6.08', abilities: {}, level: 'normal', weapon: 'normal',
+    prefix, version: 'com_6.08', innateAbilities: {}, markedAbilities: {}, level: 'normal', weapon: 'normal',
     armor: 'normal', rtbType: 'none', unitType: 'normal', figs: 1, atk: 0, rtb: 0,
     def: 0, res: 0, hp: 10, dmg: 0, irrecoverableDamage: 0, undeadDamage: 0, baseBonusHp: 0,
     toHitMod: 70, toHitRtbMod: 70, toBlkMod: 70, cityWalls: 'none', nodeAura: 'none',
@@ -1779,10 +1792,10 @@ function runLifeStealHealingChecks(ctx) {
     const suppressed = ctx.resolveCombat(
       com1Unit('a', {
         atk: 60,
-        abilities: { doom: true, firstStrike: true, lifeSteal: -20,
-          ...(haste ? { haste: true } : {}) },
+        innateAbilities: { doom: true, firstStrike: true, lifeSteal: -20 },
+        markedAbilities: haste ? { haste: true } : {},
       }),
-      com1Unit('b', { atk: 10, hp: 30, abilities: { doom: true } }),
+      com1Unit('b', { atk: 10, hp: 30, innateAbilities: { doom: true } }),
       { version: 'com_6.08', isRanged: false, wallOfFire: false });
     assertCloseToPrecision(suppressed.totalDmgToA[5], 1, 12,
       `[LSH-10] F57 CoM 1 haste=${haste}: a 30-HP front figure suppresses First Strike, so the `

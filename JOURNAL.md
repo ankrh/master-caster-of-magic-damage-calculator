@@ -4,6 +4,15 @@
 
 # Journal
 
+## 2026-09-11 — F271.3 remaining unit checks converted
+
+Fifteen files now preserve source inputs through their factories and sweeps; source-neutral
+consumer checks cover separate origins and cross-origin pairings. The Windows source-reader
+failure is fixed. Sol high review findings are resolved. Final npm test passed all 1,179
+presets, citations and 34,123 Node assertions. Of 23,376 instrumented derivations, only the
+intentional rejection and two F271.5 generator forwards used nonstandard input shapes.
+The [inventory](Reference%20docs/F271.1.source-input-inventory.md) corrects that forwarding dependency.
+
 ## 2026-09-11 — F271.2 derivation checks converted
 
 Main derivation and range/level inputs now state their sources explicitly. All 329 targeted

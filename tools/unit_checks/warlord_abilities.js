@@ -16,7 +16,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     version,
     modernAttacks: {},
     ...overrides,
-    abilities: { outlanderWizard: true, ...(overrides.abilities || {}) },
+    innateAbilities: { outlanderWizard: true, ...(overrides.innateAbilities || {}) },
   });
 
   const sapiensCount = vm.runInContext(
@@ -83,7 +83,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     res: wanderer.resist,
     hp: wanderer.hp,
     hitChance: wanderer.to_hit,
-    abilities: {
+    markedAbilities: {
       channeler: true,
       marionetteBaseSkill: 90,
       marionettePrimary: 'nature',
@@ -224,7 +224,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     modernAttacks: {},
     identity: { ...wandererIdentity, version: 'com2_1.05.11' },
     unitType: 'hero',
-    abilities: { channeler: true, marionetteBaseSkill: 90 },
+    markedAbilities: { channeler: true, marionetteBaseSkill: 90 },
   }));
   assertEqual(offVersion.marionette, null, 'Marionette package is exact-version scoped');
   assertEqual(offVersion.abilities.liveFantastic, false,
@@ -240,20 +240,20 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   const armorclad = ctx.deriveUnitStats(warlordUnit({
     def: 1,
-    abilities: { armorcladReform: true, mechanical: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { armorcladReform: true },
   }));
   assertEqual(armorclad.def, 7, 'Armorclad permanently grants +6 Armor');
 
   const battleArmor = ctx.deriveUnitStats(warlordUnit({
     def: 1,
-    abilities: { armorcladReform: true },
+    markedAbilities: { armorcladReform: true },
   }));
   assertEqual(battleArmor.def, 4, 'Battle Armor grants +3 Armor in combat');
 
   const blazeWithIronSkin = ctx.deriveUnitStats(warlordUnit({
     atk: 4,
     def: 5,
-    abilities: { blazeOfGlory: true, ironSkin: true },
+    markedAbilities: { blazeOfGlory: true, ironSkin: true },
   }));
   assertEqual(blazeWithIronSkin.atk, 14,
     'Blaze of Glory transfers current Armor, including Iron Skin, to melee');
@@ -268,7 +268,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     'Blaze of Glory grants Armor Piercing beside it');
 
   const blazeHeroNoGrant = ctx.deriveUnitStats(warlordUnit({
-    unitType: 'hero', atk: 4, def: 5, abilities: { blazeOfGlory: true },
+    unitType: 'hero', atk: 4, def: 5, markedAbilities: { blazeOfGlory: true },
   }));
   assert(!blazeHeroNoGrant.abilities.wallCrusher,
     'The hero exclusion keeps the Wall Crusher grant off as well');
@@ -277,7 +277,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // fields finishes with one Thrown attack at the summed strength. The preset fixture format
   // maps a scenario onto a single modern channel, so the two-channel case is asserted here.
   const blazeChannels = (attacks, abilities) => ctx.deriveUnitStats(warlordUnit({
-    atk: 1, def: 0, modernAttacks: attacks, abilities,
+    atk: 1, def: 0, modernAttacks: attacks, markedAbilities: abilities,
   })).modernAttacks;
 
   const blazeRangedOnly = blazeChannels(
@@ -301,7 +301,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const blazeAfterRust = ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0,
     modernAttacks: { ranged: { strength: 6, type: 'missile' }, thrown: { strength: 2, type: 'thrown' } },
-    abilities: { blazeOfGlory: true, rust: true },
+    markedAbilities: { blazeOfGlory: true, rust: true },
   })).modernAttacks;
   assertEqual(blazeAfterRust.thrown.strength, 3,
     'Rust reaches the missile field before Blaze of Glory moves it to Thrown');
@@ -314,7 +314,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // arrives as 7 and finishes at 2.
   const mindStormBlaze = attacks => ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0, modernAttacks: attacks,
-    abilities: { blazeOfGlory: true, mindStorm: true },
+    markedAbilities: { blazeOfGlory: true, mindStorm: true },
   })).modernAttacks;
   assert(!mindStormBlaze({ ranged: { strength: 6, type: 'missile' } }).thrown,
     'Mind Storm reaches the empty Thrown field, so a missile 6 does not survive the transfer');
@@ -326,7 +326,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // so the breath keeps its whole thrown+1.
   const mindStormLightningBlade = ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0, modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
-    abilities: { lightningBlade: true, mindStorm: true },
+    markedAbilities: { lightningBlade: true, mindStorm: true },
   })).modernAttacks;
   assertEqual(mindStormLightningBlade.lightningBreath.strength, 5,
     'Mind Storm leaves the Lightning Blade breath alone once it is no longer the Thrown field');
@@ -340,7 +340,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const blazeThrownThreshold = abilities => ctx.deriveUnitStats(warlordUnit({
     atk: 1, def: 0,
     modernAttacks: { ranged: { strength: 6, type: 'magic' }, thrown: { strength: 4, type: 'thrown' } },
-    abilities,
+    markedAbilities: abilities,
   })).modernAttacks;
   const blazeAfterLightningBlade = blazeThrownThreshold({
     lightningBlade: true, blazeOfGlory: true, trueSight: true, holyWeapon: true });
@@ -359,7 +359,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const shadowAndBlaze = ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0,
     modernAttacks: { ranged: { strength: 6, type: 'missile' }, thrown: { strength: 2, type: 'thrown' } },
-    abilities: { shadowStrike: true, blazeOfGlory: true },
+    markedAbilities: { shadowStrike: true, blazeOfGlory: true },
   })).modernAttacks;
   assertEqual(shadowAndBlaze.thrown.strength, 10,
     'Shadow Strike adds to the Thrown field before Blaze of Glory transfers the Ranged one');
@@ -368,7 +368,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const shadowBesideRanged = ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0,
     modernAttacks: { ranged: { strength: 6, type: 'missile' } },
-    abilities: { shadowStrike: true },
+    markedAbilities: { shadowStrike: true },
   })).modernAttacks;
   assertEqual(shadowBesideRanged.ranged.strength, 6,
     'The Shadow Strike grant leaves a conventional Ranged attack alone');
@@ -382,7 +382,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // champion To Hit ladder without the weapon's +10.
   const shadowChampionAdamant = ctx.deriveUnitStats(warlordUnit({
     atk: 3, def: 0, level: 'champion', weapon: 'adamantium',
-    modernAttacks: {}, abilities: { shadowStrike: true },
+    modernAttacks: {}, markedAbilities: { shadowStrike: true },
   })).modernAttacks;
   assertEqual(shadowChampionAdamant.thrown.strength, 4,
     'Neither the level ladder nor the weapon strength reaches the Shadow Strike grant');
@@ -400,7 +400,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     version,
     modernAttacks: {},
     def: 1,
-    abilities: { mechanical: true, armorcladReform: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { armorcladReform: true },
   }));
   assertEqual(noOutlanderArmorclad.def, 1, 'Outlander reforms are inert without an Outlander wizard owner');
 
@@ -411,13 +411,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtbType: 'missile',
     rtb: 1,
     modernAttacks: { ranged: { strength: 1, type: 'missile' } },
-    abilities: {
-      sapiens: true,
-      xenopsychology: true,
-      radio: true,
-      ballisticsTraining: true,
-      xenoveterinary: true,
-    },
+    innateAbilities: { sapiens: true }, markedAbilities: { xenopsychology: true, radio: true, ballisticsTraining: true, xenoveterinary: true },
   }));
   assertEqual(sapiensReforms.res, 3, 'Sapiens summons receive Xenopsychology and Radio resistance');
   assertEqual(sapiensReforms.hp, 5, 'Xenoveterinary adds 25% HP to fantastic Sapiens summons');
@@ -429,11 +423,11 @@ function runWarlordUnitAbilityChecks(ctx) {
   assertClose(sapiensReforms.toHitBreath, 0.7, 'Ballistics Training still adds 20% Breath To-Hit');
 
   const magitekScience = ctx.deriveUnitStats(warlordUnit({
-    abilities: { mechanical: true, armorcladReform: true, magitekScience: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { armorcladReform: true, magitekScience: true },
   }));
   assertEqual(magitekScience.abilities.resistMagic, true, 'Magitek Science grants Resist Magic to Armorclad units');
   const magitekScienceBattleArmor = ctx.deriveUnitStats(warlordUnit({
-    abilities: { armorcladReform: true, magitekScience: true },
+    markedAbilities: { armorcladReform: true, magitekScience: true },
   }));
   assertEqual(!!magitekScienceBattleArmor.abilities.resistMagic, false,
     'Magitek Science does not grant Resist Magic to Battle Armor units despite the prose claim');
@@ -441,7 +435,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const militaryDrilling = ctx.deriveUnitStats(warlordUnit({
     level: 'regular',
     def: 1,
-    abilities: { militaryDrilling: true },
+    markedAbilities: { militaryDrilling: true },
   }));
   assertEqual(militaryDrilling.abilities.discipline, 'overland', 'Military Drilling gives new non-fantastic units permanent Discipline');
   assertEqual(militaryDrilling.def, 3, 'Military Drilling Discipline applies its Regular +2 Armor bonus');
@@ -462,17 +456,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtbType: 'missile',
     rtb: 3,
     modernAttacks: { ranged: { strength: 3, type: 'missile' } },
-    abilities: {
-      mechanical: true,
-      armorclad: true,
-      battleArmor: true,
-      blackpowder: true,
-      energyCannon: true,
-      energyWeaponry: true,
-      pneumaField: true,
-      powerEngine: true,
-      psychoForce: true,
-    },
+    innateAbilities: { mechanical: true, armorclad: true, battleArmor: true, blackpowder: true, energyCannon: true, energyWeaponry: true, pneumaField: true, powerEngine: true, psychoForce: true },
   }));
   assertEqual(staleDerivedInputs.def, 1, 'Derived Armorclad/Battle Armor inputs are ignored');
   assertEqual(staleDerivedInputs.modernAttacks.ranged.type, 'missile',
@@ -484,7 +468,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtbType: 'missile',
     rtb: 3,
     modernAttacks: { ranged: { strength: 3, type: 'missile' } },
-    abilities: { rocketry: true },
+    markedAbilities: { rocketry: true },
   }));
   assertEqual(blackpowderMissile.modernAttacks.ranged.type, 'boulder',
     'Blackpowder converts missile to heavy projectile');
@@ -497,7 +481,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtbType: 'thrown',
     rtb: 3,
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
-    abilities: { rocketry: true, armorPiercing: true },
+    innateAbilities: { armorPiercing: true }, markedAbilities: { rocketry: true },
   }));
   assertEqual(blackpowderThrownAP.modernAttacks.thrown.strength, 7,
     'Blackpowder gives existing-AP Thrown +4 strength');
@@ -506,7 +490,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtbType: 'fire',
     rtb: 3,
     modernAttacks: { fireBreath: { strength: 3, type: 'fire' } },
-    abilities: { rocketry: true },
+    markedAbilities: { rocketry: true },
   }));
   assertEqual(blackpowderFire.modernAttacks.fireBreath.strength, 7,
     'Blackpowder gives Fire Breath +4 strength');
@@ -515,7 +499,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     figs: 4,
     rtbType: 'none',
     rtb: 0,
-    abilities: { explosive: true },
+    markedAbilities: { explosive: true },
   }));
   assertEqual(bombs.modernAttacks.thrown.type, 'thrown', 'Bombs&Grenades grants a Thrown attack');
   assertEqual(bombs.modernAttacks.thrown.strength, 6,
@@ -527,7 +511,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtbType: 'thrown',
     rtb: 2,
     modernAttacks: { thrown: { strength: 2, type: 'thrown' } },
-    abilities: { explosive: true },
+    markedAbilities: { explosive: true },
   }));
   assertEqual(bombsAdditive.modernAttacks.thrown.strength, 8,
     'Bombs&Grenades adds to existing Thrown');
@@ -536,7 +520,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtbType: 'missile',
     rtb: 3,
     modernAttacks: { ranged: { strength: 3, type: 'missile' } },
-    abilities: { rocketry: true, explosive: true },
+    markedAbilities: { rocketry: true, explosive: true },
   }));
   assertEqual(upgradedRanged.modernAttacks.ranged.strength, 5, 'Upgraded Explosive gives ranged +2');
 
@@ -544,7 +528,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtbType: 'fire',
     rtb: 3,
     modernAttacks: { fireBreath: { strength: 3, type: 'fire' } },
-    abilities: { rocketry: true, explosive: true },
+    markedAbilities: { rocketry: true, explosive: true },
   }));
   assertEqual(upgradedFire.modernAttacks.fireBreath.strength, 14,
     'Explosive doubles Blackpowder-upgraded Fire Breath');
@@ -554,7 +538,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     rtb: 3,
     modernAttacks: { fireBreath: { strength: 3, type: 'fire' } },
     trueLight: true,
-    abilities: { sanctify: true, rocketry: true, explosive: true },
+    markedAbilities: { sanctify: true, rocketry: true, explosive: true },
   }));
   assertEqual(upgradedFireBeforeTrueLight.modernAttacks.fireBreath.strength, 14,
     'Warlord True Light leaves the doubled independent Fire Breath channel unchanged');
@@ -562,13 +546,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const temporalDrive = ctx.deriveUnitStats(warlordUnit({
     def: 4,
     res: 4,
-    abilities: {
-      mechanical: true,
-      sailing: true,
-      heatPowerEngine: true,
-      temporalEngineering: true,
-      mindStorm: true,
-    },
+    innateAbilities: { mechanical: true, sailing: true }, markedAbilities: { heatPowerEngine: true, temporalEngineering: true, mindStorm: true },
   }));
   assertEqual(temporalDrive.abilities.illusionImmunity, true, 'Temporal-Gravity Drive grants Illusion Immunity');
   assertEqual(temporalDrive.def, 4, 'Temporal-Gravity Drive immunity gates Mind Storm defense penalty');
@@ -579,7 +557,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // the assertions read it (F127).
   const energyCannon = ctx.deriveUnitStats(warlordUnit({
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
-    abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { heatPowerEngine: true, energyBeamWeapons: true },
   }));
   assertEqual(energyCannon.modernAttacks.ranged.type, 'magic', 'Energy Cannon converts the projectile to id 40, beam energy');
   assertEqual(energyCannon.modernAttacks.ranged.strength, 7, 'Energy Cannon adds floor(50% base ranged strength)');
@@ -595,9 +573,7 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   const normalizedEnergyCannonWithGeneral = ctx.normalizeCombatUnit(ctx.deriveUnitStats(warlordUnit({
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
-    abilities: {
-      destruction: 0, mechanical: true, heatPowerEngine: true, energyBeamWeapons: true,
-    },
+    innateAbilities: { destruction: 0, mechanical: true }, markedAbilities: { heatPowerEngine: true, energyBeamWeapons: true },
   })), version);
   assertEqual(normalizedEnergyCannonWithGeneral.touchFlagRecords.global.destruction, 0,
     'Energy Cannon preserves an independent general Destruction channel');
@@ -608,7 +584,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
     hitChance: 10,
     hitRanged: 10, hitThrown: 10, hitBreath: 10,
-    abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { heatPowerEngine: true, energyBeamWeapons: true },
   }));
   assertEqual(aimedEnergyCannon.abilities.energyCannonDestruction, -3,
     'Energy Cannon snapshots the live 50% common-plus-ranged threshold without double-counting base modifiers');
@@ -618,14 +594,7 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   const upgradedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
-    abilities: {
-      heatPowerEngine: true,
-      energyBeamWeapons: true,
-      rocketry: true,
-      armorPiercing: true,
-      artificer: true,
-      mechanical: true,
-    },
+    innateAbilities: { armorPiercing: true, mechanical: true }, markedAbilities: { heatPowerEngine: true, energyBeamWeapons: true, rocketry: true, artificer: true },
   }));
   assertEqual(
     upgradedEnergyCannon.modernAttacks.ranged.strength,
@@ -635,7 +604,7 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   const noRangedEnergyCannon = ctx.deriveUnitStats(warlordUnit({
     modernAttacks: { ranged: null, thrown: null, fireBreath: null, lightningBreath: null },
-    abilities: { mechanical: true, heatPowerEngine: true, energyBeamWeapons: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { heatPowerEngine: true, energyBeamWeapons: true },
   }));
   assertEqual(!!noRangedEnergyCannon.abilities.energyCannon, false,
     'Energy Cannon inference requires positive permanent conventional Ranged');
@@ -648,7 +617,7 @@ function runWarlordUnitAbilityChecks(ctx) {
       baseRace: 'Draconian', baseFantastic: false, specialUnit: 'none',
     },
     modernAttacks: {}, rtbType: 'none', rtb: 0,
-    abilities: { dragonMound: true },
+    markedAbilities: { dragonMound: true },
   }));
   assertEqual(dragonMoundCreatesBreath.modernAttacks.fireBreath.strength, 2,
     'Dragon Mound creates independent Fire Breath strength 2 when the field was absent');
@@ -656,7 +625,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const psychoForce = ctx.deriveUnitStats(warlordUnit({
     level: 'champion',
     res: 4,
-    abilities: { psychoConverter: true },
+    markedAbilities: { psychoConverter: true },
   }));
   assertEqual(psychoForce.res, 7, 'Psycho Force reads current Resistance after level bonus');
   assertClose(psychoForce.toHitMelee, 0.57, 'Psycho Force adds floor(7 * 5 / 2)=17% To-Hit');
@@ -664,41 +633,41 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   const pneumaField = ctx.deriveUnitStats(warlordUnit({
     res: 5,
-    abilities: { pneumaReactor: true },
+    markedAbilities: { pneumaReactor: true },
   }));
   assertEqual(pneumaField.abilities.lifeSteal, -2, 'Pneuma Field grants Life Steal from current Resistance');
 
   const pneumaStacks = ctx.deriveUnitStats(warlordUnit({
     res: 5,
-    abilities: { pneumaReactor: true, lifeSteal: -3 },
+    innateAbilities: { lifeSteal: -3 }, markedAbilities: { pneumaReactor: true },
   }));
   assertEqual(pneumaStacks.abilities.lifeSteal, -5, 'Pneuma Field stacks with existing negative Life Steal');
 
   const powerEngine = ctx.deriveUnitStats(warlordUnit({
-    abilities: { mechanical: true, heatPowerEngine: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { heatPowerEngine: true },
   }));
   assertEqual(powerEngine.abilities.powerEngine, true, 'Heat Power Engine derives the Power Engine unit state');
 
   const magitekEngine = ctx.deriveUnitStats(warlordUnit({
-    abilities: { mechanical: true, heatPowerEngine: true, magitekEngineering: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { heatPowerEngine: true, magitekEngineering: true },
   }));
   assertClose(magitekEngine.toBlock, 0.5, 'Magitek Engineering gives Power Engine units +20% To-Defend');
   assertEqual(magitekEngine.abilities.largeShield, true, 'Magitek Engineering gives Power Engine units Large Shield');
 
   const temporalEngine = ctx.deriveUnitStats(warlordUnit({
-    abilities: { mechanical: true, heatPowerEngine: true, temporalEngineering: true },
+    innateAbilities: { mechanical: true }, markedAbilities: { heatPowerEngine: true, temporalEngineering: true },
   }));
   assertEqual(temporalEngine.abilities.haste, true, 'Temporal Engineering gives Power Engine units Haste');
 
   const ineligibleRocketry = ctx.deriveUnitStats(warlordUnit({
     atk: 3,
-    abilities: { rocketry: true },
+    markedAbilities: { rocketry: true },
   }));
   assertEqual(ineligibleRocketry.abilities.poison || 0, 0, 'Rocketry does not grant Blackpowder to a melee-only unit');
 
   const uphillBattle = ctx.deriveUnitStats(warlordUnit({
     res: 5,
-    abilities: { uphillBattle: true },
+    markedAbilities: { uphillBattle: true },
   }));
   assertClose(uphillBattle.toHitMelee, 0.4, 'Uphill Battle gives an AI unit +10% To-Hit');
   assertClose(uphillBattle.toBlock, 0.4, 'Uphill Battle gives an AI unit +10% To-Defend');
@@ -706,13 +675,13 @@ function runWarlordUnitAbilityChecks(ctx) {
 
   const godsPlayDices = ctx.deriveUnitStats(warlordUnit({
     res: 5,
-    abilities: { godsPlayDices: -2 },
+    markedAbilities: { godsPlayDices: -2 },
   }));
   assertEqual(godsPlayDices.res, 3, 'Gods Play Dices applies the fixed per-unit Resistance roll');
 
   const godsPlayDicesClamped = ctx.deriveUnitStats(warlordUnit({
     res: 5,
-    abilities: { godsPlayDices: 9 },
+    markedAbilities: { godsPlayDices: 9 },
   }));
   assertEqual(godsPlayDicesClamped.res, 7, 'Gods Play Dices clamps its Resistance roll to +2');
 
@@ -755,7 +724,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   const lightningBladeHeavenlyLight = ctx.deriveUnitStats(warlordUnit({
     atk: 1, rtbType: 'thrown', rtb: 4,
     modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
-    abilities: { lightningBlade: true, heavenlyLight: true },
+    markedAbilities: { lightningBlade: true, heavenlyLight: true },
   }));
   assertClose(lightningBladeHeavenlyLight.modernAttacks.lightningBreath.toHit, 0.3,
     'Heavenly Light writes the Thrown To-Hit field, which a Lightning Breath channel does not read');
@@ -764,7 +733,7 @@ function runWarlordUnitAbilityChecks(ctx) {
   // holds the modifier even on a unit with no secondary attack to spend it on.
   const trueSightNoSecondary = ctx.deriveUnitStats(warlordUnit({
     atk: 1, rtbType: 'none', rtb: 0, modernAttacks: {},
-    abilities: { trueSight: true },
+    markedAbilities: { trueSight: true },
   }));
   assertClose(trueSightNoSecondary.toHitRtb, 0.35,
     'True Sight writes the Ranged To-Hit modifier without a ranged-presence gate');
@@ -773,7 +742,7 @@ function runWarlordUnitAbilityChecks(ctx) {
     version: 'com2_1.05.11',
     modernAttacks: {},
     res: 5,
-    abilities: { uphillBattle: true, godsPlayDices: 2 },
+    markedAbilities: { uphillBattle: true, godsPlayDices: 2 },
   }));
   assertClose(scoringOptionsInertOutsideWarlord.toHitMelee, 0.3, 'Warlord scoring To-Hit is inert outside Warlord');
   assertClose(scoringOptionsInertOutsideWarlord.toBlock, 0.3, 'Warlord scoring To-Defend is inert outside Warlord');

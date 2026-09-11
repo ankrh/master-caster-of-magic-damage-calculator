@@ -104,7 +104,7 @@ function runDerivationStageChecks(ctx) {
     const afterClamp = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, atk: 0, def: 0, res: 0,
       rtb: 1, rtbType: 'missile', modernAttacks: { ranged: { strength: 1, type: 'missile' } },
-      abilities: { mindStorm: true, mislead: true },
+      markedAbilities: { mindStorm: true, mislead: true },
     }));
     assertEqual(afterClamp.atk, -1,
       `${modernVersion}: Misfortune subtracts melee after the terminal zero clamp`);
@@ -122,7 +122,7 @@ function runDerivationStageChecks(ctx) {
     const beforeSupremeLight = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, atk: 1, def: 1, res: 3,
       rtb: 1, rtbType: 'magic', modernAttacks: { ranged: { strength: 1, type: 'magic' } },
-      abilities: { mislead: true, supremeLight: true },
+      markedAbilities: { mislead: true, supremeLight: true },
     }));
     const supremeIndex = beforeSupremeLight.statTrace
       .findIndex(entry => entry.id === 'supremeLight');
@@ -135,7 +135,7 @@ function runDerivationStageChecks(ctx) {
 
     const createdRanged = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, rtb: 0, rtbType: 'none',
-      abilities: { focusMagic: true, mislead: true }, modernAttacks: {},
+      markedAbilities: { focusMagic: true, mislead: true }, modernAttacks: {},
     }));
     assertEqual(createdRanged.modernAttacks.ranged.strength, 3,
       `${modernVersion}: Misfortune does not subtract from Ranged created after the persistent base record`);
@@ -147,23 +147,26 @@ function runDerivationStageChecks(ctx) {
     // :2599), so a Ranged channel created after the permanent record takes neither; Guiding
     // Beacon tests the calculated `U.ranged > 0` (:2543) and takes it. That is what separates
     // the two gates in one aura pass — the record each reads, not the slot each writes.
-    const createdRangedWithAuras = ctx.deriveUnitStats(baseUnitInput({
-      version: modernVersion, rtb: 0, rtbType: 'none',
-      abilities: { focusMagic: true, holyBonus: 2, mislead: true, guidingBeaconAura: 2 },
-      modernAttacks: {},
-    }));
-    assertEqual(createdRangedWithAuras.modernAttacks.ranged.strength, 5,
-      `${modernVersion}: a created Ranged channel takes Guiding Beacon but neither permanent-record aura`);
-    const createdAuraIds = createdRangedWithAuras.modernAttacks.ranged.modifierTrace.entries
-      .map(entry => entry.id);
-    assert(createdAuraIds.includes('guidingBeaconAura')
-      && !createdAuraIds.includes('holyBonus') && !createdAuraIds.includes('mislead'),
-    `${modernVersion}: calculated and permanent Ranged gates remain isolated in one aura pass`);
-
+    for (const auraSource of ['innateAbilities', 'markedAbilities']) {
+      const createdRangedWithAuras = ctx.deriveUnitStats(baseUnitInput({
+        version: modernVersion, rtb: 0, rtbType: 'none',
+        innateAbilities: auraSource === 'innateAbilities' ? { holyBonus: 2 } : {},
+        markedAbilities: { focusMagic: true, mislead: true, guidingBeaconAura: 2,
+          ...(auraSource === 'markedAbilities' ? { holyBonus: 2 } : {}) },
+        modernAttacks: {},
+      }));
+      assertEqual(createdRangedWithAuras.modernAttacks.ranged.strength, 5,
+        `[${auraSource}] ` + (`${modernVersion}: a created Ranged channel takes Guiding Beacon but neither permanent-record aura`));
+      const createdAuraIds = createdRangedWithAuras.modernAttacks.ranged.modifierTrace.entries
+        .map(entry => entry.id);
+      assert(createdAuraIds.includes('guidingBeaconAura')
+        && !createdAuraIds.includes('holyBonus') && !createdAuraIds.includes('mislead'),
+      `[${auraSource}] ` + (`${modernVersion}: calculated and permanent Ranged gates remain isolated in one aura pass`));
+  }
     const hero = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, unitType: 'hero', atk: 2, def: 2, res: 2,
       rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
-      abilities: { mislead: true },
+      markedAbilities: { mislead: true },
     }));
     assertEqual(hero.atk, 1,
       `${modernVersion}: an eligible live non-Fantastic hero receives Misfortune`);
@@ -172,7 +175,7 @@ function runDerivationStageChecks(ctx) {
 
     const thrown = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, rtb: 2, rtbType: 'thrown',
-      modernAttacks: { thrown: { strength: 2, type: 'thrown' } }, abilities: { mislead: true },
+      modernAttacks: { thrown: { strength: 2, type: 'thrown' } }, markedAbilities: { mislead: true },
     }));
     assertEqual(thrown.rtb, 2,
       `${modernVersion}: Misfortune does not subtract from the independent Thrown channel`);
@@ -180,7 +183,7 @@ function runDerivationStageChecks(ctx) {
     const fantastic = ctx.deriveUnitStats(baseUnitInput({
       version: modernVersion, unitType: 'normal', atk: 2, def: 2, res: 2,
       rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
-      abilities: { combatSummoned: true, mislead: true },
+      markedAbilities: { combatSummoned: true, mislead: true },
     }));
     assertEqual(fantastic.abilities.liveFantastic, true,
       `${modernVersion}: the test subject becomes Fantastic before the aura gate`);
@@ -192,7 +195,7 @@ function runDerivationStageChecks(ctx) {
   const linkedMisfortune = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature', atk: 2, def: 2, res: 2,
     rtb: 2, rtbType: 'missile', modernAttacks: { ranged: { strength: 2, type: 'missile' } },
-    abilities: { spiritLink: true, mislead: true },
+    markedAbilities: { spiritLink: true, mislead: true },
   }));
   assertEqual(linkedMisfortune.abilities.liveFantastic, false,
     'Warlord Spirit Link clears Fantastic before the Misfortune aura gate');
@@ -230,18 +233,18 @@ function runDerivationStageChecks(ctx) {
     version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature', atk: 4, def: 4, res: 6,
     rtb: 0, rtbType: 'none', modernAttacks: {}, level: 'elite', ...over });
   const linkedEquipped = ctx.deriveUnitStats(linkedCard({
-    weapon: 'adamantium', abilities: { spiritLink: true } }));
+    weapon: 'adamantium', markedAbilities: { spiritLink: true } }));
   const unlinkedEquipped = ctx.deriveUnitStats(linkedCard({
-    weapon: 'adamantium', abilities: {} }));
+    weapon: 'adamantium', innateAbilities: {}, markedAbilities: {} }));
   assertEqual(unlinkedEquipped.weapon, 'normal',
     'a base-Fantastic Warlord unit is unequipped: the loadout gate discards the stated material');
   assertEqual(linkedEquipped.weapon, 'normal',
     'and Spirit Link does not equip it retroactively: the cast clears the permanent Fantastic '
     + 'flag at buffs, four phases behind the training write that reads it (F262)');
   const normalEquipped = ctx.deriveUnitStats(linkedCard({
-    unitType: 'normal', weapon: 'adamantium', abilities: {} }));
+    unitType: 'normal', weapon: 'adamantium', innateAbilities: {}, markedAbilities: {} }));
   const destinyEquipped = ctx.deriveUnitStats(linkedCard({
-    unitType: 'normal', weapon: 'adamantium', abilities: { destiny: true } }));
+    unitType: 'normal', weapon: 'adamantium', markedAbilities: { destiny: true } }));
   assertEqual(normalEquipped.weapon, 'adamantium',
     'a normal Warlord unit keeps the material its city gave it');
   assertEqual(destinyEquipped.weapon, 'adamantium',
@@ -256,9 +259,9 @@ function runDerivationStageChecks(ctx) {
   assert(!linkedEquipped.statTrace.some(e => e.id === 'level:fantastic'),
     'while c:level:fantastic no longer fires, its gate reading the cleared base record');
   const linkedBadMoon = ctx.deriveUnitStats(linkedCard({
-    level: 'normal', abilities: { spiritLink: true, badMoon: true } }));
+    level: 'normal', markedAbilities: { spiritLink: true, badMoon: true } }));
   const unlinkedBadMoon = ctx.deriveUnitStats(linkedCard({
-    level: 'normal', abilities: { badMoon: true } }));
+    level: 'normal', markedAbilities: { badMoon: true } }));
   assertEqual(unlinkedBadMoon.res, 6,
     "Bad Moon's permanent-record arm refuses a base-Fantastic unit");
   assertEqual(linkedBadMoon.res, 5,
@@ -275,15 +278,15 @@ function runDerivationStageChecks(ctx) {
   const breakthroughEvent = card => ctx.deriveUnitStats(card).statExecutionTrace
     .find(event => event.id === 'breakthrough:normal');
   const plainBreakthrough = breakthroughEvent(breakthroughCard({
-    abilities: { breakthrough: 'melee' } }));
+    markedAbilities: { breakthrough: 'melee' } }));
   const destinyBreakthrough = breakthroughEvent(breakthroughCard({
-    abilities: { breakthrough: 'melee', destiny: true } }));
+    markedAbilities: { breakthrough: 'melee', destiny: true } }));
   assert(plainBreakthrough && plainBreakthrough.status === 'applied',
     'c:breakthrough:normal is composed and fires on a permanently non-Fantastic unit');
   assert(destinyBreakthrough && destinyBreakthrough.status === 'skipped',
     'and is still composed, reporting itself skipped, once Destiny writes the permanent flag '
     + '- a step present and unfired rather than a step never built (F244.3h)');
-  assert(!breakthroughEvent(breakthroughCard({ abilities: {} })),
+  assert(!breakthroughEvent(breakthroughCard({ innateAbilities: {}, markedAbilities: {} })),
     'while a card with no Breakthrough composes no step at all, which is the enchantment gate '
     + 'rather than the block term');
 
@@ -303,12 +306,12 @@ function runDerivationStageChecks(ctx) {
     version: 'com2_warlord_1.5.12.9', unitType: 'fantastic_nature', atk: 4, def: 4, res: 6,
     rtb: 6, rtbType: 'missile',
     modernAttacks: { ranged: { strength: 6, type: 'missile' } }, ...over });
-  const REFORM = { outlanderWizard: true, ballisticsTraining: true, xenopsychology: true,
+  const REFORM = { ballisticsTraining: true, xenopsychology: true,
     radio: true };
   const reformDestinyLinked = ctx.deriveUnitStats(reformCard({
-    abilities: { ...REFORM, spiritLink: true, destiny: true } }));
+    innateAbilities: { outlanderWizard: true }, markedAbilities: { ...REFORM, spiritLink: true, destiny: true } }));
   const reformDestinyPlain = ctx.deriveUnitStats(reformCard({
-    abilities: { ...REFORM, destiny: true } }));
+    innateAbilities: { outlanderWizard: true }, markedAbilities: { ...REFORM, destiny: true } }));
   assertEqual(reformDestinyPlain.toHitRtb, 0.3,
     'a permanently Fantastic Outlander unit is outside the Sapiens tail');
   assertEqual(reformDestinyLinked.toHitRtb, 0.5,

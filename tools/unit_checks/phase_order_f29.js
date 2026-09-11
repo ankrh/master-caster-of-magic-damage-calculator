@@ -48,7 +48,7 @@ function makeUnit(ctx, version, prefix, overrides = {}) {
   return ctx.deriveUnitStats({
     prefix,
     version,
-    abilities: {},
+    innateAbilities: {}, markedAbilities: {},
     level: 'normal',
     weapon: 'normal',
     armor: 'normal',
@@ -104,7 +104,7 @@ function runModernPhaseOrderChecks(ctx) {
         fireBreath: { strength: 1, type: 'fire' },
         thrown: { strength: 1, type: 'thrown' },
       },
-      abilities: { stoningGaze: 0, deathGaze: 0, doomGaze: 1 },
+      innateAbilities: { stoningGaze: 0, deathGaze: 0, doomGaze: 1 },
     });
     const allDefender = makeUnit(ctx, version, 'b', {
       figs: 2,
@@ -112,7 +112,7 @@ function runModernPhaseOrderChecks(ctx) {
       hp: 20,
       res: 100,
       modernAttacks: {},
-      abilities: { stoningGaze: 0, deathGaze: 0, doomGaze: 1 },
+      innateAbilities: { stoningGaze: 0, deathGaze: 0, doomGaze: 1 },
     });
     const ordered = ctx.resolveCombat(allAttacker, allDefender, {
       version, isRanged: false, wallOfFire: true, distance: 1,
@@ -137,7 +137,7 @@ function runModernPhaseOrderChecks(ctx) {
       hp: 20,
       res: 0,
       modernAttacks: {},
-      abilities: { stoningGaze: -10 },
+      innateAbilities: { stoningGaze: -10 },
     });
     const baseline = ctx.resolveCombat(breathAttacker, plainDefender, {
       version, isRanged: false, wallOfFire: false, distance: 1,

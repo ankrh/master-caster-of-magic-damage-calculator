@@ -10,7 +10,7 @@ const { repoRoot } = require('../calculator_sources');
 const { evalInContext, assert, assertEqual, assertClose, baseUnitInput } = require('./assertions');
 
 function calculatorSource(file) {
-  return fs.readFileSync(path.join(repoRoot, ...file.split('/')), 'utf8');
+  return fs.readFileSync(path.join(repoRoot, ...file.split('/')), 'utf8').replace(/\r\n/g, '\n');
 }
 
 // The `fantastic_<realm>` / `normal_<realm>` / `hero` grammar, transcribed from the token's own
@@ -104,9 +104,11 @@ function runIdentityProjectionChecks(ctx) {
 
   // The projection itself, decoded by the grammar above rather than re-run: no derivation may
   // report a token whose realm or Fantastic value its live identity does not carry.
-  const conversionControls = ['ccFireBreath', 'fieryFury', 'sanctify', 'clergy', 'destiny',
+  const conversionControls = ['ccFireBreath', 'fieryFury', 'sanctify', 'destiny',
     'ccFlight', 'ccDefense', 'bloodLust', 'blackChannels', 'undead', 'animated', 'mysticSurge',
     'raiseDead'];
+  const identityProbes = [['none', {}], ['clergy', { innateAbilities: { clergy: true } }],
+    ...conversionControls.map(control => [control, { markedAbilities: { [control]: true } }])];
   const identityShapes = [
     { isHero: false, baseRace: 'High Men', baseFantastic: false },
     { isHero: true, baseRace: 'High Men', baseFantastic: false },
@@ -115,11 +117,11 @@ function runIdentityProjectionChecks(ctx) {
   ];
   for (const version of evalInContext(ctx, 'ENGINE_VERSIONS')) {
     for (const shape of identityShapes) {
-      for (const control of ['none', ...conversionControls]) {
+      for (const [control, sourceInput] of identityProbes) {
         const result = ctx.deriveUnitStats(baseUnitInput({
           version,
           identity: ctx.createCustomUnitIdentity(version, shape),
-          abilities: control === 'none' ? {} : { [control]: true },
+          ...sourceInput,
         }));
         assert(unitTypeTokenAgreesWithIdentity(result.unitType, livePublishedIdentity(result)),
           `${version}/${control}: the projected unit type agrees with the live identity `
@@ -196,7 +198,7 @@ function runTemplateRankPermanentIdentityChecks(ctx) {
         const result = ctx.deriveUnitStats(baseUnitInput({
           version,
           identity: ctx.createUnitIdentity({ version, ...shape }),
-          abilities: { combatSummoned },
+          markedAbilities: { combatSummoned },
         }));
         const label = `${version}/${shapeName}/combatSummoned=${combatSummoned}`;
         for (const field of ['race', 'fantastic']) {
@@ -925,12 +927,13 @@ function runIdentityChecks(ctx) {
   assert(chosen.statTrace.some(t => t.id === 'chosen'),
     'Identity writes are included with affected calculated-stat output trace');
 
-  const orderedRealmAbilities = [
+  const orderedRealmInputs = [
     {},
-    { ccDefense: true },
-    { ccDefense: true, undead: true },
-    { ccDefense: true, undead: true, mysticSurge: true },
-    { ccDefense: true, undead: true, mysticSurge: true, sanctify: true, clergy: true },
+    { markedAbilities: { ccDefense: true } },
+    { markedAbilities: { ccDefense: true, undead: true } },
+    { markedAbilities: { ccDefense: true, undead: true, mysticSurge: true } },
+    { innateAbilities: { clergy: true },
+      markedAbilities: { ccDefense: true, undead: true, mysticSurge: true, sanctify: true } },
   ];
   const orderedRealmExpected = [
     ['Life', 'fantastic_life'],
@@ -939,13 +942,13 @@ function runIdentityChecks(ctx) {
     ['No Heal', 'fantastic_unaligned'],
     ['No Heal', 'fantastic_unaligned'],
   ];
-  orderedRealmAbilities.forEach((abilities, index) => {
+  orderedRealmInputs.forEach((sourceInput, index) => {
     const unit = ctx.deriveUnitStats(baseUnitInput({
       version: 'com2_warlord_1.5.12.9',
       identity: ctx.createCustomUnitIdentity('com2_warlord_1.5.12.9', {
         baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen',
       }),
-      abilities,
+      ...sourceInput,
     }));
     assertEqual(unit.abilities.liveRace, orderedRealmExpected[index][0],
       `Ordered identity override ${index} writes the expected live race`);
@@ -954,12 +957,12 @@ function runIdentityChecks(ctx) {
   });
 
   const summoned = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { combatSummoned: true },
+    version: 'com2_1.05.11', markedAbilities: { combatSummoned: true },
   }));
   assertEqual(summoned.abilities.liveFantastic, true, 'Combat Summoned writes live Fantastic');
 
   const construct = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { combatSummoned: true },
+    version: 'com2_1.05.11', markedAbilities: { combatSummoned: true },
     identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 37,
       baseRace: 'Special', baseFantastic: false }),
   }));
@@ -967,7 +970,7 @@ function runIdentityChecks(ctx) {
   assertEqual(construct.abilities.liveFantastic, true, 'Construct Catapult writes live Fantastic');
 
   const callToArms = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { combatSummoned: true },
+    version: 'com2_1.05.11', markedAbilities: { combatSummoned: true },
     identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 113,
       baseRace: 'High Men', baseFantastic: false }),
   }));
@@ -975,7 +978,7 @@ function runIdentityChecks(ctx) {
   assertEqual(callToArms.abilities.liveFantastic, true, 'Call to Arms Paladins writes live Fantastic');
 
   const invalidCallToArms = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', name: 'Paladins', abilities: { combatSummoned: true },
+    version: 'com2_1.05.11', name: 'Paladins', markedAbilities: { combatSummoned: true },
     identity: ctx.createCustomUnitIdentity('com2_1.05.11', { baseRace: 'High Men' }),
   }));
   assertEqual(invalidCallToArms.abilities.liveRace, 'High Men', 'Call to Arms ignores display names');
@@ -983,7 +986,7 @@ function runIdentityChecks(ctx) {
     'Custom Paladins display name does not infer Call to Arms');
 
   const com1SummonedOther = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com_6.08', abilities: { combatSummoned: true },
+    version: 'com_6.08', markedAbilities: { combatSummoned: true },
     identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 150,
       baseRace: 'Troll', baseFantastic: false }),
   }));
@@ -993,7 +996,7 @@ function runIdentityChecks(ctx) {
     'CoM1 generic combat summons become live Fantastic');
 
   const com1ConstructCatapult = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com_6.08', abilities: { combatSummoned: true }, rtb: 9, rtbType: 'boulder',
+    version: 'com_6.08', markedAbilities: { combatSummoned: true }, rtb: 9, rtbType: 'boulder',
     identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 37,
       baseRace: 'Special', baseFantastic: false, specialUnit: 'none' }),
   }));
@@ -1005,7 +1008,7 @@ function runIdentityChecks(ctx) {
     'CoM1 Construct Catapult source type 37 receives Magic Weapons');
 
   const com1SummonedCentaurs = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com_6.08', abilities: { combatSummoned: true },
+    version: 'com_6.08', markedAbilities: { combatSummoned: true },
     identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 54,
       baseRace: 'Beastmen', baseFantastic: false }),
   }));
@@ -1015,7 +1018,7 @@ function runIdentityChecks(ctx) {
     'CoM1 combat-summoned Centaurs become live Fantastic');
 
   const com1SummonedPaladins = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com_6.08', abilities: { combatSummoned: true },
+    version: 'com_6.08', markedAbilities: { combatSummoned: true },
     identity: ctx.createUnitIdentity({ version: 'com_6.08', templateId: 113,
       baseRace: 'High Men', baseFantastic: false }),
   }));
@@ -1033,13 +1036,13 @@ function runIdentityChecks(ctx) {
     'CoM1 Zombies trace the ten-percentage-point engine step');
 
   const breakthroughNormal = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { breakthrough: 'meleeDef' }, atk: 2, def: 2,
+    version: 'com2_1.05.11', markedAbilities: { breakthrough: 'meleeDef' }, atk: 2, def: 2,
   }));
   assertEqual(breakthroughNormal.atk, 3, 'Normal Breakthrough derives the melee package');
   assertEqual(breakthroughNormal.def, 2,
     'Exceptional Breakthrough labels cannot override the normal package\'s zero Defense bonus');
   const breakthroughChosen = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { breakthrough: 'meleeDef' }, atk: 2, def: 2,
+    version: 'com2_1.05.11', markedAbilities: { breakthrough: 'meleeDef' }, atk: 2, def: 2,
     identity: ctx.createUnitIdentity({ version: 'com2_1.05.11', templateId: 34,
       isHero: true, baseRace: 'Dwarf', baseFantastic: false, specialUnit: 'chosen' }),
   }));
@@ -1051,12 +1054,12 @@ function runIdentityChecks(ctx) {
   assert(breakthroughChosen.statTrace.some(t => t.id === 'breakthrough:normal'),
     'Live-Fantastic Chosen still receive the normal Breakthrough package, which tests the permanent record');
   const breakthroughSummoned = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { breakthrough: 'melee', combatSummoned: true }, atk: 2, def: 2,
+    version: 'com2_1.05.11', markedAbilities: { breakthrough: 'melee', combatSummoned: true }, atk: 2, def: 2,
   }));
   assertEqual(breakthroughSummoned.atk, 3, 'Combat Summoned derives Breakthrough attack');
   assertEqual(breakthroughSummoned.def, 3, 'Combat Summoned derives Breakthrough defense');
   const breakthroughNoncorporeal = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { breakthrough: 'melee', nonCorporeal: true }, atk: 2, def: 2,
+    version: 'com2_1.05.11', innateAbilities: { nonCorporeal: true }, markedAbilities: { breakthrough: 'melee' }, atk: 2, def: 2,
     identity: ctx.createCustomUnitIdentity('com2_1.05.11', {
       baseRace: 'Sorcery', baseFantastic: true,
     }),

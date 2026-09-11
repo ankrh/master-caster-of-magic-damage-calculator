@@ -117,7 +117,7 @@ function runModifierTraceChecks(ctx) {
     // A modern fixture states the record's own To-Hit fields; the DOS pair is a different
     // record shape (`SPEC.md`, *Attack channels on the card*).
     hitMelee: 5,
-    abilities: { lucky: true, highPrayer: true, warpAttack: true, vertigo: true },
+    innateAbilities: { lucky: true }, markedAbilities: { highPrayer: true, warpAttack: true, vertigo: true },
     modernAttacks: {
       ranged: { strength: 4, type: 'missile' },
       thrown: { strength: 3, type: 'thrown' },
@@ -162,10 +162,7 @@ function runModifierTraceChecks(ctx) {
   for (const version of ['com2_1.05.11', 'com2_warlord_1.5.12.9']) {
     const raisedBeforeHolyArmor = ctx.deriveUnitStats(baseUnitInput({
       version, def: 1,
-      abilities: {
-        holyArmor: true, discipline: 'overland', animated: true,
-        mysticSurge: true, ironSkin: true, landLinking: true,
-      },
+      markedAbilities: { holyArmor: true, discipline: 'overland', animated: true, mysticSurge: true, ironSkin: true, landLinking: true },
     }));
     assertEqual(raisedBeforeHolyArmor.def, 12,
       `${version}: every represented earlier Defense writer contributes before Holy Armor`);
@@ -179,7 +176,7 @@ function runModifierTraceChecks(ctx) {
     }
 
     const raisedAfterHolyArmor = ctx.deriveUnitStats(baseUnitInput({
-      version, def: 4, abilities: { holyArmor: true, highPrayer: true },
+      version, def: 4, markedAbilities: { holyArmor: true, highPrayer: true },
     }));
     assertEqual(raisedAfterHolyArmor.def, 8,
       `${version}: Holy Armor takes its +2 Defense branch before High Prayer raises Defense`);
@@ -190,7 +187,7 @@ function runModifierTraceChecks(ctx) {
       `${version}: Holy Armor trace precedes the later combat-global Defense write`);
 
     const loweredAfterHolyArmor = ctx.deriveUnitStats(baseUnitInput({
-      version, def: 6, abilities: { holyArmor: true, blackPrayer: true },
+      version, def: 6, markedAbilities: { holyArmor: true, blackPrayer: true },
     }));
     assertEqual(loweredAfterHolyArmor.def, 5,
       `${version}: Holy Armor takes its To Defend branch before Black Prayer lowers Defense`);
@@ -203,10 +200,7 @@ function runModifierTraceChecks(ctx) {
     const postThresholdOrder = ctx.deriveUnitStats(baseUnitInput({
       version, def: 6, hp: 8, armor: 'orihalcon', rtb: 2, rtbType: 'magic',
       modernAttacks: { ranged: { strength: 2, type: 'magic' } },
-      abilities: {
-        holyArmor: true, holyWeapon: true, highPrayer: true,
-        reinforceMagic: true, charmOfLife: true, weakness: true,
-      },
+      markedAbilities: { holyArmor: true, holyWeapon: true, highPrayer: true, reinforceMagic: true, charmOfLife: true, weakness: true },
     })).statTrace.map(entry => entry.id);
     assert(postThresholdOrder.indexOf('holyArmor') < postThresholdOrder.indexOf('orihalcon')
         && postThresholdOrder.indexOf('orihalcon')
@@ -225,10 +219,7 @@ function runModifierTraceChecks(ctx) {
     const physicalLaterOrder = ctx.deriveUnitStats(baseUnitInput({
       version, def: 6, hp: 8, rtb: 2, rtbType: 'missile',
       modernAttacks: { ranged: { strength: 2, type: 'missile' } },
-      abilities: {
-        holyArmor: true, holyWeapon: true,
-        charmOfLife: true, blazingMarch: true, weakness: true,
-      },
+      markedAbilities: { holyArmor: true, holyWeapon: true, charmOfLife: true, blazingMarch: true, weakness: true },
     })).statTrace.map(entry => entry.id);
     assert(physicalLaterOrder.indexOf('holyWeapon')
         < physicalLaterOrder.indexOf('charmOfLife')
@@ -271,7 +262,7 @@ function runModifierTraceChecks(ctx) {
 
   const cappedPlague = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', hitChance: -20,
-    abilities: { plague: true },
+    markedAbilities: { plague: true },
   }));
   const cappedSources = cappedPlague.modifierTraces.toHitMelee.entries.map(t => t.id);
   assert(cappedSources.includes('chance:plague'),
@@ -312,10 +303,7 @@ function runModifierTraceChecks(ctx) {
 
   const recoveringBlock = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', toBlkMod: -40,
-    abilities: {
-      outlanderWizard: true, mechanical: true, heatPowerEngine: true,
-      magitekEngineering: true, radio: true,
-    },
+    innateAbilities: { outlanderWizard: true, mechanical: true }, markedAbilities: { heatPowerEngine: true, magitekEngineering: true, radio: true },
   }));
   assertClose(recoveringBlock.toBlock, 0.2,
     'Warlord phase-b To Defend bonuses recover from the signed base record without an intermediate floor');
@@ -325,7 +313,7 @@ function runModifierTraceChecks(ctx) {
 
   for (const version of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08']) {
     const highDos = ctx.deriveUnitStats(baseUnitInput({
-      version, toHitMod: 70, abilities: { lucky: true },
+      version, toHitMod: 70, innateAbilities: { lucky: true },
     }));
     assertClose(highDos.toHitMelee, 1,
       `${version}: DOS terminal normalization clamps the effective common-plus-melee threshold`);
@@ -337,7 +325,7 @@ function runModifierTraceChecks(ctx) {
   }
 
   const tracedDestiny = ctx.deriveUnitStats(baseUnitInput({
-    abilities: { destiny: true },
+    markedAbilities: { destiny: true },
     level: 'champion',
     rtbType: 'missile',
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
@@ -368,15 +356,15 @@ function runModifierTraceChecks(ctx) {
   const permanentSourceCases = [
     [
       'Chaos Channels', 'chaosChannels:fireBreath', 'fireBreath',
-      baseUnitInput({ version: 'com2_1.05.11', abilities: { ccFireBreath: true } }), 0, 4,
+      baseUnitInput({ version: 'com2_1.05.11', markedAbilities: { ccFireBreath: true } }), 0, 4,
     ],
     [
       'Lightning Blade', 'lightningBlade:breath', 'lightningBreath',
-      baseUnitInput({ version: 'com2_warlord_1.5.12.9', abilities: { lightningBlade: true } }), 0, 1,
+      baseUnitInput({ version: 'com2_warlord_1.5.12.9', markedAbilities: { lightningBlade: true } }), 0, 1,
     ],
     [
       'Focus Magic', 'focusMagic', 'ranged',
-      baseUnitInput({ version: 'com2_1.05.11', abilities: { focusMagic: true } }), 0, 3,
+      baseUnitInput({ version: 'com2_1.05.11', markedAbilities: { focusMagic: true } }), 0, 3,
     ],
   ];
   for (const [label, sourceId, channel, input, from, to] of permanentSourceCases) {
@@ -391,7 +379,7 @@ function runModifierTraceChecks(ctx) {
     version: 'com2_warlord_1.5.12.9', race: 'Goblin',
     atk: 3, rtb: 2, rtbType: 'missile',
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
-    abilities: { motherFungus: true, destiny: true },
+    markedAbilities: { motherFungus: true, destiny: true },
   }));
   assertEqual(destinyAfterPermanent.atk, 10,
     'Destiny doubles melee after the permanent Mother Fungus write');
@@ -408,7 +396,7 @@ function runModifierTraceChecks(ctx) {
   const destinyAfterEarlyHook = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', atk: 3, rtb: 2, rtbType: 'missile',
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
-    abilities: { luckyStar: true, destiny: true },
+    markedAbilities: { luckyStar: true, destiny: true },
   }));
   assertEqual(destinyAfterEarlyHook.atk, 8,
     'Destiny doubles the phase-b Lucky Star melee write at its compiled position');
@@ -419,7 +407,7 @@ function runModifierTraceChecks(ctx) {
     'Destiny follows UnitCalcPre and precedes later phase-c transforms');
 
   const destinyChannels = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', atk: 1, abilities: { ccFireBreath: true, destiny: true },
+    version: 'com2_1.05.11', atk: 1, markedAbilities: { ccFireBreath: true, destiny: true },
     modernAttacks: {},
   }));
   assertEqual(destinyChannels.modernAttacks.fireBreath.strength, 8,
@@ -431,7 +419,7 @@ function runModifierTraceChecks(ctx) {
   'Chaos Channels Fire Breath precedes Destiny in the modern channel trace');
 
   const focusCreatedAfterLevel = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', level: 'champion', abilities: { focusMagic: true },
+    version: 'com2_1.05.11', level: 'champion', markedAbilities: { focusMagic: true },
   }));
   assertEqual(focusCreatedAfterLevel.rtb, 3,
     'Focus Magic creates ranged strength after the level ladder, so the new slot gets no level bonus');
@@ -445,7 +433,7 @@ function runModifierTraceChecks(ctx) {
   }));
   const focusedThrown = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_1.05.11', level: 'champion', rtb: 2, rtbType: 'thrown',
-    abilities: { focusMagic: true }, modernAttacks: baseModernThrown,
+    markedAbilities: { focusMagic: true }, modernAttacks: baseModernThrown,
   }));
   assertEqual(focusedThrown.modernAttacks.ranged.strength,
     leveledThrown.modernAttacks.thrown.strength,
@@ -456,7 +444,7 @@ function runModifierTraceChecks(ctx) {
     'Focus Magic consumes the original Thrown channel');
 
   const focusedBreath = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { focusMagic: true },
+    version: 'com2_1.05.11', markedAbilities: { focusMagic: true },
     modernAttacks: { fireBreath: { strength: 2, type: 'fire' } },
   }));
   assertEqual(focusedBreath.modernAttacks.fireBreath.strength, 5,
@@ -465,7 +453,7 @@ function runModifierTraceChecks(ctx) {
     'Focus Magic also executes its independent empty-ranged creation branch beside a Breath');
 
   const focusedGaze = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { focusMagic: true, doomGaze: 4 },
+    version: 'com2_1.05.11', innateAbilities: { doomGaze: 4 }, markedAbilities: { focusMagic: true },
     modernAttacks: {},
   }));
   assertEqual(focusedGaze.effectiveDoomGaze, 7,
@@ -478,7 +466,7 @@ function runModifierTraceChecks(ctx) {
   // unit with no Doom Gaze takes no Doom Gaze write at all. The region-`e` clamp discards a
   // stray one, which is why the ledger rather than the total is where this is observable.
   const focusedNoGaze = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { focusMagic: true },
+    version: 'com2_1.05.11', markedAbilities: { focusMagic: true },
     rtbType: 'magic', rtb: 4,
     modernAttacks: { ranged: { strength: 4, type: 'magic' } },
   }));
@@ -488,7 +476,7 @@ function runModifierTraceChecks(ctx) {
 
   const focusedBombs = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', atk: 3,
-    abilities: { outlanderWizard: true, explosive: true, focusMagic: true },
+    innateAbilities: { outlanderWizard: true }, markedAbilities: { explosive: true, focusMagic: true },
     modernAttacks: {},
   }));
   assertEqual(focusedBombs.modernAttacks.ranged.strength, 7,
@@ -504,7 +492,7 @@ function runModifierTraceChecks(ctx) {
 
   const focusedBombsAndBreath = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', atk: 3,
-    abilities: { outlanderWizard: true, explosive: true, focusMagic: true },
+    innateAbilities: { outlanderWizard: true }, markedAbilities: { explosive: true, focusMagic: true },
     modernAttacks: { fireBreath: { strength: 2, type: 'fire' } },
   }));
   assertEqual(focusedBombsAndBreath.modernAttacks.ranged.strength, 7,
@@ -513,7 +501,7 @@ function runModifierTraceChecks(ctx) {
     'Focus Magic independently boosts Breath while converting Bombs & Grenades Thrown');
 
   const typeOnlyFocus = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11', abilities: { focusMagic: true },
+    version: 'com2_1.05.11', markedAbilities: { focusMagic: true },
     modernAttacks: { ranged: { strength: 2, type: 'missile' } },
   }));
   const typeOnlyFocusEvent = typeOnlyFocus.modernAttacks.ranged.statTrace
@@ -524,7 +512,7 @@ function runModifierTraceChecks(ctx) {
 
   const tracedVampirism = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9',
-    abilities: { vampirism: true },
+    markedAbilities: { vampirism: true },
     atk: 3, rtb: 5, rtbType: 'thrown',
     modernAttacks: { thrown: { strength: 5, type: 'thrown' } },
   }));
@@ -537,7 +525,7 @@ function runModifierTraceChecks(ctx) {
 
   const simultaneousVampirism = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9',
-    abilities: { vampirism: true },
+    markedAbilities: { vampirism: true },
     atk: 3, rtb: 1, rtbType: 'thrown',
     modernAttacks: {
       thrown: { strength: 1, type: 'thrown' },
@@ -554,7 +542,7 @@ function runModifierTraceChecks(ctx) {
 
   const orderedVampirism = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9',
-    abilities: { colossalStrength: true, vampirism: true, shadowStrike: true },
+    markedAbilities: { colossalStrength: true, vampirism: true, shadowStrike: true },
     atk: 4, rtb: 3, rtbType: 'thrown',
     modernAttacks: {
       thrown: { strength: 3, type: 'thrown' },
@@ -583,7 +571,7 @@ function runModifierTraceChecks(ctx) {
 
   const focusedCoexistingVampirism = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', atk: 3, rtb: 4, rtbType: 'missile',
-    abilities: { focusMagic: true, vampirism: true },
+    markedAbilities: { focusMagic: true, vampirism: true },
     modernAttacks: {
       ranged: { strength: 4, type: 'missile' },
       thrown: { strength: 3, type: 'thrown' },
@@ -609,9 +597,9 @@ function runModifierTraceChecks(ctx) {
   'Vampirism probe fields do not leak into the public derived result');
 
   const createdVampirismSources = [
-    ['Bombs & Grenades', { outlanderWizard: true, explosive: true }, {}, 6, 'thrown'],
-    ['Chaos Channels', { ccFireBreath: true }, {}, 5, 'fireBreath'],
-    ['Lightning Blade', { lightningBlade: true },
+    ['Bombs & Grenades', { innateAbilities: { outlanderWizard: true }, markedAbilities: { explosive: true } }, {}, 6, 'thrown'],
+    ['Chaos Channels', { markedAbilities: { ccFireBreath: true } }, {}, 5, 'fireBreath'],
+    ['Lightning Blade', { markedAbilities: { lightningBlade: true } },
       { thrown: { strength: 4, type: 'thrown' } }, 5, 'lightningBreath'],
   ];
   for (const [label, sourceAbilities, modernAttacks, expectedMelee, outputKey]
@@ -620,7 +608,8 @@ function runModifierTraceChecks(ctx) {
       version: 'com2_warlord_1.5.12.9', atk: 3,
       rtb: outputKey === 'lightningBreath' ? 4 : 0,
       rtbType: outputKey === 'lightningBreath' ? 'thrown' : 'none',
-      abilities: { vampirism: true, ...sourceAbilities }, modernAttacks,
+      innateAbilities: sourceAbilities.innateAbilities || {},
+      markedAbilities: { vampirism: true, ...sourceAbilities.markedAbilities }, modernAttacks,
     }));
     assertEqual(created.atk, expectedMelee,
       `Vampirism includes the ${label} source at its region-d read`);
@@ -631,7 +620,7 @@ function runModifierTraceChecks(ctx) {
   for (const otherVersion of ['mom_1.31', 'mom_cp_1.60.00', 'com_6.08', 'com2_1.05.11']) {
     const inert = ctx.deriveUnitStats(baseUnitInput({
       version: otherVersion, atk: 3, rtb: 3, rtbType: 'thrown',
-      abilities: { vampirism: true },
+      markedAbilities: { vampirism: true },
       modernAttacks: otherVersion.startsWith('com2')
         ? { thrown: { strength: 3, type: 'thrown' } } : undefined,
     }));
@@ -641,7 +630,7 @@ function runModifierTraceChecks(ctx) {
 
   const shadowStrikeGrant = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9',
-    abilities: { shadowStrike: true },
+    markedAbilities: { shadowStrike: true },
     atk: 6, rtb: 0, rtbType: 'none',
     modernAttacks: {},
   }));
@@ -666,7 +655,7 @@ function runModifierTraceChecks(ctx) {
 
   const colossalShadow = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', atk: 9,
-    abilities: { colossalStrength: true, shadowStrike: true }, modernAttacks: {},
+    markedAbilities: { colossalStrength: true, shadowStrike: true }, modernAttacks: {},
   }));
   assertEqual(colossalShadow.atk, 13,
     'Colossal Strength raises melee before Shadow Strike reads it');
@@ -680,7 +669,7 @@ function runModifierTraceChecks(ctx) {
 
   const focusAndShadow = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', atk: 9, rtb: 4, rtbType: 'thrown',
-    abilities: { focusMagic: true, shadowStrike: true },
+    markedAbilities: { focusMagic: true, shadowStrike: true },
     modernAttacks: { thrown: { strength: 4, type: 'thrown' } },
   }));
   assertEqual(focusAndShadow.modernAttacks.ranged.strength, 4,
@@ -700,15 +689,19 @@ function runModifierTraceChecks(ctx) {
       `Modern ${key} trace finishes at that channel's own result`);
   }
 
-  const inert = ctx.deriveUnitStats(baseUnitInput({
-    version: 'com2_1.05.11',
-    atk: 4,
-    abilities: { highPrayer: false, warpAttack: false, holyBonus: 0 },
-  }));
-  const inertSources = inert.modifierTraces.melee.entries.map(entry => entry.source.id);
-  assert(!inertSources.includes('highPrayer') && !inertSources.includes('warpAttack')
-      && !inertSources.includes('holyBonus'),
-    'Inactive and zero-valued inputs are omitted instead of producing no-op trace entries');
+  for (const source of ['innateAbilities', 'markedAbilities']) {
+    const inert = ctx.deriveUnitStats(baseUnitInput({
+      version: 'com2_1.05.11',
+      atk: 4,
+      innateAbilities: source === 'innateAbilities' ? { holyBonus: 0 } : {},
+      markedAbilities: { highPrayer: false, warpAttack: false,
+        ...(source === 'markedAbilities' ? { holyBonus: 0 } : {}) },
+    }));
+    const inertSources = inert.modifierTraces.melee.entries.map(entry => entry.source.id);
+    assert(!inertSources.includes('highPrayer') && !inertSources.includes('warpAttack')
+        && !inertSources.includes('holyBonus'),
+      `[${source}] ` + ('Inactive and zero-valued inputs are omitted instead of producing no-op trace entries'));
+  }
 }
 
 // Channel attribution on the trace layer (F87). A modern record keeps its attack channels in
@@ -723,7 +716,7 @@ function runChannelAttributionChecks(ctx) {
   // differ: Heavenly Light Ranged and Thrown, True Sight Ranged alone, Hurricane all four.
   const multiChannel = ctx.deriveUnitStats(baseUnitInput({
     version: 'com2_warlord_1.5.12.9', atk: 6, rtb: 5, rtbType: 'missile', hp: 10,
-    abilities: { heavenlyLight: true, trueSight: true },
+    markedAbilities: { heavenlyLight: true, trueSight: true },
     hurricane: true,
     modernAttacks: {
       ranged: { strength: 5, type: 'missile' },
@@ -903,7 +896,7 @@ function runRecordFieldChecks(ctx) {
 
   // `Caster.exe` $00599EE8-$00599FA8 writes `firebreath += 4` and no other attack field.
   const chaosChannels = probe({
-    abilities: { ccFireBreath: true }, rtbType: 'missile', rtb: 5,
+    markedAbilities: { ccFireBreath: true }, rtbType: 'missile', rtb: 5,
     modernAttacks: fourChannels('missile'),
   });
   assertEqual(strengths(chaosChannels).join(','), '5,4,7,2',
@@ -912,7 +905,7 @@ function runRecordFieldChecks(ctx) {
   // Units.RecalculateUnits.pas:1451-1454 and its strength half (:span e405a407) write the
   // conventional Ranged field; Thrown and both Breaths keep their own values.
   const goodMoon = probe({
-    abilities: { goodMoon: true }, rtbType: 'missile', rtb: 5,
+    markedAbilities: { goodMoon: true }, rtbType: 'missile', rtb: 5,
     modernAttacks: fourChannels('missile'),
   });
   assertEqual(strengths(goodMoon).join(','), '6,4,3,2',
@@ -923,7 +916,7 @@ function runRecordFieldChecks(ctx) {
   // field is positive, and never `hitchancebreath`. Holy Weapon (:1806-1809) repeats both gates.
   // The two probes differ only in the Ranged channel's type, so the Ranged modifier cannot have
   // been decided by the Thrown channel that is present in both.
-  const magicWeapon = { weapon: 'magic', abilities: { holyWeapon: true } };
+  const magicWeapon = { weapon: 'magic', markedAbilities: { holyWeapon: true } };
   const materialOnMissile = probe({
     ...magicWeapon, rtbType: 'missile', rtb: 5, modernAttacks: fourChannels('missile'),
   });
@@ -939,7 +932,7 @@ function runRecordFieldChecks(ctx) {
   // when the current type is not magical, and Thrown unconditionally. Its strength half reads
   // the conventional Ranged field, so the +1 lands there whatever that field's type is.
   const heavenlyMissile = probe({
-    abilities: { heavenlyLight: true }, rtbType: 'missile', rtb: 5,
+    markedAbilities: { heavenlyLight: true }, rtbType: 'missile', rtb: 5,
     modernAttacks: fourChannels('missile'),
   });
   assertEqual(toHits(heavenlyMissile).join(','), '0.4,0.4,0.3,0.3',
@@ -947,7 +940,7 @@ function runRecordFieldChecks(ctx) {
   assertEqual(strengths(heavenlyMissile).join(','), '6,4,3,2',
     'Heavenly Light adds its strength to the conventional Ranged field alone');
   const heavenlyMagicRanged = probe({
-    abilities: { heavenlyLight: true }, rtbType: 'magic', rtb: 5,
+    markedAbilities: { heavenlyLight: true }, rtbType: 'magic', rtb: 5,
     modernAttacks: fourChannels('magic'),
   });
   assertEqual(toHits(heavenlyMagicRanged).join(','), '0.3,0.4,0.3,0.3',
@@ -1002,26 +995,90 @@ const F20_VERSIONS = [
 ];
 
 const F20_PROBE_ABILITIES = {
-  lucky: true, darkForce: true, heavenlyLight: true, endurance: true, discipline: true,
-  animated: true, flameBlade: true, mysticSurge: true, lionheart: true, ironSkin: true,
-  stoneSkin: true, landLinking: true, ccDefense: true, blackChannels: true,
-  giantStrength: true, holyArmor: true, orihalcon: true, highPrayer: true, prayer: true,
-  trueLight: true, blackPrayer: true, darkness: true, warpReality: true, vertigo: true,
-  weakness: true, mindStorm: true, warpAttack: true, warpDefense: true, warpResist: true,
-  shatter: true, guardian: true, survivalInstinct: true, reinforceMagic: true,
-  innerPower: true, blazingEyes: true, blazingMarch: true, charmOfLife: true,
-  badMoon: true, goodMoon: true,
-  natureConjunction: true, tactician: true, spellWard: 'life', metalFires: true,
-  rebuild: true, fieryFury: true,
-  nausea: true, uphillBattle: true, soulFlay: true,
-  eternalNight: true, greatUnbinding: true, plague: true, goblinPox: true, luckyStar: true,
-  disheartenProphecy: true, wallOfFireGarrison: true, godsPlayDices: true,
-  mechanical: true, mechanicalExpert: true, trueSight: true, eyeOfHeaven: true,
-  berserkWarlord: true, rust: true, hurricane: true, favoredTerrain: true,
-  colossalStrength: true, vampirism: true, shadowStrike: true, psychoForce: true,
-  pneumaField: true, energyBeamWeapons: true, blazeOfGlory: true, beatOfSwiftness: true,
-  hierophany: true, channeler: true, militaryWorkshop: true, rocketry: true,
-  insulation: true, divineProtection: true, fortification: true, venom: true,
+  innateAbilities: {
+    lucky: true,
+    orihalcon: true,
+    trueLight: true,
+    darkness: true,
+    warpReality: true,
+    goblinPox: true,
+    wallOfFireGarrison: true,
+    mechanical: true,
+    hurricane: true,
+    psychoForce: true,
+    pneumaField: true
+  },
+  markedAbilities: {
+    darkForce: true,
+    heavenlyLight: true,
+    endurance: true,
+    discipline: true,
+    animated: true,
+    flameBlade: true,
+    mysticSurge: true,
+    lionheart: true,
+    ironSkin: true,
+    stoneSkin: true,
+    landLinking: true,
+    ccDefense: true,
+    blackChannels: true,
+    giantStrength: true,
+    holyArmor: true,
+    highPrayer: true,
+    prayer: true,
+    blackPrayer: true,
+    vertigo: true,
+    weakness: true,
+    mindStorm: true,
+    warpAttack: true,
+    warpDefense: true,
+    warpResist: true,
+    shatter: true,
+    guardian: true,
+    survivalInstinct: true,
+    reinforceMagic: true,
+    innerPower: true,
+    blazingEyes: true,
+    blazingMarch: true,
+    charmOfLife: true,
+    badMoon: true,
+    goodMoon: true,
+    natureConjunction: true,
+    tactician: true,
+    spellWard: 'life',
+    metalFires: true,
+    rebuild: true,
+    fieryFury: true,
+    nausea: true,
+    uphillBattle: true,
+    soulFlay: true,
+    eternalNight: true,
+    greatUnbinding: true,
+    plague: true,
+    luckyStar: true,
+    disheartenProphecy: true,
+    godsPlayDices: true,
+    mechanicalExpert: true,
+    trueSight: true,
+    eyeOfHeaven: true,
+    berserkWarlord: true,
+    rust: true,
+    favoredTerrain: true,
+    colossalStrength: true,
+    vampirism: true,
+    shadowStrike: true,
+    energyBeamWeapons: true,
+    blazeOfGlory: true,
+    beatOfSwiftness: true,
+    hierophany: true,
+    channeler: true,
+    militaryWorkshop: true,
+    rocketry: true,
+    insulation: true,
+    divineProtection: true,
+    fortification: true,
+    venom: true
+  }
 };
 
 // An anchor is a write the named build makes, in the order that build makes it.
@@ -1165,7 +1222,9 @@ function f20Input(ctx, version, scenario) {
     // Minus any key the origin table does not place in this version: stating one is a halt since
     // F253.1, and it is not part of the version's input surface — no control offers it either, so
     // the anchors it could contribute to are not this version's.
-    realmWard: 'life', abilities: abilitiesStatableIn(ctx, version, F20_PROBE_ABILITIES),
+    realmWard: 'life',
+    innateAbilities: abilitiesStatableIn(ctx, version, F20_PROBE_ABILITIES.innateAbilities),
+    markedAbilities: abilitiesStatableIn(ctx, version, F20_PROBE_ABILITIES.markedAbilities),
   };
 }
 
