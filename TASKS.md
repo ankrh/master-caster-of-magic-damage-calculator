@@ -18,114 +18,104 @@ Unrelated work keeps its relative order after this block.
 
 | # | Subtask | Next outcome |
 |---|---|---|
-| 1 | **P2.1** | Reconstruct the remaining modern Holy Weapon admission/animation links in one 273-instruction packet. |
-| 2 | **F279.2** | Design the outer cast sequence, record ownership, recalculation boundaries and traces. Needs P2.1; uses completed P1.1, P1, P2, P8.1, F250, F236.1 and F277.2. |
-| 3 | **F271.1** | Inventory and partition merged-input callers; resolve ambiguous source intent. Needs F279.2. |
-| 4 | **F271.2** | Convert derive_unit_stats callers to explicit source halves. Needs F271.1. |
-| 5 | **F271.3** | Convert remaining unit-check callers and factories. Needs F271.2. |
-| 6 | **F271.4** | Preserve explicit sources in the matrix custom-unit path. Needs F271.3. |
-| 7 | **F271.5** | Convert tool/sweep and other remaining callers. Needs F271.4. |
-| 8 | **F271.6** | Remove the merged-input API and splitter; verify caller intent and coverage. Needs F271.5. |
-| 9 | **F279.3a** | Implement pilot execution/trace support while preserving current schedules. Needs F279.2 and F271.6. |
-| 10 | **F279.3c** | Implement the pilot outer cast sequence with persistent state and evidenced recalculation boundaries. Needs F279.3a. |
-| 11 | **F279.3b** | Migrate Holy Weapon admission and consumers in all five versions. Needs F279.3c. |
-| 12 | **F277.3** | Extend the DOS schedule and position CoM 1 summon conversions. Needs F279.3b. |
-| 13 | **F209.1** | Reopen F202 rulings against the settled model. Needs F279.2. |
-| 14 | **F209.2** | Reopen F200 stage 4 narrowing and CoM2 training coverage. Needs F209.1. |
-| 15 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
-| 16 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
-| 17 | **F273.1** | Position Sancta Basilica grants and fix the over-wide Sanctify grant; owns Q30/F200 stage 3. Needs F209.2, F213.2 and F279.3b. |
-| 18 | **F273.2** | Position Pillar of Faith and remove early grant/seed-carry paths. Needs F273.1. |
-| 19 | **F272.4** | Migrate innate/cast Fear and Immolation as the dual-source pilot. Needs F273.2 and F279.3b. |
-| 20 | **F275** | Add cast-only modern Immolation Cold Immunity. Needs F272.4. |
-| 21 | **F251.1** | Put elemental precedence in the consumers. Needs F279.3b. |
-| 22 | **F251.2** | The `elemArmor` select is replaced by two independent booleans, with a stored-state migration on the retired values. Needs F251.1. |
-| 23 | **F272.3** | Give the two independent elemental casts their record fields and admission. Needs F251.2 and F279.3b. |
-| 24 | **F251.3** | Compose Golem intrinsic Resist Elements with Elemental Armor. Needs F251.2 and F272.3. |
-| 25 | **F272.2a** | Position the remaining Rust clear-target presence writes. Needs F272.3. |
-| 26 | **F276** | Implement the single Rust targeting decision at the evidenced record/time. Needs F279.3b. |
-| 27 | **F272.7** | Publish admitted Rust state and migrate its melee reader. Needs F276 and F272.2a. |
-| 28 | **F242** | Apply Rust permanent clears using the admitted state and fields. Needs F272.7 and F251.3. |
-| 29 | **F226.1** | Model Create Undead in the settled record/admission design and extend the census. Needs F279.3b. |
-| 30 | **F279.4** | Assign every remaining census gap; fix batch lists and propose any additional bounded tasks. Needs F273.2, F275, F242 and F277.3. |
-| 31 | **F272.2b** | Migrate the first dependency-ordered group of remaining condition flags, exactly listed by F279.4. Needs F279.4. |
-| 32 | **F272.2c** | Migrate the second group of that list. Needs F272.2b. |
-| 33 | **F272.5** | Migrate teleporting/undead admission and readers. Needs F279.4. |
-| 34 | **F272.6** | Migrate hierophany/mislead/soulFlay admission and readers. Needs F279.4. |
-| 35 | **F257.3** | The six writes become positioned steps at their `UnitCalcPre.CAS` ranks, one per engine write. Needs F279.4; the retort inputs are already implemented. |
-| 36 | **F243** | Resolve the figure-dependent writes using the settled record schedule. Needs F279.2. |
-| 37 | **F249** | Position CoM 1 Raise Dead with the settled creation schedule. Needs F279.2. |
-| 38 | **F236.2** | Implement remaining global-grant eligibility, preserving the pilot cast distinction. Needs F279.3b and F279.4. |
-| 39 | **F232** | `UnitCalc.CAS:93-98`'s region-`d` Sanctify race re-write is read and either modelled or declared inapplicable. |
-| 40 | **F235** | Determine when the known Vampirism/Revenant `EncUndead` writes reach the classifier and Eternal Night / True Light readers. |
-| 41 | **F231** | Resolve the No Heal missing producer/healing reader. Needs F249. |
-| 42 | **F207** | Remove the obsolete Supreme Light published-value suppression. Needs F279.4. |
-| 43 | **F279.5** | Audit every live control/version and remove obsolete paths/docs; BLOCKED until all assigned migration/evidence work is resolved. See body for prerequisites. |
-| 44 | **F226.2** | Create Undead routes the damage it colours into the undead bucket, in both engine families. Needs F226.1. |
-| 45 | **F233** | The post-combat composition states a normalisation rule for overkill cells, where uncapped riders sum past the capped published total. |
-| 46 | **F229** | Exorcise's created-undead penalty loses the `fantastic_death` term no version's block tests. |
-| 47 | **F230** | Supreme Light stops testing the compact type token, so a Life-race hero passes the gate the binary passes it on. |
-| 48 | **F234** | The DOS Warp Reality exemption sheds the Fantastic term its block does not test, keeping a scalar race compare. |
-| 49 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
-| 50 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
-| 51 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 52 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 53 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
-| 54 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
-| 55 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
-| 56 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
-| 57 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
-| 58 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 59 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 60 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 61 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
-| 62 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
-| 63 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
-| 64 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
-| 65 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
-| 66 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
-| 67 | **F153** | The modern gaze rider exclusion gets one home. |
-| 68 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
-| 69 | **F147** | Five derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
-| 70 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
-| 71 | **F151** | A version's default-state map is built without resetting the live page. |
-| 72 | **F128** | The `Other` unit category no roster can fill goes. |
-| 73 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
-| 74 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
-| 75 | **F240** | The dead `traceBasePreparation` trace in `stats.js` goes. |
-| 76 | **F237** | The CAS audit attributes and gates a `/N` after a locator and a bare `:N` under a `@span` line or bare mention, keeping non-script numbers reported and ungated. |
-| 77 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
-| 78 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
-| 79 | **F238** | The Warlord source-order tables in `CoM2 binary - unit recalculation.md` are re-derived against 1.5.12.9 with label-bounded rows. |
-| 80 | **F41.1** | The DOS eight-threshold hero ladders. |
-| 81 | **F41.2** | The DOS template-ability formulas. |
-| 82 | **F41.3** | The modern nine-step hero table. |
-| 83 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
-| 84 | **M3** | The DOS Destruction path. Needs F41. |
-| 85 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
-| 86 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
-| 87 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
-| 88 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
-| 89 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
-| 90 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
-| 91 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
-| 92 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
-| 93 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
-| 94 | **H1** | Contact Seravy about the Blur bug. |
-| 95 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
-| 96 | **F265** | The ~60 `SPEC.md` references in `Calculator/*.js` name `CLAUDE.md`, the file that actually holds the content. |
-| 97 | **F269** | The post-combat panel stops showing `Bonus HP / figure` / `Extra Hits / figure`; the quantity stays internal. |
-| 98 | **F270** | The tooltip system is overhauled. Low priority, deliberately late: nothing depends on it and the F268 pass left tooltip wording unasserted in the meantime. |
-| 99 | **F278** | The cost of having the matrix worker import all 24 core sources instead of nine is measured, and the subset either goes or is kept with the number stated. |
-
-## P2.1 — Modern Holy Weapon admission and animation links
-
-*Category: binary reconstruction.* Approved 2026-09-11. Execute one Method B packet for the
-273 instructions plus 28 data bytes in the [P2 extent ledgers](Reference%20docs/Caster%20binary/P2.holy-weapon-cast-boundary.md#separately-approvable-first-packets).
-Establish the remaining slot-124/live-group-15 unit and enclosing combat target results, and
-the generic animation connection to the existing effect wrapper. Keep the two extent ledgers
-and claims distinct. Preserve runtime/custom/renderer boundaries and reuse known source;
-initializer internals and overland UI entry are outside this packet. Uses completed P1.1.
+| 1 | **F279.2** | Design the outer cast sequence, record ownership, recalculation boundaries and traces. Uses completed P1.1, P2.1, P1, P2, P8.1, F250, F236.1 and F277.2. |
+| 2 | **F271.1** | Inventory and partition merged-input callers; resolve ambiguous source intent. Needs F279.2. |
+| 3 | **F271.2** | Convert derive_unit_stats callers to explicit source halves. Needs F271.1. |
+| 4 | **F271.3** | Convert remaining unit-check callers and factories. Needs F271.2. |
+| 5 | **F271.4** | Preserve explicit sources in the matrix custom-unit path. Needs F271.3. |
+| 6 | **F271.5** | Convert tool/sweep and other remaining callers. Needs F271.4. |
+| 7 | **F271.6** | Remove the merged-input API and splitter; verify caller intent and coverage. Needs F271.5. |
+| 8 | **F279.3a** | Implement pilot execution/trace support while preserving current schedules. Needs F279.2 and F271.6. |
+| 9 | **F279.3c** | Implement the pilot outer cast sequence with persistent state and evidenced recalculation boundaries. Needs F279.3a. |
+| 10 | **F279.3b** | Migrate Holy Weapon admission and consumers in all five versions. Needs F279.3c. |
+| 11 | **F277.3** | Extend the DOS schedule and position CoM 1 summon conversions. Needs F279.3b. |
+| 12 | **F209.1** | Reopen F202 rulings against the settled model. Needs F279.2. |
+| 13 | **F209.2** | Reopen F200 stage 4 narrowing and CoM2 training coverage. Needs F209.1. |
+| 14 | **F213.1** | The seven Warlord race-building race terms get a citation or an evidence home. |
+| 15 | **F213.2** | The eight Warlord race-building hero terms get a citation or an evidence home. Needs F213.1. |
+| 16 | **F273.1** | Position Sancta Basilica grants and fix the over-wide Sanctify grant; owns Q30/F200 stage 3. Needs F209.2, F213.2 and F279.3b. |
+| 17 | **F273.2** | Position Pillar of Faith and remove early grant/seed-carry paths. Needs F273.1. |
+| 18 | **F272.4** | Migrate innate/cast Fear and Immolation as the dual-source pilot. Needs F273.2 and F279.3b. |
+| 19 | **F275** | Add cast-only modern Immolation Cold Immunity. Needs F272.4. |
+| 20 | **F251.1** | Put elemental precedence in the consumers. Needs F279.3b. |
+| 21 | **F251.2** | The `elemArmor` select is replaced by two independent booleans, with a stored-state migration on the retired values. Needs F251.1. |
+| 22 | **F272.3** | Give the two independent elemental casts their record fields and admission. Needs F251.2 and F279.3b. |
+| 23 | **F251.3** | Compose Golem intrinsic Resist Elements with Elemental Armor. Needs F251.2 and F272.3. |
+| 24 | **F272.2a** | Position the remaining Rust clear-target presence writes. Needs F272.3. |
+| 25 | **F276** | Implement the single Rust targeting decision at the evidenced record/time. Needs F279.3b. |
+| 26 | **F272.7** | Publish admitted Rust state and migrate its melee reader. Needs F276 and F272.2a. |
+| 27 | **F242** | Apply Rust permanent clears using the admitted state and fields. Needs F272.7 and F251.3. |
+| 28 | **F226.1** | Model Create Undead in the settled record/admission design and extend the census. Needs F279.3b. |
+| 29 | **F279.4** | Assign every remaining census gap; fix batch lists and propose any additional bounded tasks. Needs F273.2, F275, F242 and F277.3. |
+| 30 | **F272.2b** | Migrate the first dependency-ordered group of remaining condition flags, exactly listed by F279.4. Needs F279.4. |
+| 31 | **F272.2c** | Migrate the second group of that list. Needs F272.2b. |
+| 32 | **F272.5** | Migrate teleporting/undead admission and readers. Needs F279.4. |
+| 33 | **F272.6** | Migrate hierophany/mislead/soulFlay admission and readers. Needs F279.4. |
+| 34 | **F257.3** | The six writes become positioned steps at their `UnitCalcPre.CAS` ranks, one per engine write. Needs F279.4; the retort inputs are already implemented. |
+| 35 | **F243** | Resolve the figure-dependent writes using the settled record schedule. Needs F279.2. |
+| 36 | **F249** | Position CoM 1 Raise Dead with the settled creation schedule. Needs F279.2. |
+| 37 | **F236.2** | Implement remaining global-grant eligibility, preserving the pilot cast distinction. Needs F279.3b and F279.4. |
+| 38 | **F232** | `UnitCalc.CAS:93-98`'s region-`d` Sanctify race re-write is read and either modelled or declared inapplicable. |
+| 39 | **F235** | Determine when the known Vampirism/Revenant `EncUndead` writes reach the classifier and Eternal Night / True Light readers. |
+| 40 | **F231** | Resolve the No Heal missing producer/healing reader. Needs F249. |
+| 41 | **F207** | Remove the obsolete Supreme Light published-value suppression. Needs F279.4. |
+| 42 | **F279.5** | Audit every live control/version and remove obsolete paths/docs; BLOCKED until all assigned migration/evidence work is resolved. See body for prerequisites. |
+| 43 | **F226.2** | Create Undead routes the damage it colours into the undead bucket, in both engine families. Needs F226.1. |
+| 44 | **F233** | The post-combat composition states a normalisation rule for overkill cells, where uncapped riders sum past the capped published total. |
+| 45 | **F229** | Exorcise's created-undead penalty loses the `fantastic_death` term no version's block tests. |
+| 46 | **F230** | Supreme Light stops testing the compact type token, so a Life-race hero passes the gate the binary passes it on. |
+| 47 | **F234** | The DOS Warp Reality exemption sheds the Fantastic term its block does not test, keeping a scalar race compare. |
+| 48 | **F180** | The four keys live in some versions and silent in others get a source reading each. |
+| 49 | **F159.1** | Rule on what "same implementation in all versions" has to mean. |
+| 50 | **F159.2** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 51 | **F159.3** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 52 | **F159.4** | Roughly 15 of the 43 unasserted keys get a scope entry with a citation. Needs F159.1. |
+| 53 | **F215.1** | CoM2 gains a positive Black Sleep and a positive Shatter assertion. |
+| 54 | **F215.2** | CoM 1 gains a positive Land Linking assertion. |
+| 55 | **F216** | The Land Linking version-difference subgroup asserts a version difference. Needs F215.2. |
+| 56 | **F145.1** | Family predicates are added over the existing `SCOPE_*` sets. |
+| 57 | **F145.2** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 58 | **F145.3** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 59 | **F145.4** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 60 | **F145.5** | Roughly 55 open-coded version tests route through the predicates and take the halt. Needs F145.1. |
+| 61 | **T8.1** | The unsourced engine claims in `combat.js` get a citation or an evidence home. |
+| 62 | **T8.2** | The unsourced engine claims in `combat_special_attacks.js` get a citation or an evidence home. |
+| 63 | **T8.3** | The unsourced engine claims in `combat_effects.js` get a citation or an evidence home. |
+| 64 | **T8.4** | The unsourced engine claims in `combat_abilities.js` and `combat_phases.js` get a citation or an evidence home. |
+| 65 | **T8.5** | The unsourced engine claims in the remaining sources get a citation or an evidence home. |
+| 66 | **F153** | The modern gaze rider exclusion gets one home. |
+| 67 | **F146** | The seven roster facts the card and matrix decode separately get one reader each. |
+| 68 | **F147** | Five derivation values read by nothing go, F205's three write-only `luckyPhase*` markers with them. |
+| 69 | **F140** | The matrix stops computing a row and column for the card that nothing renders. |
+| 70 | **F151** | A version's default-state map is built without resetting the live page. |
+| 71 | **F128** | The `Other` unit category no roster can fill goes. |
+| 72 | **F129** | The version-scope sweep's shared attack slot gets a strength. |
+| 73 | **F182** | `derivation_equivalence.js`'s dead `chaos-channels` env is dropped or fixed. |
+| 74 | **F240** | The dead `traceBasePreparation` trace in `stats.js` goes. |
+| 75 | **F237** | The CAS audit attributes and gates a `/N` after a locator and a bare `:N` under a `@span` line or bare mention, keeping non-script numbers reported and ungated. |
+| 76 | **F115** | The 44 Warlord spell ids the roster renders as `Spell#N` get names. |
+| 77 | **T15** | The Markdown roster tools' drift from the roster JSON is fixed. |
+| 78 | **F238** | The Warlord source-order tables in `CoM2 binary - unit recalculation.md` are re-derived against 1.5.12.9 with label-bounded rows. |
+| 79 | **F41.1** | The DOS eight-threshold hero ladders. |
+| 80 | **F41.2** | The DOS template-ability formulas. |
+| 81 | **F41.3** | The modern nine-step hero table. |
+| 82 | **F41.4** | How the level control exposes them. Needs F41.1–F41.3. |
+| 83 | **M3** | The DOS Destruction path. Needs F41. |
+| 84 | **Q1** | Troll Shaman/Magician roster values versus the manual. |
+| 85 | **Q2** | The apparent Draconian common-unit +1 Resistance racial modifier. |
+| 86 | **Q6** | CoM High Prayer's +3-attack text versus the +2 used elsewhere. |
+| 87 | **Q8** | Whether Wraiths use Life Steal −4 or −3. |
+| 88 | **Q12** | When "ranged" includes each attack kind, across versions and effects. |
+| 89 | **Q19** | CoM 1 Realm Ward helptext against the executed −2/−3/−3 writes. |
+| 90 | **Q21** | CoM 1 helptext's retained powers against the manual's replacements. |
+| 91 | **Q26** | The R9-G1a-R3 evidence-scope disagreement. |
+| 92 | **Q28** | What realm a Fantastic unit with a mundane base race has. |
+| 93 | **H1** | Contact Seravy about the Blur bug. |
+| 94 | **H2** | Contact Seravy about the Bless defense term's missing breath flag. |
+| 95 | **F265** | The ~60 `SPEC.md` references in `Calculator/*.js` name `CLAUDE.md`, the file that actually holds the content. |
+| 96 | **F269** | The post-combat panel stops showing `Bonus HP / figure` / `Extra Hits / figure`; the quantity stays internal. |
+| 97 | **F270** | The tooltip system is overhauled. Low priority, deliberately late: nothing depends on it and the F268 pass left tooltip wording unasserted in the meantime. |
+| 98 | **F278** | The cost of having the matrix worker import all 24 core sources instead of nine is measured, and the subset either goes or is kept with the number stated. |
 
 ## T2 — Adjudicate the non-discriminating presets and declare the result
 
@@ -297,7 +287,7 @@ through its local weapon-quality substitution, without rejecting its whole stat 
 
 Remaining subtask: **F236.2** implement the remaining grant behavior (needs F279.3b and F279.4),
 using the completed source distinction. Enclosing direct-cast admission/store/timing gaps remain
-qualified by the completed P1/P2 inventories; P1.1 supplies the DOS exit bridge; P2.1 owns the remaining modern links.
+qualified by the completed P1/P2 inventories; P1.1 supplies the DOS exit bridge; P2.1 supplies the bounded modern links.
 No new reconstruction of the known grants is needed.
 
 ### F226 — Create Undead is omitted, and it colours the damage it deals
@@ -986,8 +976,8 @@ field does not by itself establish that a full recalculation runs before every c
 reconciliation names existing owners and individually enumerated unfiled P-family/U1–U3 proposals;
 these are not approved tasks. F279.2 and dependent .3c/.3b work remain gated on required pilot
 timing/target evidence. P1/P2/P8.1 preparation is complete; the DOS cast-exit and modern
-Holy Weapon admission/animation packets are owned by completed P1.1 and pending P2.1. Their canonical
-inventories own the exact extents; this preparation completion does not settle those source gaps.
+Holy Weapon admission/animation packets are completed in P1.1 and P2.1. Their canonical
+evidence retains live-state and external-entry conditions; completion does not establish whole-lifecycle equivalence.
 Later-only gaps gate their own migrations and .5.
 
 - **F279.2** settle one design from the completed census, the completed [invocation decision](Reference%20docs/DOS%20reconstructed/F277.2.invocation-decision.md) and the relevant admission evidence. Separate
@@ -1002,7 +992,7 @@ Later-only gaps gate their own migrations and .5.
   merely because recalculation runs again. Specify how admission and repeated invocations appear
   in the traces. Cost faithful alternatives
   and any proposed deviation; settle vocabulary and submit necessary contract text through
-  `PROPOSALS.md`. No code migration. Needs P2.1; uses completed P1.1, P1, P2, P8.1, F250, F236.1 and F277.2.
+  `PROPOSALS.md`. No code migration. Uses completed P1.1, P2.1, P1, P2, P8.1, F250, F236.1 and F277.2.
 - **F279.3a** implement the execution-schedule and trace support chosen by F279.2 for the pilot:
   distinguish a source write from its invocations, with explicit per-pass arguments and record
   reads. Preserve the currently executed schedules and numerical behavior in this representation-only

@@ -211,3 +211,11 @@ route to its known tail and establish overland recalculation before the script/c
 and conditional player/animation paths join the existing effect-entry refusal. Earlier
 admission, runtime loading and animation scheduling remain external. The
 [script reconciliation](F250.4.script-reconciliation.md) routes Warlord grants and DOS evidence.
+
+## P2.1 Holy Weapon admission and animation links
+
+[Evidence](P2.1.evidence.md), [reconstruction](P2.1.reconstruction.md),
+[raw packet](P2.1.raw.md), [flow](P2.1.flow.svg). The bounded unit/outer-target continuations
+preserve the preceding result for the stated live slot-124/group-15 route. The generic
+animation and selected renderer entry connect conditionally to the known effect wrapper;
+initializer, custom, runtime and intervening-call conditions remain explicit.

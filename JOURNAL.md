@@ -4,6 +4,15 @@
 
 # Journal
 
+## 2026-09-11 — P2.1 modern Holy Weapon links complete
+
+[Evidence](Reference%20docs/Caster%20binary/P2.1.evidence.md) adds the bounded target and
+animation continuations: 273 instructions plus 28 data bytes, one Astra/Claude Method B
+packet. Stable slot/group checks preserve the earlier target result; renderer completion
+connects to the known effect wrapper with live state. Opaque earlier helper/initializer
+boundaries remain explicit. Thirty extent checks, links, byte/hash joins, diagram inspection
+and citations passed. No calculator behavior changed. F279.2 is next.
+
 ## 2026-09-11 — P1.1 DOS cast-exit bridge complete
 
 [Bridge evidence](Reference%20docs/DOS%20reconstructed/P1.1.evidence.md) adds 25 instructions

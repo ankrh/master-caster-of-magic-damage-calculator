@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1130" viewBox="0 0 1200 1130">
+<defs><marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8" fill="#68849d"/></marker></defs>
+<rect width="1200" height="1130" fill="#f6f8fb"/>
+<style>text{font-family:Arial,sans-serif;fill:#182c43}.title{font-size:27px;font-weight:bold}.sub{font-size:16px}.head{font-size:18px;font-weight:bold}.body{font-size:16px}.label{font-size:14px;fill:#49617c}</style>
+<text x="35" y="43" class="title">P2.1 • Holy Weapon: conditional target and animation links</text>
+<text x="35" y="73" class="sub">Shared CoM2 / Warlord binary. Blue: newly reconstructed. Grey: existing source or explicit boundary.</text>
+<text x="35" y="112" class="head">TARGET RESULT</text>
+<text x="625" y="112" class="head">ANIMATION TO EFFECT</text>
+<rect x="35" y="135" width="535" height="122" rx="12" fill="#edf0f4" stroke="#a8b5c4"/>
+<text x="53" y="164" class="head">Existing target prefix • F264.1</text>
+<text x="53" y="192" class="body">Ownership and existing-enchantment tests;</text>
+<text x="53" y="215" class="body">group 15 reads BaseUnits.Fantastic.</text>
+<text x="53" y="238" class="body">The current result may already be a failure.</text>
+<path d="M300,257 L300,293" stroke="#68849d" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="310" y="280.0" class="label">conditional arrival</text>
+<rect x="35" y="293" width="535" height="145" rx="12" fill="#e6f1ff" stroke="#5793cf"/>
+<text x="53" y="322" class="head">New unit-target continuation • 53E216 onward</text>
+<text x="53" y="350" class="body">Slot 124 skips the thirteen special-ID bodies.</text>
+<text x="53" y="373" class="body">Immunitycheck runs; the live group-15 / slot-124</text>
+<text x="53" y="396" class="body">route returns the prior result through 53E9B3.</text>
+<text x="53" y="419" class="body">No new success or failure assignment.</text>
+<path d="M300,438 L300,476" stroke="#68849d" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="35" y="476" width="535" height="124" rx="12" fill="#e6f1ff" stroke="#5793cf"/>
+<text x="53" y="505" class="head">New outer continuation • 53CB41 onward</text>
+<text x="53" y="533" class="body">Two separate live group reads and seven ID heads.</text>
+<text x="53" y="556" class="body">With reads 15 / 124, return the current outer result.</text>
+<text x="53" y="579" class="body">Earlier tile / visibility / unit conditions still apply.</text>
+<rect x="35" y="647" width="535" height="156" rx="12" fill="#edf0f4" stroke="#a8b5c4"/>
+<text x="53" y="676" class="head">Entry conditions remain explicit</text>
+<text x="53" y="704" class="body">Raw INI records are not runtime-state proof.</text>
+<text x="53" y="727" class="body">Returning handlers retain their actual state.</text>
+<text x="53" y="750" class="body">Custom routes, initialization and scheduling</text>
+<text x="53" y="773" class="body">are not silently assumed away.</text>
+<rect x="35" y="846" width="535" height="189" rx="12" fill="#edf0f4" stroke="#a8b5c4"/>
+<text x="53" y="875" class="head">Boundary for the calculator design</text>
+<text x="53" y="903" class="body">The known effect-handler entry can be modelled</text>
+<text x="53" y="926" class="body">with preceding conditions stated explicitly.</text>
+<text x="53" y="949" class="body">The opaque renderer call can itself mutate state.</text>
+<text x="53" y="972" class="body">This diagram does not establish first/only effect</text>
+<text x="53" y="995" class="body">application across the engine animation lifecycle.</text>
+<rect x="625" y="135" width="540" height="100" rx="12" fill="#edf0f4" stroke="#a8b5c4"/>
+<text x="643" y="164" class="head">Known combat prefix • F250.4</text>
+<text x="643" y="192" class="body">Initializer/custom/group conditions reach 65A002;</text>
+<text x="643" y="215" class="body">call SpellAnimationGeneric.</text>
+<path d="M895,235 L895,272" stroke="#68849d" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="625" y="272" width="540" height="125" rx="12" fill="#e6f1ff" stroke="#5793cf"/>
+<text x="643" y="301" class="head">New generic animation • 659E70</text>
+<text x="643" y="329" class="body">Realm 4 requests StartAnimation(4).</text>
+<text x="643" y="352" class="body">A later Custom read can replace the selector.</text>
+<text x="643" y="375" class="body">Known setter writes selector and clears counter.</text>
+<path d="M895,397 L895,439" stroke="#68849d" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="905" y="423.0" class="label">later dispatch must select entry 4</text>
+<rect x="625" y="439" width="540" height="147" rx="12" fill="#e6f1ff" stroke="#5793cf"/>
+<text x="643" y="468" class="head">New renderer entry 4 • 678A31</text>
+<text x="643" y="496" class="body">Store signed counter div 4 in the frame.</text>
+<text x="643" y="519" class="body">Call opaque checkspelleffectrequired at 678A45.</text>
+<text x="643" y="542" class="body">Then reread frame value at current EBP.</text>
+<text x="643" y="565" class="body">The call may have changed the tested state.</text>
+<path d="M750,586 L750,625" stroke="#68849d" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="760" y="610.5" class="label">current value &lt; 12</text>
+<path d="M1030,586 L1030,625" stroke="#68849d" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="1040" y="610.5" class="label">current value &gt;= 12</text>
+<rect x="625" y="625" width="255" height="146" rx="12" fill="#e6f1ff" stroke="#5793cf"/>
+<text x="643" y="654" class="head">Draw branch</text>
+<text x="643" y="682" class="body">Bounds / live image reads;</text>
+<text x="643" y="705" class="body">checked coordinates;</text>
+<text x="643" y="728" class="body">DrawBitmap; external join.</text>
+<rect x="900" y="625" width="265" height="146" rx="12" fill="#e6f1ff" stroke="#5793cf"/>
+<text x="918" y="654" class="head">Completion branch</text>
+<text x="918" y="682" class="body">Clear current selector.</text>
+<text x="918" y="705" class="body">Call IsCombat.</text>
+<text x="918" y="728" class="body">Zero result skips effect.</text>
+<path d="M1030,771 L1030,817" stroke="#68849d" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="1040" y="799.0" class="label">nonzero result</text>
+<rect x="625" y="817" width="540" height="100" rx="12" fill="#e6f1ff" stroke="#5793cf"/>
+<text x="643" y="846" class="head">Live spell → known effect wrapper</text>
+<text x="643" y="874" class="body">678B12: SpellBeingCast reads the spell now current.</text>
+<text x="643" y="897" class="body">678B17: call 6456D8 → handler 5C9AAC.</text>
+<path d="M895,917 L895,955" stroke="#68849d" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="905" y="941.0" class="label">existing handler conditions</text>
+<rect x="625" y="955" width="540" height="138" rx="12" fill="#edf0f4" stroke="#a8b5c4"/>
+<text x="643" y="984" class="head">Existing store and recalculation • F250.2</text>
+<text x="643" y="1012" class="body">Group 1/15 stores the permanent combat flag.</text>
+<text x="643" y="1035" class="body">Known shared continuation: script → full engine pass.</text>
+<text x="643" y="1058" class="body">Current calculator full-pass equivalence remains</text>
+<text x="643" y="1081" class="body">a separate assessment.</text>
+<text x="35" y="1103" class="label">Exact extents, conditional branches, raw tables and provenance: P2.1.evidence.md / P2.1.reconstruction.md</text>
+</svg>
