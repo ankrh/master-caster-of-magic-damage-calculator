@@ -7,6 +7,115 @@ const { expectNoConsoleErrors, openCalculator } = require('./helpers');
 // --- from matrix-drawers.spec.js ---
 const MATRIX_ROSTER_LIMIT = 40;
 
+test('custom matrix projection preserves provided and received sources independently', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const reports = await page.evaluate(() => {
+    const reports = [];
+    const select = document.getElementById('gameVersion');
+    const original = deriveUnitStats;
+    let captured;
+    deriveUnitStats = input => { captured = input; return original(input); };
+    try {
+      for (const version of Array.from(select.options, option => option.value)) {
+        select.value = version;
+        select.dispatchEvent(new Event('change'));
+        const key = name => cardStateAbilityUiKey(abilityUiDefs().find(
+          def => def.source === 'enchantment' && def.key === name));
+        for (const prefix of ['a', 'b']) for (const mode of ['melee', 'ranged']) {
+          for (const [provided, received] of [[5, 3], [2, 4]]) {
+            const state = presetDefaultCardState(prefix, version);
+            state.atk = '5';
+            state.dmg = '0';
+            state.abilities[key('holyBonus')] = 9;
+            state.abilities[key('holyWeapon')] = true;
+            state.abilities.holyBonus = provided;
+            state.dosSpecial.magnitude = provided;
+            state.dosSpecial.flags.holyBonus = true;
+            writeCardStateToControls(prefix, state, 'matrix source test');
+            const before = JSON.stringify(collectCardState(prefix));
+            matrixPropertyState = { a: [], b: [], global: [
+              { key: 'rangedDist', enabled: true, value: 7 },
+            ] };
+            matrixPropertyState[prefix] = [
+              { key: key('holyBonus'), enabled: true, value: received },
+              { key: key('holyWeapon'), enabled: false, value: true },
+              { key: 'damageTaken', enabled: true, value: 2 },
+            ];
+            readMatrixCustomUnitStats(prefix, mode);
+            const active = { innate: captured.innateAbilities.holyBonus,
+              marked: captured.markedAbilities.holyBonus,
+              weapon: !!captured.markedAbilities.holyWeapon,
+              damage: captured.dmg, ranged: captured.rangedCheck, distance: captured.rangedDist };
+            matrixPropertyState[prefix][0].enabled = false;
+            readMatrixCustomUnitStats(prefix, mode);
+            reports.push({ version, prefix, mode, provided, received, active,
+              inactive: captured.markedAbilities.holyBonus ?? 0,
+              retained: captured.innateAbilities.holyBonus,
+              unchanged: before === JSON.stringify(collectCardState(prefix)) });
+          }
+        }
+      }
+    } finally { deriveUnitStats = original; }
+    return reports;
+  });
+  expect(reports).toHaveLength(40);
+  for (const row of reports) {
+    const label = `${row.version}/${row.prefix}/${row.mode}/${row.provided}/${row.received}`;
+    expect(row.active, label).toEqual({ innate: row.provided, marked: row.received,
+      weapon: false, damage: '2', ranged: row.prefix === 'a' && row.mode === 'ranged',
+      distance: row.prefix === 'a' && row.mode === 'ranged' ? '7' : '1' });
+    expect(row.inactive, label).toBe(0);
+    expect(row.retained, label).toBe(row.provided);
+    expect(row.unchanged, label).toBe(true);
+  }
+  expectNoConsoleErrors(errors);
+});
+
+test('custom matrix keeps flags, special records, aliases and matrix settings through the card projection', async ({ page }) => {
+  const errors = await openCalculator(page);
+  const rows = await page.evaluate(() => {
+    const select = document.getElementById('gameVersion');
+    select.value = 'com2_warlord_1.5.12.9';
+    select.dispatchEvent(new Event('change'));
+    const key = name => cardStateAbilityUiKey(abilityUiDefs().find(
+      def => def.source === 'enchantment' && def.key === name));
+    const original = deriveUnitStats;
+    deriveUnitStats = input => input; // Inspect the real page-to-calculator boundary.
+    try {
+      return [true, false].map(innate => {
+        const state = presetDefaultCardState('b', select.value);
+        state.abilities.magicImmunity = innate;
+        state.abilities[key('magicImmunity')] = true;
+        state.identity.specialUnit = 'golem';
+        state.modernSpecial.stoningGaze = { on: true, value: -2 };
+        state.modernAttacks = { ranged: '6', rangedType: 'magic', thrown: '3',
+          fireBreath: '4', lightningBreath: '2' };
+        writeCardStateToControls('b', state, 'matrix record test');
+        matrixPropertyState = { a: [], b: [
+          { key: key('magicImmunity'), enabled: !innate, value: true },
+          { key: key('liability'), enabled: true, value: true },
+          { key: key('elemArmor'), enabled: true, value: 'elementalArmor' },
+          ...Object.entries({ level: 'veteran', weapon: 'mithril', armor: 'orihalcon',
+            cityWalls: '3', damageTaken: 4 }).map(([key, value]) => ({ key, value, enabled: true })),
+        ], global: [{ key: 'wallOfFire', enabled: true, value: true }] };
+        const input = readMatrixCustomUnitStats('b', 'ranged');
+        return { innate: input.innateAbilities.magicImmunity,
+          marked: !!input.markedAbilities.magicImmunity, alias: input.markedAbilities.mislead,
+          elements: input.markedAbilities.elemArmor, gaze: input.innateAbilities.stoningGaze,
+          channels: input.modernAttacks, level: input.level, weapon: input.weapon,
+          armor: input.armor, walls: input.cityWalls, damage: input.dmg, wallOfFire: input.wallOfFire };
+      });
+    } finally { deriveUnitStats = original; }
+  });
+  for (const [index, row] of rows.entries()) expect(row).toEqual({
+    innate: index === 0, marked: index !== 0, alias: true, elements: 'resistElements', gaze: -2,
+    channels: { ranged: { strength: 6, type: 'magic' }, thrown: { strength: 3, type: 'thrown' },
+      fireBreath: { strength: 4, type: 'fire' }, lightningBreath: { strength: 2, type: 'lightning' } },
+    level: 'veteran', weapon: 'mithril', armor: 'orihalcon', walls: '3', damage: '4', wallOfFire: true,
+  });
+  expectNoConsoleErrors(errors);
+});
+
 async function useSmallRoster(page) {
   await page.evaluate((limit) => {
     const version = document.getElementById('gameVersion').value;

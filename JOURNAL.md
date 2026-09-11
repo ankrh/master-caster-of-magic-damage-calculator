@@ -4,6 +4,14 @@
 
 # Journal
 
+## 2026-09-11 — F271.4 custom matrix projection complete
+
+Custom matrix rows now retain innate and matrix enchantment controls through the shared
+card projection, fixing the overwrite of provided aura values. The existing maximum rule
+is unchanged: with base attack 5, provided 5 and received 3 give 5 + max(5, 3) = 10.
+Sol high review and all required checks passed: 79 browser tests, 34,123 Node assertions,
+all presets and citations. Unused DOM adapters are recorded for F271.6 removal.
+
 ## 2026-09-11 — F271.3 remaining unit checks converted
 
 Fifteen files now preserve source inputs through their factories and sweeps; source-neutral

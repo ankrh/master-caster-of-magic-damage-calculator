@@ -271,8 +271,8 @@ function matrixEnchantmentValue(prefix, abil, version) {
 }
 
 // The matrix's enchantment rows in the shape a **card state's ability map** takes: one entry per
-// control, keyed by `uiKey`, holding what the control would hold. It is what the roster path
-// overlays onto the card state `applyRosterUnit` produced (F269.2). It is deliberately not folded
+// control, keyed by `uiKey`, holding what the control would hold. Both roster and custom rows
+// overlay this onto their source-preserving card state (F269.2, F271.4). It is deliberately not folded
 // onto `calcKey`: folding is `cardStateAbilityCalcValues`'s job, and a map keyed by `calcKey`
 // cannot hold both the record's own value and the marked one for a key two controls name.
 //
@@ -290,9 +290,9 @@ function matrixEnchantmentRows(prefix) {
   return rows;
 }
 
-// Build the same shape as activeNonInnateUnitEnchantments, but driven by matrix state. Its two
-// readers are the custom-unit row and the "open this matchup on the card" action
-// (`ui_matrix.js`); the roster rows take `matrixEnchantmentRows` above.
+// Build the same shape as activeNonInnateUnitEnchantments for the "open this matchup on the
+// card" action (`ui_matrix.js`). Both matrix calculation paths use `matrixEnchantmentRows`
+// above, retaining control sources until the shared card projection.
 function matrixAppliedEnchantments(prefix) {
   const result = {};
   const version = document.getElementById('gameVersion').value;

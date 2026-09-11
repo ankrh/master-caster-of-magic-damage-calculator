@@ -150,7 +150,7 @@ function matrixGlobalsForSide(prefix, matrixMode, version) {
 // user chose, the identity's own derived Elements value, and version gating last
 // (`applyVersionGating`, the state half of `updateTypeVisibility`). The enchantment rows go on as
 // **controls**, keyed by `uiKey`, so a key an ability and an enchantment both name keeps two values
-// and they contend at the derivation boundary under `mergeAbilityCalcValue` (F252.1).
+// for the engine's later provided/received contention (F252.1).
 //
 // Level, weapon and armor are written after the roster statement and are **not** put back by
 // `cardStateLoadoutLocks`. That is the preset applier's treatment of a fixture's own level, and
@@ -206,83 +206,30 @@ function buildMatrixAttackerStats(unit, enchantmentRows, matrixMode) {
 // Innate abilities and base numeric stats come from the main panel; level,
 // weapon, armor, enchantments, and global options come from matrix state.
 function readMatrixCustomUnitStats(prefix, matrixMode) {
-  const el = id => document.getElementById(id);
-  const enemyPrefix = prefix === 'a' ? 'b' : 'a';
-  const rangedMatrixAttacker = isRangedMatrixAttacker(matrixMode, prefix);
-
-  // Start with innate (source='ability') values from the DOM.
-  const abilities = {};
-  for (const abil of abilityUiDefs()) {
-    if (abil.source === 'enchantment') continue;
-    const val = getAbilityControlValue(prefix, abil);
-    if (val === undefined) continue;
-    const calcKey = abil.calcKey || abil.key;
-    abilities[calcKey] = mergeAbilityCalcValue(abil, abilities[calcKey], val);
+  const version = document.getElementById('gameVersion').value;
+  const state = collectCardState(prefix);
+  const abilities = { ...state.abilities };
+  // The card supplies innate controls and special-value blocks; only the matrix supplies
+  // enchantments. Remove even active card spells before overlaying the matrix's uiKey rows.
+  for (const def of abilityUiDefs()) {
+    if (def.source === 'enchantment') delete abilities[cardStateAbilityUiKey(def)];
   }
-  // The DOS block replaces the ability-row values for its consumers, same as on the main path.
-  Object.assign(abilities, dosSpecialValues(prefix));
-  // Merge matrix-state enchantments on top. This replaces rather than contends, where the card
-  // and — since F269.2 — the matrix's roster rows let the two halves contend under
-  // `mergeAbilityCalcValue`. F269.2 closed that for the roster rows only; the custom row still
-  // overwrites. `splitAbilityCalcValuesBySource` then says which half of the boundary each key
-  // states (F252.1).
-  const stateEnch = matrixAppliedEnchantments(prefix);
-  for (const k of Object.keys(stateEnch)) {
-    abilities[k] = stateEnch[k];
+  Object.assign(abilities, matrixEnchantmentRows(prefix));
+  // As on the card and roster rows, the identity-derived Elements value wins over a drawer row.
+  if (specialUnitDerivesResistElements(version, state.identity.specialUnit)) {
+    abilities.elemArmor = 'resistElements';
   }
-  const { innateAbilities, markedAbilities } = splitAbilityCalcValuesBySource(abilities);
-
-  const version = el('gameVersion').value;
-  const identity = unitIdentityForDerivation(prefix, version);
-  return deriveUnitStats({
-    prefix,
-    version,
-    innateAbilities,
-    markedAbilities,
-    identity,
-    name: (unitIdentity[prefix] || {}).name,
+  const matrixState = applyVersionGating({
+    ...state,
+    abilities,
     level: matrixSideSetting(prefix, 'level'),
     weapon: matrixSideSetting(prefix, 'weapon'),
     armor: matrixSideSetting(prefix, 'armor'),
-    rtbType: sharedSlotRangedType(prefix),
-    figs: el(prefix + 'Figs').value,
-    atk: el(prefix + 'Atk').value,
-    rtb: el(prefix + 'Rtb').value,
-    modernAttacks: modernCardAttacks(prefix),
-    def: el(prefix + 'Def').value,
-    res: el(prefix + 'Res').value,
-    hp: el(prefix + 'HP').value,
-    dmg: matrixSideSetting(prefix, 'damageTaken'),
-    irrecoverableDamage: 0,
-    undeadDamage: 0,
-    baseBonusHp: 0,
-    noHealing: false,
-    ...(version.startsWith('com2') ? {
-      hitChance: el(prefix + 'HitChance').value,
-      hitMelee: el(prefix + 'HitMelee').value,
-      hitRanged: el(prefix + 'HitRanged').value,
-      hitThrown: el(prefix + 'HitThrown').value,
-      hitBreath: el(prefix + 'HitBreath').value,
-    } : {
-      toHitMod: el(prefix + 'ToHitMod').value,
-      toHitRtbMod: el(prefix + 'ToHitRtbMod').value,
-    }),
-    toBlkMod: el(prefix + 'ToBlkMod').value,
-    cityWalls: matrixSideSetting(prefix, 'cityWalls'),
-    nodeAura: matrixGlobalValue('nodeAura'),
-    wallOfFire: !!matrixGlobalValue('wallOfFire'),
-    trueLight: !!matrixGlobalValue('trueLight'),
-    darkness: !!matrixGlobalValue('darkness'),
-    enemyEternalNight: matrixHasActiveEnchantment(enemyPrefix, 'eternalNight'),
-    enemyEyeOfHeaven: matrixHasActiveEnchantment(enemyPrefix, 'eyeOfHeaven'),
-    chaosSurge: matrixGlobalValue('chaosSurge'),
-    rangedCheck: rangedMatrixAttacker,
-    rangedDist: rangedMatrixAttacker ? matrixGlobalValue('rangedDist') : 1,
-    warpReality: !!matrixGlobalValue('warpReality'),
-    hurricane: !!matrixGlobalValue('hurricane'),
-    poxHost: !!matrixGlobalValue('poxHost'),
-    generic: !!(unitBaseStats[prefix] && unitBaseStats[prefix].generic),
-  });
+    cityWalls: String(matrixSideSetting(prefix, 'cityWalls')),
+    dmg: String(matrixSideSetting(prefix, 'damageTaken')),
+  }, version);
+  return deriveUnitStats(cardStateToDerivationInput(
+    matrixState, matrixGlobalsForSide(prefix, matrixMode, version)));
 }
 
 function selectedMatrixUnitRow(prefix, matrixMode) {

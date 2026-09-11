@@ -128,7 +128,7 @@ function collectGlobals(overrides) {
 }
 
 // The shared slot's type for a side's live controls. The rule itself is
-// `cardStateSharedSlotRangedType`; this is the DOM caller the matrix still uses.
+// `cardStateSharedSlotRangedType`; matrix calculation now uses the shared card projection.
 function sharedSlotRangedType(prefix) {
   return cardStateSharedSlotRangedType(
     collectCardState(prefix), document.getElementById('gameVersion').value);
@@ -471,7 +471,7 @@ function syncDosSpecialCard(prefix, byte) {
 // their modifiers are literals, so they stay ordinary ability rows that the card state's
 // `calcKey` merge supplies.
 // The marshalling rule itself is `cardStateDosSpecialValues` (`card_state.js`); this is the DOM
-// caller the matrix still uses.
+// adapter; matrix calculation now uses the shared card projection.
 function dosSpecialValues(prefix) {
   return cardStateDosSpecialValues(
     collectCardState(prefix), document.getElementById('gameVersion').value);
