@@ -4,6 +4,15 @@
 
 # Journal
 
+## 2026-09-11 — P8.1 MoM 1.31 invocation preparation complete
+
+[Local-call ledger](Reference%20docs/DOS%20reconstructed/P8.1.mom131-specials-calls.md)
+reuses all requested source: copied P OR I / M1 at the constructor call, B AND NOT P / M2
+at the battlefield call, and local reset/retain witnesses. Holy Weapon is constructor-inline.
+No new binary packet is needed. Claude Fable 5.1 medium review passed after quota reset;
+minor scope/locator wording was corrected. Six links,62 existing locators and whitespace
+checked. Required P1/P2 missing-link packets await approval before the dependent pilot design.
+
 ## 2026-09-11 — P2 modern Holy Weapon preparation complete
 
 [Source-availability ledger](Reference%20docs/Caster%20binary/P2.holy-weapon-cast-boundary.md)
