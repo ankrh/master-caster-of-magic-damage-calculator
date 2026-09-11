@@ -4,6 +4,19 @@
 
 # Journal
 
+## 2026-09-11 — P1.1 DOS cast-exit bridge complete
+
+[Bridge evidence](Reference%20docs/DOS%20reconstructed/P1.1.evidence.md) adds 25 instructions
+and joins CoM's cast exit to the existing aggregation/rebuild loop. MoM/CP retain their
+opaque calls and far return. Astra/Claude Method B completed; live stack and argument
+conditions are explicit. No calculator behavior changes. P2.1 is next.
+
+## 2026-09-11 — P1.1 and P2.1 approved
+
+The user approved both bounded reconstruction packets. They are queued before F279.2;
+P1.1 executes first, then the combined P2.1 packet. Exact extents remain in the P1/P2
+source inventories.
+
 ## 2026-09-11 — P8.1 MoM 1.31 invocation preparation complete
 
 [Local-call ledger](Reference%20docs/DOS%20reconstructed/P8.1.mom131-specials-calls.md)

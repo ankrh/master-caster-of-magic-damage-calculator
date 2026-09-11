@@ -5454,9 +5454,21 @@ void com1_raise_dead_dispatch_fragment(int16_t spell_idx, int16_t player_idx,
     SP = u16(SP + 0x000C); \
 } while (0)
 
+/* P1.1 encoded operands for the shared cast-exit fragment below. Address-derived names
+ * preserve opaque call semantics. DS_word uses the DS live at the instruction; the existing
+ * _combat_structure label at DS:C520 is an integration identity, not a DS-preservation claim. */
+#define P1_EXIT_COMBAT_STRUCTURE_WORD_DS  0xC520
+#define P1_EXIT_FAR_767A0_SELECTOR        0x0318
+#define P1_EXIT_FAR_767A0_OFFSET          0x0020
+#define P1_EXIT_FAR_6DC3_SELECTOR         0x0008
+#define P1_EXIT_FAR_6DC3_OFFSET           0x0503
+#define P1_EXIT_FAR_9A8AB_SELECTOR        0x03D0
+#define P1_EXIT_FAR_9A8AB_OFFSET          0x004D
+
 /* Analysis wrapper around the two alternative entries, NOT a recovered game function/ABI.
  * Select class14_82451 or class1_15_8262D as the entry; TAIL selects the corresponding old-build
- * expansion. The wrapper return marks only the boundary at 0x82F61, whose body is outside scope.
+ * expansion. P1.1 supplies the shared exit from 0x82F61 through the actual far-return
+ * instructions; its evidence owns that separate extent. The wrapper adds no game call.
  * This C-shaped notation is not a standalone compilable translation: machine aliases are explicit
  * unresolved notation rather than fabricated C ABI contracts for the opaque game calls.
  */
@@ -5704,8 +5716,27 @@ tail_done:
     goto external_82F61;                      /* 131:0x82778 160:= com1:—; class1/15: 0x82778 */
 
 external_82F61:
-    /* 131:0x82F61 160:= com1:=; boundary only, no return instruction reconstructed here. */
-    return;
+    /* P1.1 cast-exit bridge. Each opaque far call includes the architectural CS/IP stack
+     * pushes and the opaque callee/overlay transition. Following instructions require a
+     * return there; no register, segment, stack or memory preservation is promised. */
+    opaque_far_call(P1_EXIT_FAR_767A0_SELECTOR, P1_EXIT_FAR_767A0_OFFSET);
+                                             /* 131:0x82F61 160:= com1:=; 0318:0020 ->0x767A0 */
+    opaque_far_call(P1_EXIT_FAR_6DC3_SELECTOR, P1_EXIT_FAR_6DC3_OFFSET);
+                                             /* 131:0x82F66 160:= com1:=; 0008:0503 ->0x6DC3 */
+#if BUILD == COM1
+    goto p1_exit_82A9C;                       /* 131:— 160:— com1:0x82F6B */
+p1_exit_82A9C:
+    push16(DS_word(P1_EXIT_COMBAT_STRUCTURE_WORD_DS));
+                                             /* 131:— 160:— com1:0x82A9C; live DS word, stack write */
+    opaque_far_call(P1_EXIT_FAR_9A8AB_SELECTOR, P1_EXIT_FAR_9A8AB_OFFSET);
+                                             /* 131:— 160:— com1:0x82AA0; known Calc_Battlefield_Bonuses */
+    CX = pop16();                            /* 131:— 160:— com1:0x82AA5; live stack top, not assumed argument */
+#endif
+    DI = pop16();                            /* 131:0x82F6B 160:= com1:0x82AA6 */
+    SI = pop16();                            /* 131:0x82F6C 160:= com1:0x82AA7 */
+    SP = BP;                                 /* 131:0x82F6D 160:= com1:0x82AA8; current BP */
+    BP = pop16();                            /* 131:0x82F6F 160:= com1:0x82AAA */
+    machine_retf16();                        /* 131:0x82F70 160:= com1:0x82AAB; pop IP then CS, transfer */
 }
 #undef BADDR
 #undef SADDR

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="860" viewBox="0 0 1080 860"><defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10Z" fill="#58708c"/></marker></defs><rect width="1080" height="860" fill="#f6f8fc"/><g font-family="Segoe UI,Arial,sans-serif" fill="#182d45">
+<text x="540" y="35" font-size="25" text-anchor="middle" fill="#182d45">P1.1 · DOS cast-exit bridge</text>
+<text x="540" y="62" font-size="16" text-anchor="middle" fill="#182d45">Blue: 25 newly reconstructed instructions · Grey: existing source reused</text>
+<rect x="295" y="85" width="490" height="70" rx="12" fill="#e8edf3" stroke="#99a7b8" stroke-width="1.5"/>
+<text x="540.0" y="111" font-size="17" text-anchor="middle" fill="#182d45">Known ordinary class-1/15 exit</text>
+<text x="540.0" y="134" font-size="17" text-anchor="middle" fill="#182d45">MoM / CP 82778 · CoM 826C9 → 82F61</text>
+<path d="M540 155 L540 177" stroke="#58708c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="295" y="178" width="490" height="65" rx="12" fill="#e3f0ff" stroke="#4888ce" stroke-width="1.5"/>
+<text x="540.0" y="204" font-size="17" text-anchor="middle" fill="#182d45">82F61: opaque call 0318:0020 → 767A0</text>
+<text x="540.0" y="227" font-size="17" text-anchor="middle" fill="#182d45">82F66: opaque call 0008:0503 → 6DC3</text>
+<path d="M540 243 L540 276" stroke="#58708c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<text x="540" y="298" font-size="16" text-anchor="middle" fill="#182d45">After the calls return to their continuations</text>
+<path d="M540 307 L540 325 L270 325 L270 350 M540 325 L810 325 L810 350" stroke="#58708c" stroke-width="2" fill="none"/>
+<text x="170" y="342" font-size="16" text-anchor="middle" fill="#182d45">MoM 1.31 / CP 1.60</text>
+<text x="915" y="342" font-size="16" text-anchor="middle" fill="#182d45">CoM 6.08</text>
+<rect x="45" y="358" width="450" height="80" rx="12" fill="#e3f0ff" stroke="#4888ce" stroke-width="1.5"/>
+<text x="270.0" y="384" font-size="17" text-anchor="middle" fill="#182d45">82F6B: POP DI / POP SI</text>
+<text x="270.0" y="407" font-size="17" text-anchor="middle" fill="#182d45">SP := BP; POP BP; RETF at 82F70</text>
+<rect x="585" y="358" width="450" height="80" rx="12" fill="#e3f0ff" stroke="#4888ce" stroke-width="1.5"/>
+<text x="810.0" y="384" font-size="17" text-anchor="middle" fill="#182d45">82F6B → 82A9C</text>
+<text x="810.0" y="407" font-size="17" text-anchor="middle" fill="#182d45">Push word from the then-live DS:C520</text>
+<path d="M810 438 L810 460" stroke="#58708c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="585" y="460" width="450" height="66" rx="12" fill="#e3f0ff" stroke="#4888ce" stroke-width="1.5"/>
+<text x="810.0" y="486" font-size="17" text-anchor="middle" fill="#182d45">82AA0: call 03D0:004D → 9A8AB</text>
+<text x="810.0" y="509" font-size="17" text-anchor="middle" fill="#182d45">Known Calc_Battlefield_Bonuses entry</text>
+<path d="M810 526 L810 550" stroke="#58708c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="585" y="550" width="450" height="112" rx="12" fill="#e8edf3" stroke="#99a7b8" stroke-width="1.5"/>
+<text x="810.0" y="576" font-size="17" text-anchor="middle" fill="#182d45">Existing CoM body: 9ACFE → 99874</text>
+<text x="810.0" y="599" font-size="17" text-anchor="middle" fill="#182d45">Post-tested loop over battle-unit slots</text>
+<text x="810.0" y="622" font-size="17" text-anchor="middle" fill="#182d45">9988B constructor → 99892 battlefield</text>
+<text x="810.0" y="645" font-size="17" text-anchor="middle" fill="#182d45">Reuses existing bodies; no duplicate code</text>
+<path d="M810 662 L810 685" stroke="#58708c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+<rect x="585" y="685" width="450" height="72" rx="12" fill="#e3f0ff" stroke="#4888ce" stroke-width="1.5"/>
+<text x="810.0" y="711" font-size="17" text-anchor="middle" fill="#182d45">On return: 82AA5 POP CX</text>
+<text x="810.0" y="734" font-size="17" text-anchor="middle" fill="#182d45">POP DI / SI; SP := BP; POP BP; RETF</text>
+<rect x="45" y="487" width="450" height="200" rx="12" fill="#e8edf3" stroke="#99a7b8" stroke-width="1.5"/>
+<text x="270.0" y="513" font-size="17" text-anchor="middle" fill="#182d45">Conditions remain explicit</text>
+<text x="270.0" y="536" font-size="17" text-anchor="middle" fill="#182d45">• No Holy Weapon test in this exit fragment</text>
+<text x="270.0" y="559" font-size="17" text-anchor="middle" fill="#182d45">• Opaque calls may change live state</text>
+<text x="270.0" y="582" font-size="17" text-anchor="middle" fill="#182d45">• Pops read the then-current stack</text>
+<text x="270.0" y="605" font-size="17" text-anchor="middle" fill="#182d45">• No fixed SP / BP relationship is proved</text>
+<text x="270.0" y="628" font-size="17" text-anchor="middle" fill="#182d45">• Rebuild link is not full-pass equivalence</text>
+<text x="540" y="804" font-size="17" text-anchor="middle" fill="#182d45">Known caller and DS bindings remain conditions; this is not complete cast admission.</text>
+<text x="540" y="833" font-size="15" text-anchor="middle" fill="#182d45">No calculator migration or scheduled-removal feature is introduced by this reconstruction.</text>
+</g></svg>
