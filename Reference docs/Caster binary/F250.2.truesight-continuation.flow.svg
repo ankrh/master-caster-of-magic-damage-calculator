@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="760" viewBox="0 0 1120 760">
+<title>True Sight: modern cast continuation order</title>
+<desc>Combat reaches script then full combat recalculation. Overland recalculates before the script and common tail. Unknown callees and runtime entry conditions remain explicit.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#52677d"/></marker></defs>
+<rect width="1120" height="760" fill="#f5f8fc"/>
+<g font-family="Segoe UI,Arial,sans-serif" fill="#20364b">
+<text x="35" y="42" font-size="26" font-weight="600">True Sight: modern cast continuation order</text>
+<text x="35" y="68" font-size="14">Shared CoM2 / Warlord binary · slot 131, configured group 1 · 543 new instructions</text>
+
+<rect x="35" y="95" width="490" height="95" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="53" y="122" font-size="17" font-weight="600">Combat: existing combat-layer store</text>
+<text x="53" y="146" font-size="14">0x5C9FD3 → continuation 0x5CA369</text>
+<text x="53" y="167" font-size="14">Earlier entry/admission conditions still apply.</text>
+<path d="M280 190V216" fill="none" stroke="#52677d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="216" width="490" height="115" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="53" y="243" font-size="17" font-weight="600">New: remaining dispatch heads</text>
+<text x="53" y="267" font-size="14">Slot 131 / group 1 skips supplied siblings.</text>
+<text x="53" y="288" font-size="14">No direct writes or recalculation on this route.</text>
+<text x="53" y="309" font-size="14">0x5CBB53 → known common tail 0x5CBBCA</text>
+<path d="M280 331V357" fill="none" stroke="#52677d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="357" width="490" height="95" rx="10" fill="#dff2ed" stroke="#a9bed4"/>
+<text x="53" y="384" font-size="17" font-weight="600">Existing tail: script before recalculation</text>
+<text x="53" y="408" font-size="14">Script bridge 0x5CBBCD</text>
+<text x="53" y="429" font-size="14">RecalculateUnits(True, −1, −1, −1) at 0x5CBBDC</text>
+<path d="M280 452V478" fill="none" stroke="#52677d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="35" y="478" width="490" height="95" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="53" y="505" font-size="17" font-weight="600">Existing continuation</text>
+<text x="53" y="529" font-size="14">Conditional movement helpers, then cleanup.</text>
+<text x="53" y="550" font-size="14">Early rejection paths skip this common tail.</text>
+<rect x="585" y="95" width="500" height="95" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="603" y="122" font-size="17" font-weight="600">Overland: existing overland-layer store</text>
+<text x="603" y="146" font-size="14">0x5C4D79 → continuation 0x5C4D81</text>
+<text x="603" y="167" font-size="14">Earlier entry/admission conditions still apply.</text>
+<path d="M835 190V216" fill="none" stroke="#52677d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="585" y="216" width="500" height="115" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="603" y="243" font-size="17" font-weight="600">New: conditional writes, then recalculation</text>
+<text x="603" y="267" font-size="14">Three calculated-target writes behind local guards.</text>
+<text x="603" y="288" font-size="14">RecalculateUnits at 0x5C5032: AL=0;</text>
+<text x="603" y="309" font-size="14">plane / X / Y from base target, subject to checks.</text>
+<path d="M835 331V357" fill="none" stroke="#52677d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="585" y="357" width="500" height="115" rx="10" fill="#dff2ed" stroke="#a9bed4"/>
+<text x="603" y="384" font-size="17" font-weight="600">New: script after recalculation</text>
+<text x="603" y="408" font-size="14">Eight variable exports, then RunScript 0x5C856C.</text>
+<text x="603" y="429" font-size="14">Cost-gated queue and candidate processing follow.</text>
+<text x="603" y="450" font-size="14">Do not assume the post-script cost from the INI.</text>
+<path d="M835 472V498" fill="none" stroke="#52677d" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="585" y="498" width="500" height="115" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="603" y="525" font-size="17" font-weight="600">New: final common-tail calls</text>
+<text x="603" y="549" font-size="14">Checkfordrowning → RefreshUnitsOnMapStatus</text>
+<text x="603" y="570" font-size="14">→ Recalculatevisibility → ResetAllCityData</text>
+<text x="603" y="591" font-size="14">String cleanup, then return.</text>
+<rect x="35" y="643" width="1050" height="88" rx="10" fill="#fff0d7" stroke="#a9bed4"/>
+<text x="53" y="670" font-size="17" font-weight="600">Limits for calculator simplification</text>
+<text x="53" y="694" font-size="14">Direct call order is established; excluded callees may have further effects.</text>
+<text x="53" y="715" font-size="14">A shared full calculator pass must preserve script order, scope and persistent mutations.</text>
+</g></svg>

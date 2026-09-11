@@ -8950,3 +8950,14 @@ The [reviewed 37-instruction fragment](Reference%20docs/Caster%20binary/F250.2.o
 ### F250.2 loader subunit — 2026-09-11
 
 The [loader evidence](Reference%20docs/Caster%20binary/F250.2.loader.evidence.md) supplies the missing key-to-field assignments and bounded cache/INI startup branch, using 809 instructions. Existing cast writers and recalculation are reused. Independent derivations, reciprocal reviews and fresh revisions completed; merge corrections and validations are in `.reviews/F250.2-loader/REPORT.F250.2.md`. F250.2 remains open for its named remaining claims; no calculator behavior changed.
+
+### F250.2 modern reconciliation completed — 2026-09-11
+
+The [True Sight continuation](Reference%20docs/Caster%20binary/F250.2.truesight-continuation.evidence.md)
+adds 543 instructions and joins existing writers/callees: combat reaches script then full
+combat recalculation; overland recalculates before the script/common tail. The existing
+immunity-prefix join identifies calculated-record predicates while retaining named caller/flag
+binding for F250.4. F250.2's reconciliation is complete; full targeting/lifecycle and migration
+remain separate. No numeric changes or provenance promotion. Independent derivations,
+reciprocal reviews and fresh revisions succeeded; raw bytes, links, rendered flow and citations
+passed. Integration review and final details: `.reviews/F250.2-truesight-continuation/REPORT.F250.2.md`.

@@ -191,12 +191,15 @@ review gates exist only in `Calculator/BACKLOG.md`.
 | R9-G1a-R2 | [`Spells.CombatSummonUnit.pas`](./Spells.CombatSummonUnit.pas); [`R9-G1a-R2.evidence.md`](./R9-G1a-R2.evidence.md) | Complete combat-summon creation, identity writes, Demon Lord/Lesser Demon gate and script handoff; merged 2026-08-09 from independent Claude/Codex derivations and reciprocal byte review with no surviving disagreement |
 | Q31 | [`Q31.evidence.md`](./Q31.evidence.md) | Complete `@Units@IsChaosUnit`, `@Units@IsDeathUnit` and `@Units@ChaosChannel` (`$00594FE4..$0059511F`): the realm-plus-recovery predicate, one-based flag indexing, calculated-record proof, full caller set, and `BUG-Q31`; merged 2026-08-31 from independent Claude/GPT derivations and reciprocal review, both revising from a defect reading to the recovery reading |
 
-## F250.2 combat cast backing stores (partial)
+## F250.2 modern cast-store reconciliation
 
-[Evidence](F250.2.combat.evidence.md), [reconstruction](F250.2.combat.reconstruction.md), [raw packet](F250.2.combat.raw.md), [flow](F250.2.combat.flow.svg). Generic combat buffs/curses and Warp write `BaseUnits.CombatEnchantmentFlags`; existing accessor and recalculation evidence distinguishes that persistent object's combat layer from its base enchantment layer. The combat reconstruction is bounded; F250.2 remains open for the explicitly listed claims.
+[Evidence](F250.2.combat.evidence.md), [reconstruction](F250.2.combat.reconstruction.md), [raw packet](F250.2.combat.raw.md), [flow](F250.2.combat.flow.svg). Generic combat buffs/curses and Warp write `BaseUnits.CombatEnchantmentFlags`; existing accessor and recalculation evidence distinguishes that persistent object's combat layer from its base enchantment layer. The bounded reconciliation is complete; full admission, runtime installation and migration conditions remain explicit.
 
 The subsequent [37-instruction overland store](F250.2.overland-store.evidence.md) writes
 `BaseUnits.OverlandEnchantmentFlags`; it reuses the known converter, record mapping and
 recalculation instead of reconstructing them again. Named runtime binding and complete admission
 remain conditional. The [loader supplement](F250.2.loader.evidence.md) supplies the key-to-field
 assignments and bounded startup branch; reuse it for those claims.
+
+The [True Sight continuations](F250.2.truesight-continuation.evidence.md) connect the combat
+route to its known tail and establish overland recalculation before the script/common tail.
