@@ -4,6 +4,14 @@
 
 # Journal
 
+## 2026-09-11 — F271.1 source-input inventory complete
+
+[Inventory](Reference%20docs/F271.1.source-input-inventory.md) assigns 23 caller files to
+F271.2–.5, including source-neutral test combinations and the generator assertion revisit.
+Sol high reviewed the actual sources after Claude's quota failure; all findings resolved.
+No calculator code changed. Pre-conversion presets and citations passed; the Node baseline
+stopped at a CRLF-sensitive source scan in identity.js, owned by F271.3.
+
 ## 2026-09-11 — F279.2 design approved and complete
 
 [Design](Reference%20docs/F279.2.cast-execution-design.md) and diagram separate requests,
