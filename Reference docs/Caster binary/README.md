@@ -198,4 +198,5 @@ review gates exist only in `Calculator/BACKLOG.md`.
 The subsequent [37-instruction overland store](F250.2.overland-store.evidence.md) writes
 `BaseUnits.OverlandEnchantmentFlags`; it reuses the known converter, record mapping and
 recalculation instead of reconstructing them again. Named runtime binding and complete admission
-remain conditional.
+remain conditional. The [loader supplement](F250.2.loader.evidence.md) supplies the key-to-field
+assignments and bounded startup branch; reuse it for those claims.

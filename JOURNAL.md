@@ -8946,3 +8946,7 @@ The [reviewed bounded reconstruction](Reference%20docs/DOS%20reconstructed/F250.
 ### F250.2 modern overland store subunit — 2026-09-10
 
 The [reviewed 37-instruction fragment](Reference%20docs/Caster%20binary/F250.2.overland-store.evidence.md) establishes the group-1/15 byte store in BaseUnits.OverlandEnchantmentFlags. Existing accessor and recalculation sources supply the object/layer mapping; they were not rederived. True Sight index 41 remains conditional on runtime binding and entry, with complete admission outside this fragment. Both independent derivations, reciprocal reviews and fresh revisions succeeded; 136 raw bytes, extent hash, links and rendered flow passed. The broader preflight is unnecessary for this store. No numeric behavior changed, and provenance remains UNVERIFIED. Report: `.reviews/F250.2-overland-store/REPORT.F250.2.md`.
+
+### F250.2 loader subunit — 2026-09-11
+
+The [loader evidence](Reference%20docs/Caster%20binary/F250.2.loader.evidence.md) supplies the missing key-to-field assignments and bounded cache/INI startup branch, using 809 instructions. Existing cast writers and recalculation are reused. Independent derivations, reciprocal reviews and fresh revisions completed; merge corrections and validations are in `.reviews/F250.2-loader/REPORT.F250.2.md`. F250.2 remains open for its named remaining claims; no calculator behavior changed.

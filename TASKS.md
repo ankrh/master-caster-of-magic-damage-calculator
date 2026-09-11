@@ -1133,8 +1133,10 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
   reuse those results and existing cast/API
   reconstructions. The [37-instruction overland store](Reference%20docs/Caster%20binary/F250.2.overland-store.evidence.md)
   is also reconstructed; do not rederive either writer or launch the old broader preflight by
-  default. Remaining runtime field binding, full named admission and necessary continuation
-  facts require individual scope decisions. Script sources are reconciled in F250.4. This
+  default. The [loader supplement](Reference%20docs/Caster%20binary/F250.2.loader.evidence.md)
+  supplies local key-to-field assignments and the bounded cache/INI startup branch. Remaining
+  initialization, full named admission and necessary continuation facts require individual
+  scope decisions. Script sources are reconciled in F250.4. This
   subtask remains open. The
   [recalculation assessment](Reference%20docs/Caster%20binary/F250.2.recalculation-assessment.md)
   supplies the existing caller/callee mapping; do not reconstruct the known callee again.

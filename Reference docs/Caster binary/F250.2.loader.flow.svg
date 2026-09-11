@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="665" viewBox="0 0 1080 665">
+<title>Modern spell-table initialization: bounded reconstructed calls</title>
+<desc>The shown startup fragment chooses cached spell data or the first INI loader, then reaches LoadSpellsINI2. First-loader fragments bind SpellTypeGroup and EnchantmentID to the runtime fields. Unknown surrounding code and helper effects remain explicit.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#52677d"/></marker></defs>
+<rect width="1080" height="665" fill="#f5f8fc"/>
+<g font-family="Segoe UI,Arial,sans-serif" fill="#20364b">
+<text x="35" y="40" font-size="25" font-weight="600">Modern spell-table initialization</text>
+<text x="35" y="64" font-size="14">F250.2 · 809 instructions · shared CoM2 / Warlord executable</text>
+<g fill="none" stroke="#52677d" stroke-width="2" marker-end="url(#arrow)">
+<path d="M540 142V173"/>
+<path d="M540 238V258H255V296"/>
+<path d="M540 238V258H825V296"/>
+<path d="M255 391V444H370V478"/>
+<path d="M825 418V444H710V478"/>
+<path d="M465 342H615" stroke-dasharray="6 4"/>
+</g>
+<rect x="370" y="87" width="340" height="55" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="540" y="110" text-anchor="middle" font-size="17" font-weight="600">GameInitialize fragment</text>
+<text x="540" y="131" text-anchor="middle" font-size="13">LoadFlagsINI call · 0x636638</text>
+<rect x="370" y="173" width="340" height="65" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="540" y="200" text-anchor="middle" font-size="17" font-weight="600">FileExists result for Spells.dat</text>
+<text x="540" y="222" text-anchor="middle" font-size="13">Relative filename · 0x63663D–0x63664B</text>
+<text x="300" y="251" font-size="13">nonzero result</text>
+<text x="665" y="251" font-size="13">zero result</text>
+<rect x="45" y="296" width="420" height="95" rx="10" fill="#fff0d7" stroke="#cdb27f"/>
+<text x="255" y="324" text-anchor="middle" font-size="17" font-weight="600">File-runtime calls for Spells.dat</text>
+<text x="255" y="353" text-anchor="middle" font-size="14">Record size 0x12038; target table pointer</text>
+<text x="255" y="375" text-anchor="middle" font-size="13">Normal return bypasses the first INI loader</text>
+<rect x="615" y="296" width="420" height="122" rx="10" fill="#dff2ed" stroke="#8ebbb0"/>
+<text x="825" y="324" text-anchor="middle" font-size="17" font-weight="600">LoadSpellsINI: supplied fragments</text>
+<text x="825" y="352" text-anchor="middle" font-size="14">SpellTypeGroup → dword +0x2C; default 0</text>
+<text x="825" y="376" text-anchor="middle" font-size="14">EnchantmentID → dword +0x90; default −1</text>
+<text x="825" y="400" text-anchor="middle" font-size="13">Store sites 0x62BD5C and 0x62C4DE</text>
+<text x="540" y="317" text-anchor="middle" font-size="12">handler</text>
+<text x="540" y="333" text-anchor="middle" font-size="12">continuation</text>
+<rect x="245" y="478" width="590" height="104" rx="10" fill="#e4edf7" stroke="#a9bed4"/>
+<text x="540" y="506" text-anchor="middle" font-size="18" font-weight="600">LoadSpellsINI2 · common call at 0x6366C6</text>
+<text x="540" y="533" text-anchor="middle" font-size="14">Book settings, picks, retorts, AI priority, counts and rerolls</text>
+<text x="540" y="558" text-anchor="middle" font-size="14">No direct store through the spell-table addressing sequence</text>
+<text x="35" y="618" font-size="13">Shown returning paths only. Earlier directory selection, omitted first-loader blocks and opaque helper effects remain conditional.</text>
+<text x="35" y="642" font-size="13">Dashed arrow: supplied exception-handler continuation. The original declarations and full exception lifecycle are not established.</text>
+</g></svg>
