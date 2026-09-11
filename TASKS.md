@@ -1135,7 +1135,9 @@ full validator, recast/clear or timing work assigned to the census's P-family sl
   is also reconstructed; do not rederive either writer or launch the old broader preflight by
   default. Remaining runtime field binding, full named admission and necessary continuation
   facts require individual scope decisions. Script sources are reconciled in F250.4. This
-  subtask remains open.
+  subtask remains open. The
+  [recalculation assessment](Reference%20docs/Caster%20binary/F250.2.recalculation-assessment.md)
+  supplies the existing caller/callee mapping; do not reconstruct the known callee again.
 - **F250.3** reconcile the eight DOS curses and `trueSight`, using F250.1 and the existing
   `combat.c`/`unitcalc.c` bodies and coverage ledgers. Start with
   [A32](Reference%20docs/DOS%20reconstructed/A32.evidence.md): dispatch `0x81F4C..0x81F6F`
