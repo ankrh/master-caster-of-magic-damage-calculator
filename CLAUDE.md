@@ -211,6 +211,12 @@ state changes and subsequent effect eligibility. Prefer the shared full pass whe
 is established; otherwise preserve the required sequence and record the specific difference
 or unresolved evidence that prevents simplification.
 
+Represent repeated execution of a unit-stat routine by reusing its implementation, with a
+separate position, input arguments and execution/hover trace entry for each call. Each call
+uses the state present at that point, including changes made since the previous call.
+The call sequence and arguments follow each game version's own engine; sharing an
+implementation does not impose one version's sequence on another.
+
 Fail-loud on out-of-range values. Halt with an error naming the offending value, the record or file it came from, and the set that was expected.
 
 Fail-loud is a code-design principle, verified by inspection. Individual halt sites are not each a
