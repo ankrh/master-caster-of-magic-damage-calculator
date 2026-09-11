@@ -4,6 +4,15 @@
 
 # Journal
 
+## 2026-09-11 — P1 DOS Holy Weapon preparation complete
+
+[Source-availability ledger](Reference%20docs/DOS%20reconstructed/P1.holy-weapon-cast-boundary.md)
+reuses the shared class-15 writer, MoM/CP local recalculation calls and CoM's known broader
+aggregation/rebuild loop. The missing cast-exit bridge is sized at25 instructions; approval
+for P1.1 was requested separately. No new source was derived. Sol high review corrected
+opaque-call labels, post-call binding conditions and version-specific bridge claims; local
+links, binary/data identity checks and scope boundaries passed.
+
 ## 2026-09-11 — F250.4 Illusion-refusal reconciliation complete
 
 [DOS target-screen evidence](Reference%20docs/DOS%20reconstructed/F250.4.dos.evidence.md)
