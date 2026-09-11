@@ -4,6 +4,13 @@
 
 # Journal
 
+## 2026-09-11 — F271.2 derivation checks converted
+
+Main derivation and range/level inputs now state their sources explicitly. All 329 targeted
+assertions passed over 150 calls; expectations are unchanged. Sol high review found no
+defects. Required full tests passed citations and all presets, then reproduced the existing
+identity-reader CRLF failure. F271.3 owns that repair and the remaining unit-check migration.
+
 ## 2026-09-11 — F271.1 source-input inventory complete
 
 [Inventory](Reference%20docs/F271.1.source-input-inventory.md) assigns 23 caller files to
