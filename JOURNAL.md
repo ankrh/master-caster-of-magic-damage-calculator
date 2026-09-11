@@ -4,6 +4,16 @@
 
 # Journal
 
+## 2026-09-11 — P2 modern Holy Weapon preparation complete
+
+[Source-availability ledger](Reference%20docs/Caster%20binary/P2.holy-weapon-cast-boundary.md)
+reuses the known target prefix, cast stores, post-store recalculation, caller prefix and
+Warlord Tattoo Magic transfer. Remaining target and animation links are sized at273
+instructions plus28 data bytes for one proposed P2.1 packet; approval was requested.
+Sol high review and follow-up cleared the corrected menu/initializer, script and enclosing
+validator boundaries. Raw counts/identities,21 local links and whitespace passed.
+No new binary source or calculator change. P8.1 continues; required new evidence remains gated.
+
 ## 2026-09-11 — P1 DOS Holy Weapon preparation complete
 
 [Source-availability ledger](Reference%20docs/DOS%20reconstructed/P1.holy-weapon-cast-boundary.md)
@@ -47,7 +57,7 @@ No calculator implementation changed.
 [Holy Weapon source handoff](Reference%20docs/DOS%20reconstructed/F236.1.holy-weapon-sources.md)
 separates direct casts, Holy Arms and Heavenly Light using existing reconstructions. Sol high
 review corrected an overbroad handoff claim: grant predicates/destinations are established,
-while P1/P2 still supply complete direct-cast admission, backing stores and timing. F236.1 is
+while the pilot still requires its separately scoped direct-cast admission and timing evidence. F236.1 is
 complete; F236.2 remains for implementation. Links and task dependencies checked; no code changes.
 
 ## 2026-09-10 — F250.4 script-source reconciliation
