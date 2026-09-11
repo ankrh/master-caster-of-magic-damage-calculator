@@ -4,6 +4,13 @@
 
 # Journal
 
+## 2026-09-11 — F279.2 design approved and complete
+
+[Design](Reference%20docs/F279.2.cast-execution-design.md) and diagram separate requests,
+records and call occurrences. Claude review fixes and the user's approved contract changes
+are applied; `CLAUDE.md` owns the rulings. Links and diagram checks pass. No calculator code
+changed. F271.1 inventories source-qualified callers next.
+
 ## 2026-09-11 — P2.1 modern Holy Weapon links complete
 
 [Evidence](Reference%20docs/Caster%20binary/P2.1.evidence.md) adds the bounded target and

@@ -201,6 +201,14 @@ At a fork between a binary-faithful implementation and one that is not, the fait
 - **Wall Crusher is not applied to the city-wall defense bonus.** In CoM2 a Wall-Crusher attacker calls `CrushWall` before its own attack resolves, so an intact segment's +3 becomes +1 within the same click. The calculator does not model that transition.
 - **Rust's two resistance rolls are represented as a single control despite being two independent conditions in the binary.**
 
+- **Temporary whole-run execution selection during the cast-model migration.** Use the new
+  executor only for version/input domains whose complete dependency closure is covered,
+  including innate/template/training, requested effects, globals, recalculation-produced
+  changes and their readers. Otherwise execute the existing flat calculation once. Do not
+  mix the two paths within a run or use the old final result as new admission state. Identify
+  the chosen mode and outstanding coverage in the run's execution ledger. This is a temporary
+  workaround, not a faithfulness claim for the old path. F279.5 owns removal.
+
 ## Architecture
 
 <!-- The shape of the code and why it has that shape. Structure, not a tour of the modules. -->
@@ -216,6 +224,15 @@ separate position, input arguments and execution/hover trace entry for each call
 uses the state present at that point, including changes made since the previous call.
 The call sequence and arguments follow each game version's own engine; sharing an
 implementation does not impose one version's sequence on another.
+
+Before attempted effects, the calculator starts from a fresh unit prepared from the supplied
+innate/template and training inputs and an initial calculation, preserving the supplied damage
+and external context. Selected cast-origin effects are requests, not preloaded record flags;
+apply them after that baseline in the existing assumed order. This is a starting-state
+convention, not an inferred cast history. Use evidenced version-specific initialization and
+reset/retain rules; do not invent a default for required retained state whose source is not
+established. Required state means a demonstrated dependency of a modelled result, persistent
+effect or later admission claim; an out-of-scope engine read alone is not a blocker.
 
 Fail-loud on out-of-range values. Halt with an error naming the offending value, the record or file it came from, and the set that was expected.
 
@@ -250,8 +267,8 @@ Each step in the sequence of calculating unit stats carries a **phase**: which r
 |---|---|
 | **template** | Basic roster data |
 | **training** | When the unit is trained |
-| **immunities** | The immunities the card marks are written to the permanent record before anything tests them |
-| **buffs** | Each beneficial enchantment or condition the card marks is written to the permanent record where the engine's own eligibility test, read against the record as the earlier steps left it, admits it. Includes the permanent writes the engine re-makes every recalculation, such as Destiny's |
+| **immunities** | Cast-origin immunity requests are attempted before buffs and debuffs, using the applicable version's admission record and write destination at that time. Innate immunities belong to template preparation |
+| **buffs** | Cast-origin beneficial enchantments and conditions are attempted in the assumed order; admission and writes use the applicable records as earlier execution left them. Recalculation-produced writes retain their source phase labels and execute at their evidenced invocation sites, rather than being replayed cast requests |
 | **debuffs** | The same for curses and detrimental conditions, after every buff, so a marked immunity or an identity-changing buff is in place when the debuff's own test runs |
 | **a** | precalc, in the binary |
 | **b** | precalc, in the early script hook |
