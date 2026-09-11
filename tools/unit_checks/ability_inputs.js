@@ -104,15 +104,16 @@ function runAbilityInputChecks(ctx) {
       `Holy Bonus stated as ${what} halts and names the key`);
   }
 
-  // The halves are two statements, not one: a merged map beside them is a caller error.
-  let bothShapes = null;
-  try {
-    ctx.deriveUnitStats(baseUnitInput({
-      version: 'mom_1.31', abilities: { holyBonus: 1 }, innateAbilities: { holyBonus: 2 },
-    }));
-  } catch (err) { bothShapes = String(err.message); }
-  assert(bothShapes !== null && bothShapes.includes('both'),
-    'stating the merged map and a half together halts rather than picking one');
+  // The removed input shape must halt even with no active key or explicit halves beside it.
+  for (const obsolete of [{}, { holyBonus: 1 }, undefined]) {
+    let removedShape = null;
+    try {
+      const { innateAbilities, markedAbilities, ...base } = baseUnitInput({ version: 'mom_1.31' });
+      ctx.deriveUnitStats({ ...base, abilities: obsolete });
+    } catch (err) { removedShape = String(err.message); }
+    assert(removedShape !== null && removedShape.includes('removed `abilities` input'),
+      'an obsolete abilities input halts rather than being ignored or reverse-split');
+  }
 
   // --- 2. either grant of a shared flag reaches the effect ---
   // Warlord renamed Mislead to Liability, so two controls set the one record flag, whose

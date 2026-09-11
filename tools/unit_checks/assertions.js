@@ -66,13 +66,10 @@ function baseUnitInput(overrides = {}) {
   }
   // The ability input boundary carries its source (F252.1): `innateAbilities` is what the unit
   // was built with, `markedAbilities` what the card marks. Empty probes state both halves.
-  // Explicit legacy maps remain only for callers owned by later F271 batches and the negative
-  // mixed-shape check; this default neither interprets nor partitions those maps.
-  const statesLegacyMap = 'abilities' in overrides;
   return {
     prefix: 'a',
     version: 'com2_1.05.11',
-    ...(statesLegacyMap ? {} : { innateAbilities: {}, markedAbilities: {} }),
+    innateAbilities: {}, markedAbilities: {},
     level: 'normal',
     weapon: 'normal',
     armor: 'normal',

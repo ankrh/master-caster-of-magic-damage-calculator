@@ -281,24 +281,6 @@ function receivedAbilityValues(markedAbilities) {
   return received;
 }
 
-// The reverse, for a caller that states a control set rather than a card: which half each calc
-// key belongs to is read off the def lists. The nine dual-source keys enter **both** halves,
-// which is value-preserving under F252.2's ruling — the caller stated one value, the seven
-// booleans OR it with itself, and the provided/received pair maxes it against itself. Those
-// duplicated values are one statement counted twice, not two independently stated source facts,
-// and must not be read as evidence of what the unit was built with. A key no def list names is a
-// raw record value the caller supplied directly; it has no cast behind it, so it is innate.
-function splitAbilityCalcValuesBySource(abilities) {
-  const innateAbilities = {};
-  const markedAbilities = {};
-  for (const [calcKey, value] of Object.entries(abilities || {})) {
-    const entry = abilityCalcKeySources().get(calcKey);
-    if (entry && entry.marked) markedAbilities[calcKey] = value;
-    if (!entry || entry.innate || !entry.marked) innateAbilities[calcKey] = value;
-  }
-  return { innateAbilities, markedAbilities };
-}
-
 // --- Modern card record shapes ---
 
 // Is this control's value a statement, or the absence of one? A `numcheck` distinguishes

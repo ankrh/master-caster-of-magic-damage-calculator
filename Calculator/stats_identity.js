@@ -1385,19 +1385,9 @@ function curseRefusedByImmunity(record, key, version, eyeOfHeaven) {
 // F250.3.reconciliation.md maps DOS consumers/stores and qualifies named runtime bindings.
 // The refusal mechanism has its own VERIFIED anchor; named admission is a separate claim.
 //
-// **`marked` is the marked half alone (F252.6).** It used to be the merged map after the
-// pre-sequence transforms, which is the shape F244.3b could only build: a step claiming "the cast
-// put this flag on the record" was reading a map that could not say whether a cast or the roster
-// template had stated the key. None of the nine has an `ABILITY_DEFS` control today, so
-// `splitAbilityCalcValuesBySource` puts each only in the marked half and the merged map carried
-// the same bit — the re-source moved no number. That is a coincidence of which controls exist,
-// not a property of the keys: adding an ability control for a curse flag would have made the
-// merged read silently claim a cast. What catches that is the innate-only arm of
-// `runMarkedDebuffPhaseChecks` (`tools/unit_checks/ability_origins.js`), and only it:
-// `seedNonStatRecordFields`'s `abilityMarkedWriteIsPositioned` halt (F252.3) reads the origin
-// table's producers, so it can see a missing positioned write but not a positioned write reading
-// the wrong map (F252.6 review, finding 3). The two guard different things and are not two
-// detectors of this one.
+// `marked` is the marked half alone. Innate-only cases in `runMarkedDebuffPhaseChecks`
+// (`tools/unit_checks/ability_origins.js`) guard against treating a template statement as a cast.
+// The seed's positioned-write check verifies producer availability, a separate claim.
 //
 // The nine are the `debuffs` phase's record-field half, and the phase has four other keys none of
 // which is one. `rust` takes the phase's tenth step, `debuffs:rust:material`, whose own cast term

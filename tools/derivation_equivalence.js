@@ -760,7 +760,7 @@ function canonicalValue(value) {
 }
 
 // One observed field: how many distinct values the run stated for it, and a few of them. The
-// distinct set is capped, because a whole-map field (`abilities`, `identity`) takes a different
+// distinct set is capped, because a whole-map field (an ability source half or `identity`) takes a different
 // value in nearly every case and counting it exactly would cost more memory than the digest; past
 // the cap the count is reported as a floor rather than silently becoming an occurrence count.
 //

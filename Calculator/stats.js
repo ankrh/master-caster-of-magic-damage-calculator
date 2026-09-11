@@ -111,36 +111,24 @@ function deriveUnitStats(input) {
   // CoM 1 (the DOS build). Kept distinct from `isCoM2` wherever a mechanic is settled for
   // one engine and open for the other — see the Warp Creature block and the gaze ladder.
   const isCoM2 = version.startsWith('com2');
-  // The ability input boundary carries its source. `innateAbilities` is what the unit was
-  // built with (`ABILITY_DEFS`, the `template` moment) and `markedAbilities` is what the card
-  // marks (`ENCHANTMENT_DEFS`, the cast moment); the engine makes those two writes at different
-  // moments and the phase table names both. F252.1 splits them at the boundary and puts them
-  // back together here, so nothing has moved yet: `mergeAbilitySourceHalves` applies the same
-  // `mergeAbilityCalcValue` rule the single fold applied, in the same innate-first order.
-  // F252.3–F252.6 replace this reconstruction with positioned writes per half.
-  //
-  // A caller that states a control set rather than a card — every probe and sweep under
-  // `tools/` — supplies the merged `abilities` map instead and the def lists say which half each
-  // key belongs to. Supplying both shapes is two statements of one thing, so it halts.
-  const statesHalves = input.innateAbilities !== undefined || input.markedAbilities !== undefined;
-  if (statesHalves && input.abilities !== undefined) {
-    throw new Error(`deriveUnitStats: the input for side ${JSON.stringify(prefix)} states both `
-      + 'the merged `abilities` map and the innate/marked halves. The halves are the boundary; a '
-      + 'caller with no control sources states `abilities` alone.');
+  // Source inputs remain distinct. The current flat execution consumes their positioned
+  // writes; F279 introduces explicit invocation schedules without inferring cast history here.
+  if ('abilities' in input) {
+    throw new Error(`deriveUnitStats: the input for side ${JSON.stringify(prefix)} states the `
+      + 'removed `abilities` input. Supply `innateAbilities` and `markedAbilities` from their '
+      + 'original sources.');
   }
-  if (statesHalves) {
-    for (const half of ['innateAbilities', 'markedAbilities']) {
-      const value = input[half];
-      if (value !== undefined && (value === null || typeof value !== 'object')) {
-        throw new Error(`deriveUnitStats: the input for side ${JSON.stringify(prefix)} states `
-          + `${half} as ${JSON.stringify(value)}, which is not an ability map. A half that states `
-          + 'nothing is `{}`, not a falsy value.');
-      }
+  for (const half of ['innateAbilities', 'markedAbilities']) {
+    const value = input[half];
+    if (value !== undefined && (value === null || typeof value !== 'object')) {
+      throw new Error(`deriveUnitStats: the input for side ${JSON.stringify(prefix)} states `
+        + `${half} as ${JSON.stringify(value)}, which is not an ability map. A half that states `
+        + 'nothing is `{}`, not a falsy value.');
     }
   }
-  const abilityHalves = statesHalves
-    ? { innateAbilities: input.innateAbilities || {}, markedAbilities: input.markedAbilities || {} }
-    : splitAbilityCalcValuesBySource(input.abilities || {});
+  const abilityHalves = {
+    innateAbilities: input.innateAbilities || {}, markedAbilities: input.markedAbilities || {},
+  };
   const suppliedAbilities = mergeAbilitySourceHalves(
     abilityHalves.innateAbilities, abilityHalves.markedAbilities, 'deriveUnitStats');
   // Holy Bonus and Resistance to All are the one pair whose two halves are two *quantities* —

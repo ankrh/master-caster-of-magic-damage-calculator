@@ -4,6 +4,15 @@
 
 # Journal
 
+## 2026-09-11 — F271 source-input migration complete
+
+The merged-input API, reverse splitter and unused DOM adapters are removed. Inputs retain
+separate innate and marked maps; calculated output and stored control formats are unchanged.
+The [input-flow diagram](Reference%20docs/F271.source-input-flow.svg) shows the completed boundary
+and the remaining F279 execution work. Sol high approved the final tree. All required checks
+passed: 80 browser tests, 34,145 Node assertions, all presets and citations. Every one of the
+64,456 generated inputs is explicit. No provenance-manifest change was needed.
+
 ## 2026-09-11 — F271.5 tool and page-test callers converted
 
 Seven files now preserve sources through generation, diagnostics and page-evaluated inputs.

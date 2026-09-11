@@ -465,8 +465,7 @@ function cardStateToDerivationInput(state, globals) {
     // The two halves of the ability input, kept apart at the boundary (F252.1). The unit was
     // *built* with the innate half — the ability controls, and the version's own special-value
     // block, which states what this unit provides — and the card *marks* the enchantment half.
-    // `deriveUnitStats` puts them back together for now; F252.3-F252.6 give each half its own
-    // positioned writes.
+    // `deriveUnitStats` preserves their source for the positioned writes in its current sequence.
     innateAbilities: {
       ...cardStateAbilityCalcValues(state, 'ability'),
       ...cardStateModernSpecialValues(state, version),

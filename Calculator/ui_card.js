@@ -127,13 +127,6 @@ function collectGlobals(overrides) {
   };
 }
 
-// The shared slot's type for a side's live controls. The rule itself is
-// `cardStateSharedSlotRangedType`; matrix calculation now uses the shared card projection.
-function sharedSlotRangedType(prefix) {
-  return cardStateSharedSlotRangedType(
-    collectCardState(prefix), document.getElementById('gameVersion').value);
-}
-
 // The writer counterpart. A modern-only projectile token has no spelling in the shared-slot
 // select, so assigning one left the control holding a value no `<option>` offers — the blank the
 // restore boundary now rejects (`ui_state.js`, `assertRestoredValuesAreOffered`). The modern card
@@ -460,21 +453,6 @@ function syncDosSpecialCard(prefix, byte) {
     if (val !== undefined) values[key] = val;
   }
   writeDosSpecialCard(prefix, cardStateDosSpecialBlock(values, byte));
-}
-
-// The DOS read side for a side's live controls. Consumer values come from the one byte and its
-// flags rather than from the per-effect ability controls, so the record's contention holds
-// however the state was reached — roster, preset, share link or hand edit. The DOS rosters no
-// longer carry a per-effect magnitude at all; the ability controls survive only as the presets'
-// and share links' way of naming these values, and the card overwrites them on load.
-// Dispel Evil, CoM 1 Exorcise, and Destruction are deliberately absent from the consumer list:
-// their modifiers are literals, so they stay ordinary ability rows that the card state's
-// `calcKey` merge supplies.
-// The marshalling rule itself is `cardStateDosSpecialValues` (`card_state.js`); this is the DOM
-// adapter; matrix calculation now uses the shared card projection.
-function dosSpecialValues(prefix) {
-  return cardStateDosSpecialValues(
-    collectCardState(prefix), document.getElementById('gameVersion').value);
 }
 
 // Mirror of updateModernSpecialDuplicates: in the DOS versions these values are on the card,

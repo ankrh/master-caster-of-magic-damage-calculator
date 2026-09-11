@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="650" viewBox="0 0 1100 650" role="img" aria-labelledby="title desc">
+<title id="title">F271 — source-preserving derivation inputs</title>
+<desc id="desc">Cards, presets and matrix states share one projection. Tests and tools submit explicit source halves. Derivation produces a calculated abilities record. The former merged input and reverse splitter are removed. Invocation schedules remain F279 work.</desc>
+<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10" fill="#506582"/></marker></defs>
+<rect width="1100" height="650" fill="#f6f8fc"/>
+<g font-family="Segoe UI,Arial,sans-serif" fill="#172b49">
+<text x="40" y="48" font-size="25" font-weight="600">Source inputs stay distinct; calculated output remains a record</text>
+<g fill="#ffffff" stroke="#b6c8e0" stroke-width="2">
+<rect x="40" y="90" width="310" height="105" rx="12"/><rect x="395" y="90" width="310" height="105" rx="12"/>
+<rect x="750" y="90" width="310" height="105" rx="12"/><rect x="220" y="260" width="410" height="95" rx="12"/>
+<rect x="710" y="260" width="350" height="95" rx="12"/><rect x="310" y="420" width="560" height="100" rx="12"/>
+<rect x="310" y="570" width="560" height="50" rx="12"/>
+</g>
+<g font-size="18" font-weight="600">
+<text x="60" y="121">Main cards</text><text x="415" y="121">Saved states / presets</text><text x="770" y="121">Matrix rows</text>
+<text x="240" y="291">cardStateToDerivationInput</text><text x="730" y="291">Tests and diagnostic tools</text>
+<text x="330" y="449">deriveUnitStats</text><text x="330" y="601">Calculated stats + abilities record + traces</text>
+</g>
+<g font-size="16">
+<text x="60" y="151">collectCardState: innate controls,</text><text x="60" y="176">enchantments and special records</text>
+<text x="415" y="151">Restore / project control state;</text><text x="415" y="176">stored control maps stay intact</text>
+<text x="770" y="151">Roster or custom card state;</text><text x="770" y="176">matrix spells and settings overlay</text>
+<text x="240" y="322">innateAbilities and markedAbilities</text><text x="240" y="343">Identity, stats and external context accompany them</text>
+<text x="730" y="322">Keep producer tags before aliases fold;</text><text x="730" y="343">submit each source half explicitly</text>
+<text x="330" y="475">Removed input.abilities is rejected; no reverse splitter.</text>
+<rect x="325" y="481" width="535" height="30" rx="5" fill="#fff0c2"/><text x="330" y="501" fill="#704600">Current flat execution remains; F279 owns invocation schedules.</text>
+</g>
+</g>
+<g stroke="#506582" stroke-width="2" fill="none" marker-end="url(#arrow)">
+<path d="M195 195V230H345V260"/><path d="M550 195V260"/><path d="M905 195V225H600V260"/>
+<path d="M425 355V420"/><path d="M885 355V390H760V420"/><path d="M590 520V570"/>
+</g>
+</svg>
