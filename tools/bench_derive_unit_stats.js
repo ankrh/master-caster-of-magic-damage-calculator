@@ -17,7 +17,7 @@ function unitInput(overrides = {}) {
   return {
     prefix: 'a',
     version: 'com2_1.05.11',
-    abilities: {},
+    innateAbilities: {}, markedAbilities: {},
     level: 'normal',
     weapon: 'normal',
     armor: 'normal',
@@ -52,7 +52,7 @@ const CASES = [
   ['CoM 1 warped, post-Warp tail non-empty', unitInput({
     version: 'com_6.08',
     level: 'elite',
-    abilities: { warpAttack: true, warpDefense: true, supremeLight: true, tactician: true },
+    markedAbilities: { warpAttack: true, warpDefense: true, supremeLight: true, tactician: true },
     unitType: 'fantastic_death',
   })],
   ['CoM2 ranged, levelled and equipped', unitInput({
@@ -61,7 +61,7 @@ const CASES = [
     level: 'champion', weapon: 'adamantium', armor: 'orihalcon',
     rtbType: 'missile', rtb: 4, rangedCheck: true, rangedDist: 7,
     modernAttacks: { ranged: { strength: 4, type: 'missile' } },
-    abilities: { holyWeapon: true, lionheart: true, prayer: true, holyArmor: true },
+    markedAbilities: { holyWeapon: true, lionheart: true, prayer: true, holyArmor: true },
   })],
   ['Warlord kitchen sink', unitInput({
     version: 'com2_warlord_1.5.12.9',
@@ -69,7 +69,7 @@ const CASES = [
     level: 'veteran', weapon: 'magic', armor: 'orihalcon',
     rtbType: 'thrown', rtb: 3,
     modernAttacks: { thrown: { strength: 3, type: 'thrown' } },
-    abilities: {
+    markedAbilities: {
       colossalStrength: true, shadowStrike: true, luckyStar: true, rally: true,
       ludusAgoge: true, plague: true, soulFlay: true, beatOfSwiftness: true,
       fieryFury: true, blazingMarch: true, giantStrength: true, uphillBattle: true,
@@ -77,15 +77,15 @@ const CASES = [
     poxHost: true, darkness: true,
   })],
   ['Warlord Outlander reforms', unitInput({
+    innateAbilities: { outlanderWizard: true, mechanical: true, sailing: true },
     version: 'com2_warlord_1.5.12.9',
     rtbType: 'missile', rtb: 5,
     modernAttacks: { ranged: { strength: 5, type: 'missile' } },
-    abilities: {
-      outlanderWizard: true, armorcladReform: true, heatPowerEngine: true,
-      magitekEngineering: true, temporalEngineering: true, sailing: true,
+    markedAbilities: {
+      armorcladReform: true, heatPowerEngine: true,
+      magitekEngineering: true, temporalEngineering: true,
       energyBeamWeapons: true, psychoConverter: true, pneumaReactor: true,
       ballisticsTraining: true, radio: true, explosive: true, militaryWorkshop: true,
-      mechanical: true,
     },
   })],
 ];

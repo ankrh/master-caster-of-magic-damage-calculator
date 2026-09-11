@@ -1184,8 +1184,19 @@ function runF259Checks(ctx) {
     '[F259.2] a case stating the halves states no merged map beside them'
     + `${halvesStatingBoth.length ? ` (${halvesStatingBoth[0].name})` : ''}`);
   const mergedCases = firstVersion.filter(testCase => testCase.input.abilities !== undefined);
-  assert(mergedCases.length > 100,
-    '[F259.2] the merged-map cases survive beside them, so old digests still diff');
+  assert(mergedCases.length === 0,
+    '[F271.5] generated inputs preserve halves and carry no merged ability map');
+  const dualCases = [...enumerateCases(ctx)].filter(testCase => testCase.name.includes('|halves-dual|'));
+  for (const version of evalInContext(ctx, 'ENGINE_VERSIONS')) {
+    for (const key of ['holyBonus', 'resistanceToAll']) {
+      for (const [provided, received] of [[5, 3], [2, 4]]) {
+        assert(dualCases.some(testCase => testCase.version === version
+          && testCase.input.innateAbilities[key] === provided
+          && testCase.input.markedAbilities[key] === received),
+        `[F271.5] ${version} retains ${key} provided ${provided} / received ${received}`);
+      }
+    }
+  }
   // The cross-half statement the merged map cannot make at all.
   assert(firstVersion.some(testCase => testCase.name.includes('|halves-swap|')),
     '[F259.2] a control is also stated in the half the def lists would not put it in');

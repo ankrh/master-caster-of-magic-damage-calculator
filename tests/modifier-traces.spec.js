@@ -19,7 +19,8 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
     rtb: 4, rtbType: 'missile',
     level: 'elite', weapon: 'mithril', armor: 'normal',
     hitMelee: 5, toBlkMod: 0,
-    abilities: { lucky: true, highPrayer: true, warpAttack: true, vertigo: true },
+    innateAbilities: { lucky: true },
+    markedAbilities: { highPrayer: true, warpAttack: true, vertigo: true },
     modernAttacks: {
       ranged: { strength: 4, type: 'missile' },
       thrown: { strength: 3, type: 'thrown' },
@@ -70,9 +71,10 @@ test('R7.3 projects source-ordered running chains for chance, identity, and mode
   expectNoConsoleErrors(errors);
 });
 
-test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', async ({ page }) => {
+for (const half of ['innateAbilities', 'markedAbilities']) {
+test(`R7.3 omits inactive, invalid, and no-op inputs from projected traces (${half})`, async ({ page }) => {
   const errors = await openCalculator(page);
-  const report = await page.evaluate(() => deriveUnitStats({
+  const report = await page.evaluate(half => deriveUnitStats({
     prefix: 'a', version: 'com2_1.05.11', name: 'Paladins',
     identity: createCustomUnitIdentity('com2_1.05.11', {
       baseRace: 'High Men', baseFantastic: false,
@@ -80,11 +82,11 @@ test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', asy
     figs: 1, atk: 4, def: 3, res: 5, hp: 6,
     rtb: 0, rtbType: 'none', modernAttacks: {},
     level: 'normal', weapon: 'normal', armor: 'normal',
-    abilities: {
-      highPrayer: false, warpAttack: false, holyBonus: 0,
+    innateAbilities: { ...(half === 'innateAbilities' ? { holyBonus: 0 } : {}) },
+    markedAbilities: { highPrayer: false, warpAttack: false,
       combatSummoned: true, // display name alone does not establish the retained template
-    },
-  }));
+      ...(half === 'markedAbilities' ? { holyBonus: 0 } : {}) },
+  }), half);
   const sources = Object.values(report.modifierTraces)
     .filter(trace => trace && Array.isArray(trace.entries))
     .flatMap(trace => trace.entries.map(entry => entry.source.id));
@@ -95,6 +97,8 @@ test('R7.3 omits inactive, invalid, and no-op inputs from projected traces', asy
   expectNoConsoleErrors(errors);
 });
 
+}
+
 test('F5 keeps modern common and channel chance writes on the ordered record', async ({ page }) => {
   const errors = await openCalculator(page);
   const reports = await page.evaluate(() => Object.fromEntries(
@@ -104,7 +108,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
       identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
       figs: 1, atk: 1, rtb: 1, rtbType: 'missile', def: 1, res: 1, hp: 1,
       modernAttacks: { ranged: { strength: 1, type: 'missile' } },
-      level: 'normal', weapon: 'normal', armor: 'normal', abilities: {},
+      level: 'normal', weapon: 'normal', armor: 'normal', innateAbilities: {}, markedAbilities: {},
       hitChance: -50, hitRanged: 10, hitThrown: 10, hitBreath: 10, toBlkMod: -40,
       }),
       orderedClamp: deriveUnitStats({
@@ -112,7 +116,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
         identity: createCustomUnitIdentity(version, { baseRace: 'High Men' }),
         figs: 1, atk: 1, rtb: 1, rtbType: 'missile', def: 1, res: 1, hp: 1,
         modernAttacks: { ranged: { strength: 1, type: 'missile' } },
-        level: 'normal', weapon: 'normal', armor: 'normal', abilities: {},
+        level: 'normal', weapon: 'normal', armor: 'normal', innateAbilities: {}, markedAbilities: {},
         hitChance: -50, hitRanged: 150, hitThrown: 150, hitBreath: 150, toBlkMod: 0,
       }),
       sourceOrdered: version.startsWith('com2_warlord') ? deriveUnitStats({
@@ -121,7 +125,7 @@ test('F5 keeps modern common and channel chance writes on the ordered record', a
         figs: 1, atk: 5, rtb: 5, rtbType: 'missile', def: 5, res: 6, hp: 5,
         modernAttacks: { ranged: { strength: 5, type: 'missile' } },
         level: 'normal', weapon: 'normal', armor: 'normal',
-        abilities: { plague: true, vertigo: true, berserkWarlord: true },
+        innateAbilities: {}, markedAbilities: { plague: true, vertigo: true, berserkWarlord: true },
         toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0,
         warpReality: true, hurricane: true,
       }) : null,
@@ -171,12 +175,12 @@ test('R7.3 attributes permanent writes and a created modern channel to their sou
         ...base, version: 'com2_1.05.11',
         atk: 3, rtb: 2, rtbType: 'missile', def: 1, res: 4, hp: 2,
         modernAttacks: { ranged: { strength: 2, type: 'missile' } },
-        abilities: { destiny: true },
+        innateAbilities: {}, markedAbilities: { destiny: true },
       }),
       shadowStrike: deriveUnitStats({
         ...base, version: 'com2_warlord_1.5.12.9',
         atk: 6, rtb: 0, rtbType: 'none', def: 1, res: 1, hp: 1,
-        abilities: { shadowStrike: true }, modernAttacks: {},
+        innateAbilities: {}, markedAbilities: { shadowStrike: true }, modernAttacks: {},
       }),
     };
   });

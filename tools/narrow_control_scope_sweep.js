@@ -1,7 +1,7 @@
 // The mirror image of `tools/hidden_control_leak_sweep.js`. Run:
 //   node tools/narrow_control_scope_sweep.js [--all]
 //
-// `SPEC.md`, *Versions*, invariant 4 has two failure directions and only one of them was ever
+// INV-2 has two failure directions and only one of them was ever
 // swept. The hidden-control sweep probes **out-of-scope** pairs: a control a version hides that
 // still moves a number is a leak, and it announces itself as damage appearing where the UI offers
 // nothing. The other direction is silent. A gate that is *narrower* than the effect suppresses it
@@ -9,7 +9,7 @@
 // visible control, no number to compare against. The census recorded that neither it nor the
 // hidden-control sweep can see that direction, and that the mirror sweep did not exist (F158).
 //
-// This is it. For every calcKey the UI offers, in every version whose UI offers it, the sweep asks
+// For every source/calcKey the UI offers, in every version whose UI offers it, the sweep asks
 // whether setting the key moves any of the six numbers `resolveCombat` reports. A key that moves
 // something in some of its visible versions and nothing in the others is the signal: either the
 // engines really differ there, in which case some scope table should say so and be citable, or the
@@ -64,7 +64,7 @@ function baseInput(prefix, version, over) {
     ? { hitChance: 70, hitMelee: 0, hitRanged: 0, hitThrown: 0, hitBreath: 0 }
     : { toHitMod: 70, toHitRtbMod: 70 };
   return {
-    prefix, version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
+    prefix, version, innateAbilities: {}, markedAbilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
     rtbType: 'none', unitType: 'normal', figs: 6, atk: 6, rtb: 0, def: 4, res: 6, hp: 4, dmg: 0,
     toBlkMod: 70, cityWalls: 'none', nodeAura: 'none', trueLight: false, darkness: false,
     enemyEternalNight: false, rangedCheck: false, rangedDist: 1, warpReality: false,
@@ -72,11 +72,11 @@ function baseInput(prefix, version, over) {
   };
 }
 
-function digest(version, shape, defender, abilities, side, isRanged) {
+function digest(version, shape, defender, halves, side, isRanged) {
   const attacker = baseInput('a', version, shape.over);
   const target = baseInput('b', version,
     { ...shape.over, ...defender.over, modernAttacks: undefined, rtbType: 'none', rtb: 0 });
-  (side === 'b' ? target : attacker).abilities = abilities;
+  Object.assign(side === 'b' ? target : attacker, halves);
   try {
     const result = resolveCombat(deriveUnitStats(attacker), deriveUnitStats(target), {
       isRanged, version, wallOfFire: false, chaosConjunction: false,
@@ -112,12 +112,13 @@ function scopedKeys() {
 }
 
 function run() {
-  const byCalcKey = new Map();
+  const bySourceKey = new Map();
   for (const def of abilityUiDefs()) {
     if (!def || !def.key) continue;
     const calcKey = def.calcKey || def.key;
-    if (!byCalcKey.has(calcKey)) byCalcKey.set(calcKey, []);
-    byCalcKey.get(calcKey).push(def);
+    const sourceKey = `${def.source}|${calcKey}`;
+    if (!bySourceKey.has(sourceKey)) bySourceKey.set(sourceKey, []);
+    bySourceKey.get(sourceKey).push(def);
   }
   const scoped = scopedKeys();
 
@@ -127,8 +128,11 @@ function run() {
   let liveEverywhere = 0;
   let visiblePairs = 0;
 
-  for (const [calcKey, defs] of byCalcKey) {
-    // A key is offered in a version when *any* control naming it is visible there, the complement
+  for (const defs of bySourceKey.values()) {
+      const source = defs[0].source;
+      const calcKey = defs[0].calcKey || defs[0].key;
+      const half = source === 'ability' ? 'innateAbilities' : 'markedAbilities';
+    // A source/key is offered when any control in that source is visible, the complement
     // of the hidden-control sweep's "every control gated".
     const visible = VERSIONS.filter(version => defs.some(def => !abilityVersionGated(def, version)));
     if (visible.length < 2) continue;
@@ -151,7 +155,7 @@ function run() {
               const base = digest(version, shape, defender, {}, side, isRanged);
               for (const value of values) {
                 comparisons += 1;
-                if (digest(version, shape, defender, { [calcKey]: value }, side, isRanged) !== base) {
+                if (digest(version, shape, defender, { [half]: { [calcKey]: value } }, side, isRanged) !== base) {
                   moved = true;
                 }
               }
@@ -165,7 +169,7 @@ function run() {
     if (moves.length === 0) { inertEverywhere += 1; continue; }
     if (moves.length === visible.length) { liveEverywhere += 1; continue; }
     splits.push({
-      calcKey,
+      source, calcKey,
       visible,
       moves,
       silent: visible.filter(version => !moves.includes(version)),
@@ -176,7 +180,7 @@ function run() {
   const showAll = process.argv.includes('--all');
   const reported = splits.filter(split => showAll || !split.settled);
   console.log(`keys offered in two or more versions: ${liveEverywhere + inertEverywhere + splits.length}`);
-  console.log(`(calcKey, version) pairs whose control is visible: ${visiblePairs}`);
+  console.log(`(source, calcKey, version) pairs whose control is visible: ${visiblePairs}`);
   console.log(`exchanges compared: ${comparisons}`);
   console.log(`keys live in every visible version: ${liveEverywhere}`);
   console.log(`keys inert in every visible version (shape gap, not a gate): ${inertEverywhere}`);
@@ -184,7 +188,7 @@ function run() {
   console.log(`  of those, a scope table already names the key: ${splits.filter(s => s.settled).length}`);
   console.log(`unexplained splits: ${splits.filter(s => !s.settled).length}`);
   for (const split of reported.sort((x, y) => x.calcKey.localeCompare(y.calcKey))) {
-    console.log(`  ${split.calcKey}${split.settled ? ' [scoped]' : ''}`);
+    console.log(`  ${split.source}:${split.calcKey}${split.settled ? ' [scoped]' : ''}`);
     console.log(`      moves in: ${split.moves.join(', ')}`);
     console.log(`      silent in: ${split.silent.join(', ')}`);
   }

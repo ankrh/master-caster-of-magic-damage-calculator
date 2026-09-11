@@ -4,6 +4,14 @@
 
 # Journal
 
+## 2026-09-11 — F271.5 tool and page-test callers converted
+
+Seven files now preserve sources through generation, diagnostics and page-evaluated inputs.
+All 64,456 generated cases are explicit; refusals remain unchanged. Existing numeric outputs
+are unchanged; received-only aura inputs no longer falsely echo a provided value. Sol high
+review fixes are applied. Required tests passed: 34,143 Node assertions, all presets/citations
+and 12 modifier-trace browser tests. Hidden-source sweep: 503 pairs, zero numeric leaks.
+
 ## 2026-09-11 — F271.4 custom matrix projection complete
 
 Custom matrix rows now retain innate and matrix enchantment controls through the shared

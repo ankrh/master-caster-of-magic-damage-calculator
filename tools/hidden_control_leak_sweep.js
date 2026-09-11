@@ -1,16 +1,10 @@
 // Census of version-hidden controls that still move a number. Run:
 //   node tools/hidden_control_leak_sweep.js [--derive-only]
 //
-// `SPEC.md`, *Versions*: "Abilities and enchantments not present in a version must be hidden
-// from the UI and inert in the result. A hidden control must never influence a computation."
-// The UI half is asserted by `tests/version-gating.spec.js`, which also clears a version-gated
-// control's value, so no preset and no page interaction can reach one. `deriveUnitStats` and
-// `resolveCombat` are the paths that can — presets are the browser's only entry, but the two
-// functions take an `abilities` map directly — and nothing checks that half, which is what this
-// sweep measures (F118).
-//
-// A `calcKey` counts as hidden in a version only when **every** control naming it is gated
-// there: several controls map to one key, and a key one visible control owns is a real input.
+// INV-2 also applies to raw derivation inputs, outside the page's version clearing.
+// Each control is probed in its explicit producer half. A source/key counts as hidden only
+// when every control naming that key in that source is gated; the other half's visibility
+// cannot make this source visible. Resolver records keep their calculated abilities map.
 //
 // Two tiers, because they fail differently. **derive** compares the derived stat record, minus
 // the `abilities` echo — a derivation is handed that map and returns it, so the echo differs for
@@ -79,7 +73,7 @@ function baseInput(prefix, version, over) {
     ? { ...typed, modernAttacks: modernRecordForSharedSlot(ctx, typed.rtbType, typed.rtb) }
     : typed;
   return {
-    prefix, version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
+    prefix, version, innateAbilities: {}, markedAbilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
     rtbType: 'none', unitType: 'normal', figs: 6, atk: 6, rtb: 0, def: 4, res: 6, hp: 4, dmg: 0,
     toHitMod: 0, toHitRtbMod: 0, toBlkMod: 0, cityWalls: 'none', nodeAura: 'none',
     trueLight: false, darkness: false, enemyEternalNight: false, rangedCheck: false,
@@ -119,9 +113,9 @@ function seedRefusalOr(err) {
     ? SEED_REFUSAL : 'THREW: ' + err.message;
 }
 
-function deriveDigest(version, over, abilities) {
+function deriveDigest(version, over, halves) {
   const input = baseInput('a', version, over);
-  input.abilities = abilities;
+  Object.assign(input, halves);
   try {
     const { abilities: echo, ...rest } = deriveUnitStats(input);
     return JSON.stringify(digest(rest));
@@ -135,11 +129,11 @@ function deriveDigest(version, over, abilities) {
 // effect whose only observable is on the unit being attacked: `rage` scales with figures already
 // lost, and in these shapes it is the counter-attacking defender that loses figures first, so a
 // Warlord-only control moved four versions' numbers without this sweep reporting it (F130).
-function combatDigest(version, over, abilities, isRanged, side) {
+function combatDigest(version, over, halves, isRanged, side) {
   const attacker = baseInput('a', version, over);
   const defender = baseInput('b', version,
     { ...over, modernAttacks: undefined, rtbType: 'none', rtb: 0 });
-  (side === 'b' ? defender : attacker).abilities = abilities;
+  Object.assign(side === 'b' ? defender : attacker, halves);
   try {
     const a = deriveUnitStats(attacker);
     const b = deriveUnitStats(defender);
@@ -164,16 +158,20 @@ function valuesFor(def) {
 }
 
 function hiddenPairs() {
-  const byCalcKey = new Map();
+  const bySourceKey = new Map();
   for (const def of abilityUiDefs()) {
     if (!def || !def.key) continue;
     const calcKey = def.calcKey || def.key;
-    if (!byCalcKey.has(calcKey)) byCalcKey.set(calcKey, []);
-    byCalcKey.get(calcKey).push(def);
+    const sourceKey = `${def.source}|${calcKey}`;
+    if (!bySourceKey.has(sourceKey)) bySourceKey.set(sourceKey, []);
+    bySourceKey.get(sourceKey).push(def);
   }
   const pairs = [];
   for (const version of VERSIONS) {
-    for (const [calcKey, defs] of byCalcKey) {
+    for (const defs of bySourceKey.values()) {
+      const source = defs[0].source;
+      const calcKey = defs[0].calcKey || defs[0].key;
+      const half = source === 'ability' ? 'innateAbilities' : 'markedAbilities';
       if (!defs.every(def => abilityVersionGated(def, version))) continue;
       const values = [];
       for (const def of defs) {
@@ -181,7 +179,7 @@ function hiddenPairs() {
           if (!values.some(v => JSON.stringify(v) === JSON.stringify(value))) values.push(value);
         }
       }
-      pairs.push({ version, calcKey, values, controls: defs.map(d => `${d.source}:${d.key}`) });
+      pairs.push({ version, source, half, calcKey, values, controls: defs.map(d => `${d.source}:${d.key}`) });
     }
   }
   return pairs;
@@ -204,8 +202,8 @@ function run() {
         const base = deriveDigest(pair.version, over, {});
         for (const value of pair.values) {
           deriveCases += 1;
-          const probed = deriveDigest(pair.version, over, { [pair.calcKey]: value });
-          if (probed === SEED_REFUSAL) { refusedPairs.add(`${pair.version}|${pair.calcKey}`); continue; }
+          const probed = deriveDigest(pair.version, over, { [pair.half]: { [pair.calcKey]: value } });
+          if (probed === SEED_REFUSAL) { refusedPairs.add(`${pair.version}|${pair.source}|${pair.calcKey}`); continue; }
           if (probed !== base) {
             hitDerive = hitDerive || { ...pair, value, where: `${shape.name}/${identity.name}` };
           }
@@ -221,8 +219,8 @@ function run() {
           const base = combatDigest(pair.version, shape.over, {}, isRanged, side);
           for (const value of pair.values) {
             combatCases += 1;
-            const got = combatDigest(pair.version, shape.over, { [pair.calcKey]: value }, isRanged, side);
-            if (got === SEED_REFUSAL) { refusedPairs.add(`${pair.version}|${pair.calcKey}`); continue; }
+            const got = combatDigest(pair.version, shape.over, { [pair.half]: { [pair.calcKey]: value } }, isRanged, side);
+            if (got === SEED_REFUSAL) { refusedPairs.add(`${pair.version}|${pair.source}|${pair.calcKey}`); continue; }
             if (got !== base) {
               hitCombat = hitCombat || {
                 ...pair, value, base, got,
@@ -236,9 +234,9 @@ function run() {
     if (hitCombat) resolved.push(hitCombat);
   }
 
-  const line = leak => `  ${leak.version}  ${leak.calcKey}=${JSON.stringify(leak.value)}`
+  const line = leak => `  ${leak.version}  ${leak.source}:${leak.calcKey}=${JSON.stringify(leak.value)}`
     + `  [${leak.where}]  controls=${leak.controls.join(',')}`;
-  console.log(`hidden (calcKey, version) pairs: ${pairs.length}`);
+  console.log(`hidden (source, calcKey, version) pairs: ${pairs.length}`);
   console.log(`derivations compared: ${deriveCases}`);
   console.log(`pairs the record seed refuses outright (F253.1): ${refusedPairs.size}`);
   console.log(`pairs moving a derived stat: ${derived.length}`);

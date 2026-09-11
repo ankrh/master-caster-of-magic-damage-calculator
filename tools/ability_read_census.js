@@ -173,7 +173,7 @@ function baseInput(ctx, prefix, version, over) {
     ? { hitChance: 70, hitMelee: 0, hitRanged: 0, hitThrown: 0, hitBreath: 0 }
     : { toHitMod: 70, toHitRtbMod: 70 };
   return {
-    prefix, version, abilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
+    prefix, version, innateAbilities: {}, markedAbilities: {}, level: 'normal', weapon: 'normal', armor: 'normal',
     rtbType: 'none', unitType: 'normal', figs: 6, atk: 6, rtb: 0, def: 4, res: 6, hp: 4, dmg: 0,
     toBlkMod: 70, cityWalls: 'none', nodeAura: 'none', trueLight: false, darkness: false,
     enemyEternalNight: false, rangedCheck: false, rangedDist: 1, warpReality: false,
@@ -186,25 +186,34 @@ function baseInput(ctx, prefix, version, over) {
 // nothing, and one that throws is dropped rather than silently narrowing the sweep.
 function probeAbilities(ctx, read, version) {
   const defs = read('abilityUiDefs')();
-  const candidate = {};
+  const candidates = [];
   for (const def of defs) {
     const key = def.calcKey || def.key;
-    if (def.type === 'bool') candidate[key] = true;
-    else if (def.type === 'num' || def.type === 'numcheck') candidate[key] = 2;
+    const half = def.source === 'ability' || key === 'outlanderWizard'
+      ? 'innateAbilities' : 'markedAbilities';
+    let value;
+    if (def.type === 'bool') value = true;
+    else if (def.type === 'num' || def.type === 'numcheck') value = half === 'innateAbilities' ? 2 : 3;
     else if (def.type === 'select' && Array.isArray(def.options)) {
-      const option = def.options.map(o => o[0]).find(v => v !== 'none' && v !== '');
-      if (option !== undefined) candidate[key] = option;
+      value = def.options.map(o => o[0]).find(v => v !== 'none' && v !== '');
     }
+    if (value !== undefined) candidates.push({ half, key, value });
   }
   const deriveUnitStats = read('deriveUnitStats');
-  const accepted = {};
-  for (const [key, value] of Object.entries(candidate)) {
-    const trial = { ...accepted, [key]: value };
+  const accepted = { innateAbilities: {}, markedAbilities: {} };
+  let refused = 0;
+  // Establish the owner before probing its research controls; the rich census requests both.
+  candidates.sort((a, b) => Number(b.key === 'outlanderWizard') - Number(a.key === 'outlanderWizard'));
+  for (const { half, key, value } of candidates) {
+    const trial = { ...accepted, [half]: { ...accepted[half], [key]: value } };
     try {
-      deriveUnitStats(baseInput(ctx, 'a', version, { ...SHAPES[0].over, abilities: trial }));
-      accepted[key] = value;
-    } catch (error) { /* out of range for this version: leave it out */ }
+      deriveUnitStats(baseInput(ctx, 'a', version, { ...SHAPES[0].over, ...trial }));
+      accepted[half][key] = value;
+    } catch (error) { refused += 1; }
   }
+  console.log(`probe ${version}: ${candidates.length} source controls, ${refused} rejected; `
+    + `${Object.keys(accepted.innateAbilities).length} innate / `
+    + `${Object.keys(accepted.markedAbilities).length} marked keys accepted`);
   return accepted;
 }
 
@@ -245,8 +254,8 @@ function run() {
     const rich = probeAbilities(context, read, version);
     for (const shape of SHAPES) {
       for (const unitType of UNIT_TYPES) {
-        for (const abilities of [{}, rich]) {
-          const over = { ...shape.over, unitType, abilities };
+        for (const halves of [{}, rich]) {
+          const over = { ...shape.over, unitType, ...halves };
           let a;
           let b;
           try {

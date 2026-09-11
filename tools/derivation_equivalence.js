@@ -72,18 +72,17 @@ function rng(seed) {
 // `key` names the control and so names the case; `calcKey` is what `deriveUnitStats` reads.
 // The two differ on eight enchantments (`natureLink` -> `landLinking`, `apotheosis` ->
 // `destiny`, ...), and `abilityUiDefs()` (`ability_gating.js`) is what establishes that the
-// derivation sees the `calcKey`. Both defs lists reach the derivation the same way — the UI
-// merges them into one `abilities` map — so a spec never names a top-level input field.
-function controlSpecs(defs) {
+// derivation sees the `calcKey`. Each spec retains its producer half before aliases fold.
+function controlSpecs(defs, half) {
   const specs = [];
   for (const def of defs) {
     if (!def || !def.key) continue;
     const calcKey = def.calcKey || def.key;
-    if (def.type === 'bool') specs.push({ key: def.key, calcKey, values: [true] });
-    else if (def.type === 'num') specs.push({ key: def.key, calcKey, values: [3] });
-    else if (def.type === 'numcheck') specs.push({ key: def.key, calcKey, values: [3] });
+    if (def.type === 'bool') specs.push({ half, key: def.key, calcKey, values: [true] });
+    else if (def.type === 'num') specs.push({ half, key: def.key, calcKey, values: [3] });
+    else if (def.type === 'numcheck') specs.push({ half, key: def.key, calcKey, values: [3] });
     else if (def.type === 'select' && Array.isArray(def.options)) {
-      specs.push({ key: def.key, calcKey,
+      specs.push({ half, key: def.key, calcKey,
         values: def.options.map(o => o[0]).filter(v => v !== 'none') });
     }
   }
@@ -101,10 +100,15 @@ const OUTLANDER_REFORMS = new Set([
   'xenopsychology', 'xenoveterinary',
 ]);
 
-// One control into the map the derivation reads, with its owner where it has one.
-function setControl(abilities, spec, value) {
-  abilities[spec.calcKey] = value;
-  if (OUTLANDER_REFORMS.has(spec.calcKey)) abilities.outlanderWizard = true;
+// One source-tagged control into its half; an explicit override serves opposite-half probes.
+function setControl(halves, spec, value, half = spec.half) {
+  halves[half][spec.calcKey] = value;
+  if (OUTLANDER_REFORMS.has(spec.calcKey)) halves.innateAbilities.outlanderWizard = true;
+  // The existing opposite-half corpus also keeps the owning wizard out of the cast half.
+  if (halves.markedAbilities.outlanderWizard !== undefined) {
+    halves.innateAbilities.outlanderWizard = halves.markedAbilities.outlanderWizard;
+    delete halves.markedAbilities.outlanderWizard;
+  }
 }
 
 
@@ -165,7 +169,7 @@ const ENVS = [
   // `chaosSurge` was the one matrix global this list never varied, so every gate reading it
   // measured 0 whatever it did — which is how F178's defect passed this tool at 0 differences.
   // An env carries only top-level inputs, because the combination pass below overwrites
-  // `over.abilities`; the conversions this global's gate reads come from that pass (F178).
+  // the source halves; the conversions this global's gate reads come from that pass (F178).
   { name: 'chaos-surge', over: { chaosSurge: 1 } },
 ];
 
@@ -298,9 +302,7 @@ const BOUNDARY_FIELD_PLAN = {
     + 'here says nothing about Wall of Fire, and stating the field would not change that.' },
 };
 
-// The two ability halves the boundary states instead of a merged map (F252.1). They are not in the
-// plan above because they are not a value to vary but a *shape*: the `halves` blocks below state
-// them, and `baseInput` drops `abilities` when they do, because stating both halts.
+// Every generated case states the two source halves the card boundary supplies.
 const ABILITY_HALF_FIELDS = ['innateAbilities', 'markedAbilities'];
 
 // The unit names the derivation branches on, read out of `Calculator/stats.js` rather than listed:
@@ -384,7 +386,7 @@ function baseInput(context, version, over) {
   return {
     prefix: 'a',
     version,
-    abilities: {},
+    innateAbilities: {}, markedAbilities: {},
     level: 'normal',
     weapon: 'normal',
     armor: 'normal',
@@ -446,15 +448,6 @@ function boundaryPlanCompanions(field) {
   return (BOUNDARY_FIELD_PLAN[field] || {}).with || {};
 }
 
-// One case's input, in the shape the card boundary uses for abilities: the two halves rather than
-// the merged map. `deriveUnitStats` halts on an input stating both, so the merged default the base
-// input carries is dropped here (`stats.js`, `statesHalves`).
-function halvesInput(context, version, over) {
-  const input = baseInput(context, version, over);
-  if (ABILITY_HALF_FIELDS.some(field => input[field] !== undefined)) delete input.abilities;
-  return input;
-}
-
 // The digest is derived values only. `steps`, `trace` and any modifier ledger are identity, not
 // arithmetic, and a merge or rename is expected to move them.
 // A merge turns two trace entries into one and a rename relabels them, so these carry step
@@ -483,28 +476,25 @@ function digest(value) {
 // surface must walk it. Yields `{ name, version, input }`.
 function* enumerateCases(context = defaultContext()) {
   const versions = readFrom(context, 'ENGINE_VERSIONS');
-  const abilitySpecs = controlSpecs(readFrom(context, 'ABILITY_DEFS'));
-  const enchantSpecs = controlSpecs(readFrom(context, 'ENCHANTMENT_DEFS'));
+  const abilitySpecs = controlSpecs(readFrom(context, 'ABILITY_DEFS'), 'innateAbilities');
+  const enchantSpecs = controlSpecs(readFrom(context, 'ENCHANTMENT_DEFS'), 'markedAbilities');
   // The shipped boundary, per version: which top-level fields exist, and where. Blocks 5 and 6
   // state a field only in the versions that carry it (F259.2).
   const boundary = boundaryFieldVersions(context);
-  // Both lists write the one map, so a shared `calcKey` picked twice keeps the later value
-  // rather than being counted in two places, which is what the UI's merge does for the controls
-  // that collapse onto one key. The draw order — six abilities, then six enchantments, each a
-  // spec index followed by a value index — is what makes two runs comparable, so it is one
-  // function rather than a copy in each combination block.
+  // Preserve the seeded draw order (six abilities, then six enchantments) while retaining
+  // independent source maps. Aliases fold within their own half only.
   const drawControls = (random) => {
-    const abilities = {};
+    const halves = { innateAbilities: {}, markedAbilities: {} };
     const pick = 6;
     for (let n = 0; n < pick; n += 1) {
       const spec = abilitySpecs[Math.floor(random() * abilitySpecs.length)];
-      setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
+      setControl(halves, spec, spec.values[Math.floor(random() * spec.values.length)]);
     }
     for (let n = 0; n < pick; n += 1) {
       const spec = enchantSpecs[Math.floor(random() * enchantSpecs.length)];
-      setControl(abilities, spec, spec.values[Math.floor(random() * spec.values.length)]);
+      setControl(halves, spec, spec.values[Math.floor(random() * spec.values.length)]);
     }
-    return abilities;
+    return halves;
   };
   for (const version of versions) {
     for (const row of IDENTITIES) {
@@ -518,8 +508,9 @@ function* enumerateCases(context = defaultContext()) {
           for (const value of spec.values) {
             for (const shape of SHAPES) {
               const over = { ...shape.over, ...idOver };
-              over.abilities = {};
-              setControl(over.abilities, spec, value);
+              over.innateAbilities = {};
+              over.markedAbilities = {};
+              setControl(over, spec, value);
               yield { name: `${version}|solo|${kind}|${spec.key}=${value}|${shape.name}${tag}`,
                 version, input: baseInput(context, version, over) };
             }
@@ -541,10 +532,10 @@ function* enumerateCases(context = defaultContext()) {
       for (let i = 0; i < 900; i += 1) {
         const shape = SHAPES[Math.floor(random() * SHAPES.length)];
         const env = ENVS[Math.floor(random() * ENVS.length)];
-        const abilities = drawControls(random);
+        const halves = drawControls(random);
         yield { name: `${version}|combo|${i}${tag}`, version,
           input: baseInput(context, version,
-            { ...shape.over, ...env.over, ...idOver, abilities }) };
+            { ...shape.over, ...env.over, ...idOver, ...halves }) };
       }
     }
     // 4. The roaming-identity block: the rest of the identity surface, in combination only.
@@ -554,10 +545,10 @@ function* enumerateCases(context = defaultContext()) {
       const shape = SHAPES[Math.floor(roaming() * SHAPES.length)];
       const env = ENVS[Math.floor(roaming() * ENVS.length)];
       const row = ROAMING_IDENTITIES[Math.floor(roaming() * ROAMING_IDENTITIES.length)];
-      const abilities = drawControls(roaming);
+      const halves = drawControls(roaming);
       yield { name: `${version}|combo-id|${i}|${row.name}`, version,
         input: baseInput(context, version,
-          { ...shape.over, ...env.over, ...identityOver(row, version), abilities }) };
+          { ...shape.over, ...env.over, ...identityOver(row, version), ...halves }) };
     }
     // 5. The boundary block (F259.2): the top-level fields blocks 1–4 never state, or state at one
     // value. Each is stated in the versions whose boundary emits it, so this axis adds no
@@ -587,7 +578,7 @@ function* enumerateCases(context = defaultContext()) {
           for (const shape of [SHAPES[0], SHAPES[SHAPES.length - 2]]) {
             const over = { ...shape.over, ...identityOver(row, version),
               ...boundaryPlanCompanions(field), [field]: value };
-            over.abilities = pairing ? { [pairing.control]: true } : {};
+            over.markedAbilities = pairing ? { [pairing.control]: true } : {};
             yield { name: `${version}|bnd|${field}=${valueTag(value)}|${shape.name}|id:${row.name}`,
               version, input: baseInput(context, version, over) };
           }
@@ -606,8 +597,8 @@ function* enumerateCases(context = defaultContext()) {
       const shape = SHAPES[Math.floor(bnd() * SHAPES.length)];
       const env = ENVS[Math.floor(bnd() * ENVS.length)];
       const row = ROAMING_IDENTITIES[Math.floor(bnd() * ROAMING_IDENTITIES.length)];
-      const abilities = drawControls(bnd);
-      const over = { ...shape.over, ...env.over, ...identityOver(row, version), abilities };
+      const halves = drawControls(bnd);
+      const over = { ...shape.over, ...env.over, ...identityOver(row, version), ...halves };
       for (const field of boundaryFields) {
         if (!boundary.get(field).includes(version)) continue;
         // The default is in the pool, so a field is off in about as many cases as it is on and
@@ -627,25 +618,16 @@ function* enumerateCases(context = defaultContext()) {
       yield { name: `${version}|bnd-combo|${i}|${row.name}`, version,
         input: baseInput(context, version, over) };
     }
-    // 7. The ability boundary's own shape: `innateAbilities` and `markedAbilities` rather than the
-    // merged `abilities` map (F252.1). Blocks 1–4 state the merged map, which `deriveUnitStats`
-    // splits by def source — so the halves path itself, and any state where a half disagrees with
-    // that split, was unreachable from here. The card-faithful half first: an ability control is
-    // what the unit was built with, an enchantment control is what the card marked.
+    // 7. Explicit single-source cases, retained beside the broader shape/identity solo block.
     for (const [kind, specs, half] of [['abil', abilitySpecs, 'innateAbilities'],
       ['ench', enchantSpecs, 'markedAbilities']]) {
       for (const spec of specs) {
         const value = spec.values[0];
         for (const row of [IDENTITIES[0], IDENTITIES[1]]) {
           const halves = { innateAbilities: {}, markedAbilities: {} };
-          setControl(halves[half], spec, value);
-          if (halves.markedAbilities.outlanderWizard !== undefined) {
-            // The reform's owner is a state the unit has, not a cast on it.
-            delete halves.markedAbilities.outlanderWizard;
-            halves.innateAbilities.outlanderWizard = true;
-          }
+          setControl(halves, spec, value, half);
           yield { name: `${version}|halves|${kind}|${spec.key}=${value}|id:${row.name}`, version,
-            input: halvesInput(context, version,
+            input: baseInput(context, version,
               { ...SHAPES[0].over, ...identityOver(row, version), ...halves }) };
         }
       }
@@ -659,14 +641,23 @@ function* enumerateCases(context = defaultContext()) {
       for (const spec of specs) {
         const value = spec.values[0];
         const halves = { innateAbilities: {}, markedAbilities: {} };
-        setControl(halves[half], spec, value);
-        if (halves.markedAbilities.outlanderWizard !== undefined) {
-          delete halves.markedAbilities.outlanderWizard;
-          halves.innateAbilities.outlanderWizard = true;
-        }
+        setControl(halves, spec, value, half);
         yield { name: `${version}|halves-swap|${kind}|${spec.key}=${value}`, version,
-          input: halvesInput(context, version,
+          input: baseInput(context, version,
             { ...SHAPES[0].over, ...halves }) };
+      }
+    }
+    // Unequal provided/received values retain both statements; neither draw overwrites the other.
+    for (const innate of abilitySpecs.filter(spec => typeof spec.values[0] === 'number')) {
+      const marked = enchantSpecs.find(spec => spec.calcKey === innate.calcKey
+        && typeof spec.values[0] === 'number');
+      if (!marked) continue;
+      for (const [provided, received] of [[5, 3], [2, 4]]) {
+        const halves = { innateAbilities: {}, markedAbilities: {} };
+        setControl(halves, innate, provided);
+        setControl(halves, marked, received);
+        yield { name: `${version}|halves-dual|${innate.calcKey}=${provided}/${received}`, version,
+          input: baseInput(context, version, { ...SHAPES[0].over, ...halves }) };
       }
     }
     // 9. Several controls at once in the boundary's shape: six abilities into the half the unit
@@ -684,16 +675,11 @@ function* enumerateCases(context = defaultContext()) {
         [enchantSpecs, 'markedAbilities']]) {
         for (let n = 0; n < 6; n += 1) {
           const spec = specs[Math.floor(split() * specs.length)];
-          setControl(halves[half], spec, spec.values[Math.floor(split() * spec.values.length)]);
+          setControl(halves, spec, spec.values[Math.floor(split() * spec.values.length)], half);
         }
       }
-      // `setControl`'s owner flag is a state the unit has, never a cast on it.
-      if (halves.markedAbilities.outlanderWizard !== undefined) {
-        delete halves.markedAbilities.outlanderWizard;
-        halves.innateAbilities.outlanderWizard = true;
-      }
       yield { name: `${version}|halves-combo|${i}|${row.name}`, version,
-        input: halvesInput(context, version,
+        input: baseInput(context, version,
           { ...shape.over, ...env.over, ...identityOver(row, version), ...halves }) };
     }
   }
@@ -808,6 +794,7 @@ function scopeCollector(context) {
   const topLevel = new Map();
   const identity = new Map();
   const abilityValues = new Map();
+  const abilityValuesBySource = Object.fromEntries(ABILITY_HALF_FIELDS.map(half => [half, new Map()]));
   const versions = new Set();
   const perVersionCases = new Map();
   const refusalsByVersion = new Map();
@@ -826,18 +813,14 @@ function scopeCollector(context) {
           observeInto(identity, field, input.identity[field]);
         }
       }
-      // The ability map is the axis this tool is richest in and the one whose *absences* have
-      // bitten hardest, so the keys it states are collected by name rather than as one blob.
-      // This reads the merged `abilities` map the case list builds; the shipped boundary splits
-      // it into `innateAbilities` and `markedAbilities` (F252.1), and a case list that moves to
-      // the two halves has to move this read with it or the key census silently empties.
-      // Both shapes are read, because the case list states each of them in its own blocks: the
-      // merged map in blocks 1–4 and the two boundary halves in blocks 7–9 (F259.2). Reading the
-      // merged map alone would have emptied this census the moment a block moved to the halves.
-      for (const field of ['abilities', ...ABILITY_HALF_FIELDS]) {
+      // Keep the aggregate origin-table census and a separate key/value ledger for each source.
+      for (const field of ABILITY_HALF_FIELDS) {
         const map = input[field];
         if (!map || typeof map !== 'object') continue;
-        for (const key of Object.keys(map)) observeInto(abilityValues, key, map[key]);
+        for (const key of Object.keys(map)) {
+          observeInto(abilityValues, key, map[key]);
+          observeInto(abilityValuesBySource[field], key, map[key]);
+        }
       }
     },
     refusal(version, message) {
@@ -908,6 +891,12 @@ function scopeCollector(context) {
         identityHeld: identityRows.filter(row => row.distinct <= 1),
         abilityKeysStated,
         abilityKeysNeverStated,
+        abilitySources: Object.fromEntries(ABILITY_HALF_FIELDS.map(half => [half, {
+          keysStated: [...abilityValuesBySource[half].keys()].sort(),
+          keysNeverStated: originKeys.filter(key => !abilityValuesBySource[half].has(key)).sort(),
+          values: [...abilityValuesBySource[half].entries()].sort()
+            .map(([key, seen]) => observedRow(key, seen)),
+        }])),
         abilityKeyOriginRows: originKeys.length,
         digestExcludes: [...IDENTITY_KEYS].sort(),
       };
@@ -972,6 +961,11 @@ function formatScope(scope) {
     + 'table carries are never stated here (a record key with no control cannot be reached by '
     + 'this case list at all):');
   lines.push(`    never stated: ${scope.abilityKeysNeverStated.join(', ') || 'none'}`);
+  for (const [half, source] of Object.entries(scope.abilitySources)) {
+    lines.push(`  ${half}: ${source.keysStated.length} keys stated; `
+      + `${source.keysNeverStated.length} origin keys never stated in this half: `
+      + `${source.keysNeverStated.join(', ') || 'none'}`);
+  }
   lines.push(`  digest excludes (step identity, not arithmetic): ${scope.digestExcludes.join(', ')}`);
   return lines.join('\n');
 }
